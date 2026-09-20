@@ -101,7 +101,6 @@ struct GenerationMetrics: Decodable {
     let requestedSize: String?
     let size: String?
     let requestedModel: String?
-    let returnedModel: String?
     let inputTokens: Int?
     let textInputTokens: Int?
     let imageInputTokens: Int?

@@ -86,7 +86,7 @@ function generationMetrics(data, requestId, elapsedMs, model, size) {
   const inputCost = canPrice ? (textInput * RATES.textInput + imageInput * RATES.imageInput) / 1e6 : null;
   const outputCost = canPrice ? imageOutput * RATES.imageOutput / 1e6 : null;
   return {
-    requestedModel: model, returnedModel: data.model ?? null,
+    requestedModel: model,
     requestedSize: size, size: data.size ?? size, quality: data.quality ?? QUALITY,
     inputTokens: input, textInputTokens: textInput, imageInputTokens: imageInput,
     outputTokens: output, totalTokens: count(usage?.total_tokens),
@@ -176,7 +176,7 @@ function showMetrics(m){
   const number=value=>value==null?'Not returned':value.toLocaleString();
   const dollars=value=>value==null?'Unavailable':'$'+value.toFixed(6)+' USD';
   const rows=[
-    ['Requested model',m.requestedModel],['Returned model',m.returnedModel??'Not returned by OpenAI'],
+    ['Model sent to OpenAI',m.requestedModel],
     ['Size / quality',m.size+' / '+m.quality],
     ['Input tokens',number(m.inputTokens)],['Input: text tokens',number(m.textInputTokens)],
     ['Input: image tokens',number(m.imageInputTokens)],['Output tokens',number(m.outputTokens)],

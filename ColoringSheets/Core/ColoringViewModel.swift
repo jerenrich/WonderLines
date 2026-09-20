@@ -3,9 +3,9 @@ import SwiftUI
 @MainActor
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
+    static let generationModel: ImageModel = .sunburst
     @Published var description = ""
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
-    @Published var model: ImageModel = .flare
     @Published var pageFormat: PageFormat = .a4Portrait
     private var previewSize = CGSize(width: 512, height: 728)
     private var displayScale: CGFloat = 2
@@ -28,7 +28,7 @@ final class ColoringViewModel: ObservableObject {
         do { _ = try request(); return nil } catch { return error.localizedDescription }
     }
     private func request() throws -> GenerationRequest {
-        try GenerationRequest(description: description, age: age, model: model,
+        try GenerationRequest(description: description, age: age, model: Self.generationModel,
                               size: pageFormat.imageSize(for: previewSize, displayScale: displayScale))
     }
 

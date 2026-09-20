@@ -70,8 +70,8 @@ final class GenerationTests: XCTestCase {
                 XCTAssertEqual(result.metrics?.imageInputTokens, 0)
             }
         }
-        let metrics = GenerationMetrics.decode("%7B%22returnedModel%22%3A%22a%2Bb%22%7D")
-        XCTAssertEqual(metrics?.returnedModel, "a+b")
+        let metrics = GenerationMetrics.decode("%7B%22requestedModel%22%3A%22a%2Bb%22%7D")
+        XCTAssertEqual(metrics?.requestedModel, "a+b")
     }
     func testInvalidPNGAndHTTPFailures() {
         XCTAssertThrowsError(try WorkerClient.parse(Data(), response: response(), requestedModel: .flare))
@@ -101,7 +101,7 @@ final class GenerationTests: XCTestCase {
         }
         let image = MockGenerator.sampleImage()
         let result = ColoringResult(data: image.pngData()!, image: image, requestedModel: .flare, metrics: nil)
-        let item = try ExportItem(kind: .files, result: result)
+        let item = try ExportItem(kind: .share, result: result)
         XCTAssertEqual(try Data(contentsOf: item.url), result.data)
         XCTAssertNotNil(UIImage(contentsOfFile: item.url.path))
         item.cleanUp()
@@ -199,6 +199,7 @@ final class StateTests: XCTestCase {
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, 3)
         store.generate(); store.generate()
         await waitFor { service.calls == 1 }
+        XCTAssertEqual(service.captured[0].model, .sunburst)
         XCTAssertEqual(service.captured[0].width, 992)
         XCTAssertEqual(service.captured[0].height, 1408)
         store.updatePreview(size: CGSize(width: 380, height: 890), displayScale: 2)

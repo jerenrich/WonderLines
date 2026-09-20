@@ -1,9 +1,9 @@
 import SwiftUI
-import UniformTypeIdentifiers
+import Photos
 import UIKit
 
 struct ExportItem: Identifiable {
-    enum Kind { case share, files, print }
+    enum Kind { case share, print }
     let id = UUID()
     let kind: Kind
     let url: URL
@@ -32,21 +32,46 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-struct FilesSheet: UIViewControllerRepresentable {
-    let item: ExportItem
-    let finish: (String?) -> Void
-    func makeCoordinator() -> Coordinator { Coordinator(finish: finish) }
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let controller = UIDocumentPickerViewController(forExporting: [item.url], asCopy: true)
-        controller.delegate = context.coordinator
-        return controller
+enum PhotoSaveError: LocalizedError {
+    case accessDenied, writeFailed
+    var errorDescription: String? {
+        switch self {
+        case .accessDenied:
+            return "Photos access is off. Allow Coloring Sheets to add photos in Settings, then try again."
+        case .writeFailed:
+            return "The coloring sheet could not be saved to Photos. Please try again."
+        }
     }
-    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
-    final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let finish: (String?) -> Void
-        init(finish: @escaping (String?) -> Void) { self.finish = finish }
-        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finish(nil) }
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) { finish(nil) }
+}
+
+enum PhotoLibrarySaver {
+    static func save(_ data: Data, completion: @escaping (Result<Void, PhotoSaveError>) -> Void) {
+        let finish: (Result<Void, PhotoSaveError>) -> Void = { result in
+            DispatchQueue.main.async { completion(result) }
+        }
+        authorize { allowed in
+            guard allowed else { finish(.failure(.accessDenied)); return }
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+            } completionHandler: { success, _ in
+                finish(success ? .success(()) : .failure(.writeFailed))
+            }
+        }
+    }
+
+    private static func authorize(completion: @escaping (Bool) -> Void) {
+        switch PHPhotoLibrary.authorizationStatus(for: .addOnly) {
+        case .authorized, .limited:
+            completion(true)
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+                completion(status == .authorized || status == .limited)
+            }
+        case .denied, .restricted:
+            completion(false)
+        @unknown default:
+            completion(false)
+        }
     }
 }
 

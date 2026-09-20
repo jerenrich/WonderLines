@@ -9,6 +9,8 @@ struct ContentView: View {
     @State private var export: ExportItem?
     @State private var retainedExport: ExportItem?
     @State private var exportError: String?
+    @State private var photoSaveConfirmation: String?
+    @State private var isSavingPhoto = false
     @State private var showUsage = false
     @State private var showAbout = false
     @State private var detailMessage: String?
@@ -42,11 +44,12 @@ struct ContentView: View {
         .sheet(item: $export, onDismiss: cleanExport) { item in
             switch item.kind {
             case .share: ShareSheet(item: item, finish: finishExport)
-            case .files: FilesSheet(item: item, finish: finishExport)
             case .print: PrintSheet(item: item, finish: finishExport).interactiveDismissDisabled()
             }
         }
-        .sheet(isPresented: $showUsage) { usageSheet }
+        .popover(isPresented: $showUsage) {
+            usageSheet.presentationCompactAdaptation(.popover)
+        }
         .alert("About generation", isPresented: $showAbout) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -60,6 +63,9 @@ struct ContentView: View {
         .alert("Export unavailable", isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })) {
             Button("OK") { exportError = nil }
         } message: { Text(exportError ?? "") }
+        .alert("Saved to Photos", isPresented: Binding(get: { photoSaveConfirmation != nil }, set: { if !$0 { photoSaveConfirmation = nil } })) {
+            Button("OK") { photoSaveConfirmation = nil }
+        } message: { Text(photoSaveConfirmation ?? "") }
     }
 
     private func controls(compact: Bool) -> some View {
@@ -100,9 +106,6 @@ struct ContentView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Picker("Image model", selection: $store.model) {
-                ForEach(ImageModel.allCases) { Text($0.label).tag($0) }
-            }.pickerStyle(.segmented)
             Button {
                 descriptionFocused = false
                 store.generate()
@@ -168,8 +171,8 @@ struct ContentView: View {
             }
             // Reserve the toolbar before generation so the displayed page keeps its size.
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { exportButtons; usageButton }
-                HStack(spacing: 8) { exportButtons; usageButton }.labelStyle(.iconOnly)
+                HStack(spacing: 8) { exportButtons; Spacer(minLength: 0); usageButton }
+                HStack(spacing: 8) { exportButtons; Spacer(minLength: 0); usageButton }.labelStyle(.iconOnly)
             }
             .buttonStyle(.bordered).controlSize(.regular)
             .frame(minHeight: 44)
@@ -181,16 +184,22 @@ struct ContentView: View {
     }
 
     private var usageButton: some View {
-        Button { showUsage = true } label: { Label("Usage", systemImage: "chart.bar") }
+        Button { showUsage = true } label: {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+            .buttonStyle(.plain)
             .accessibilityLabel("Usage and estimated cost")
     }
     private var usageSheet: some View {
         NavigationStack {
             List {
                 if let result = store.result {
-                    metric("Selected model", result.requestedModel.label)
-                    metric("Requested model", result.metrics?.requestedModel ?? "Unavailable")
-                    metric("Returned model", result.metrics?.returnedModel ?? "Unavailable")
+                    metric("Model", result.requestedModel.label)
+                    metric("Model sent to OpenAI", result.metrics?.requestedModel ?? "Unavailable")
                     metric("Requested pixels", result.metrics?.requestedSize ?? "Unavailable")
                     metric("Image pixels", "\(result.image.cgImage?.width ?? 0) × \(result.image.cgImage?.height ?? 0)")
                     metric("Input tokens", count(result.metrics?.inputTokens))
@@ -207,10 +216,14 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showUsage = false } } }
         }
+        .frame(minWidth: 420, idealWidth: 460, minHeight: 520)
     }
     @ViewBuilder private var exportButtons: some View {
         Button { beginExport(.share) } label: { Label("Share", systemImage: "square.and.arrow.up") }
-        Button { beginExport(.files) } label: { Label("Save to Files", systemImage: "folder") }
+        Button(action: saveToPhotos) {
+            Label(isSavingPhoto ? "Saving…" : "Save to Photos", systemImage: "photo.badge.arrow.down")
+        }
+        .disabled(isSavingPhoto)
         Button { beginExport(.print) } label: { Label("Print", systemImage: "printer") }
     }
     private func count(_ value: Int?) -> String { value.map(String.init) ?? "Unavailable" }
@@ -225,4 +238,16 @@ struct ContentView: View {
     }
     private func finishExport(_ message: String?) { export = nil; if let message { exportError = message } }
     private func cleanExport() { retainedExport?.cleanUp(); retainedExport = nil }
+    private func saveToPhotos() {
+        descriptionFocused = false
+        guard let data = store.result?.data, !isSavingPhoto else { return }
+        isSavingPhoto = true
+        PhotoLibrarySaver.save(data) { result in
+            isSavingPhoto = false
+            switch result {
+            case .success: photoSaveConfirmation = "The coloring sheet is now in your Photos library."
+            case .failure(let error): exportError = error.localizedDescription
+            }
+        }
+    }
 }

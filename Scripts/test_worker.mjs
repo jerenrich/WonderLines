@@ -29,6 +29,8 @@ try {
       assert.equal(forwarded.n, 1);
       assert.equal(forwarded.size, '1024x1456');
       const metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+      assert.equal(metrics.requestedModel, model);
+      assert.ok(!Object.hasOwn(metrics, 'returnedModel'));
       assert.equal(metrics.requestedSize, '1024x1456');
       assert.equal(metrics.size, '1024x1456');
     }
@@ -62,6 +64,9 @@ try {
     assert.equal((await generate(dimensions)).status, 400, JSON.stringify(dimensions));
   }
   assert.equal(calls, beforeInvalid, 'Invalid dimensions must never trigger a paid call');
+  const page = await (await worker.fetch(new Request('https://example.test/'), {})).text();
+  assert.ok(page.includes('Model sent to OpenAI'));
+  assert.ok(!page.includes('Returned model'));
   assert.ok(!JSON.stringify(messages).includes('Synthetic flower'));
   assert.ok(!JSON.stringify(messages).includes('dummy-family'));
   assert.ok(!JSON.stringify(messages).includes('dummy-upstream'));
