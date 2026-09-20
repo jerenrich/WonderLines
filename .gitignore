@@ -1,0 +1,15 @@
+.secrets/
+.build/
+DerivedData/
+.wrangler/
+.dev.vars*
+.env*
+*.xcuserstate
+xcuserdata/
+.DS_Store
+*.ipa
+*.xcarchive
+*.xcresult
+Config/Local.xcconfig
+*.log
+.build-log.txt

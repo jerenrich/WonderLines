@@ -1,0 +1,5 @@
+// Optional developer-local signing settings. Copy to Local.xcconfig (ignored).
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+// Set COLORING_MODE to live only after verifying the deployed Worker.
+COLORING_MODE = mock
+// Never put APP_PASSWORD here: Xcode prints build settings in diagnostics.

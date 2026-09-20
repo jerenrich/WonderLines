@@ -1,0 +1,12 @@
+{
+  "name": "coloring-sheets-api",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-09-20",
+  "workers_dev": true,
+  "secrets": {
+    "required": [
+      "OPENAI_API_KEY",
+      "APP_PASSWORD"
+    ]
+  }
+}

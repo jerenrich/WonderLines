@@ -1,0 +1,2 @@
+COLORING_MODE = mock
+#include? "Local.xcconfig"
