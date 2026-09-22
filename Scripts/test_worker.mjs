@@ -52,5 +52,42 @@ try {
   const malformedCap = new Budget({storage: new MemoryStorage()}, {GLOBAL_DAILY_GENERATION_LIMIT: 'not-a-number'});
   response = await malformedCap.fetch(new Request('https://budget/reserve', {method: 'POST', body: JSON.stringify({claim: 'test-malformed'})}));
   assert.equal(response.status, 503, 'A malformed cap must fail closed.');
+  // At the new allowance boundary, a concurrent batch may reserve only the two
+  // remaining images. The remote budget call must not permit lost usage updates.
+  const largeEnv = {...env, FREE_DAILY_ALLOWANCE: '1000'};
+  largeEnv.ACCOUNTS = new Accounts(largeEnv); largeEnv.BUDGET = new BudgetNamespace(largeEnv);
+  const accountID = crypto.randomUUID(), largeStub = largeEnv.ACCOUNTS.get(accountID);
+  response = await largeStub.fetch('https://account/initialize', {method: 'POST', body: JSON.stringify({accountId: accountID})});
+  assert.equal((await response.json()).access.freeGenerationsRemaining, 1000);
+  const account = largeEnv.ACCOUNTS.objects.get(accountID);
+  await account.state.storage.put('usage', {day: new Date().toISOString().slice(0, 10), used: 998});
+  const reserve = generationId => largeStub.fetch('https://account/reserve', {method: 'POST', body: JSON.stringify({generationId, fingerprint: 'synthetic'})});
+  const ids = Array.from({length: 5}, () => crypto.randomUUID());
+  const reservations = await Promise.all(ids.map(reserve));
+  assert.deepEqual(reservations.map(r => r.status), [201, 201, 429, 429, 429]);
+  assert.equal((await account.access()).freeGenerationsRemaining, 0);
+  assert.equal((await reserve(ids[0])).status, 200, 'A repeated ID must not consume another allowance.');
+  assert.equal((await account.state.storage.get('usage')).used, 1000);
+  // An in-flight duplicate recovers the existing job, without calling OpenAI twice.
+  let releaseUpstream;
+  const upstreamWaiting = new Promise(resolve => { releaseUpstream = resolve; });
+  let notifyStarted;
+  const started = new Promise(resolve => { notifyStarted = resolve; });
+  let concurrentCalls = 0;
+  globalThis.fetch = async () => {
+    concurrentCalls++; notifyStarted(); await upstreamWaiting;
+    return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}]}));
+  };
+  const duplicateID = crypto.randomUUID();
+  const duplicateRequest = () => new Request('https://example.test/v1/generations', {method: 'POST', headers: {
+    'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': duplicateID
+  }, body: JSON.stringify({subject: 'Synthetic flower'})});
+  const first = worker.fetch(duplicateRequest(), env);
+  await started;
+  response = await worker.fetch(duplicateRequest(), env);
+  assert.equal(response.status, 202);
+  assert.equal(concurrentCalls, 1);
+  releaseUpstream();
+  assert.equal((await first).status, 200);
 } finally { globalThis.fetch = originalFetch; }
-console.log('PASS: anonymous registration, authenticated v1 generation, quota, idempotency, and fail-closed global budget; no network.');
+console.log('PASS: registration, v1 generation, 1,000-image allowance, concurrent reservations, idempotency, and fail-closed global budget; no network.');

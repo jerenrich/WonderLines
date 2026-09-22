@@ -32,7 +32,7 @@ Each landscape sheet fills the space above the composer. The composer stays abov
 
 ## Anonymous service account
 
-The app contains only the HTTPS Worker origin. On first live use, it creates a random server account and stores a short-lived access token in the device Keychain. Concurrent requests share that registration. The client maps the Worker's `accountId` field explicitly and sends lowercase UUIDs for generation and recovery. No name, email address, Apple ID, or sign-in screen is involved. The Worker, not the app, applies the free daily generation allowance and records idempotent generation results. The configured free allowance is currently three images per account per UTC day, so a five-sheet batch can return partial results and an allowance message.
+The app contains only the HTTPS Worker origin. On first live use, it creates a random server account and stores a short-lived access token in the device Keychain. Concurrent requests share that registration. The client maps the Worker's `accountId` field explicitly and sends lowercase UUIDs for generation and recovery. No name, email address, Apple ID, or sign-in screen is involved. The Worker, not the app, applies the free daily generation allowance and records idempotent generation results. The configured free allowance is 1,000 images per account per UTC day (up to 200 full five-sheet batches). Reservations within an account run in order so concurrent requests cannot spend the same remaining allowance, and a duplicate in-flight generation ID returns its existing job without repeating the paid request.
 
 ## Deploy the updated Worker, then enable live mode
 

@@ -15,6 +15,10 @@ function globalDailyGenerationLimit(value) {
   if (typeof value !== 'string' || !/^(?:0|[1-9][0-9]{0,5})$/.test(value)) return null;
   const limit = Number(value); return limit <= 100000 ? limit : null;
 }
+function freeDailyAllowance(env) {
+  const value = Number(env.FREE_DAILY_ALLOWANCE ?? 3);
+  return Number.isSafeInteger(value) && value >= 0 && value <= 100000 ? value : 0;
+}
 function b64(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
 function unb64(s) { return Uint8Array.from(atob(s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
 async function key(secret) { return crypto.subtle.importKey('raw', encoder.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign', 'verify']); }
@@ -55,7 +59,7 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; }
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); }
   async fetch(request) {
     const input = await request.json().catch(() => null), path = new URL(request.url).pathname;
     if (!input || request.method !== 'POST') return fail('invalid_request', 'Send JSON.', 400);
@@ -63,7 +67,13 @@ export class Account {
     const account = await this.state.storage.get('account');
     if (!account) return fail('unknown_account', 'Unknown account.', 404);
     if (path === '/authorize') return account.credentialId === input.credentialId ? reply({access: await this.access()}) : fail('invalid_token', 'Invalid token.', 401);
-    if (path === '/reserve') return this.reserve(input);
+    if (path === '/reserve') {
+      // The global budget call yields to other requests. Keep account reservations
+      // in order so a parallel batch cannot read and spend the same allowance.
+      const reservation = this.reservations.then(() => this.reserve(input));
+      this.reservations = reservation.catch(() => {});
+      return reservation;
+    }
     if (path === '/job') return this.job(input);
     if (path === '/complete') return this.complete(input);
     if (path === '/access') return reply({access: await this.access()});
@@ -75,7 +85,7 @@ export class Account {
     return reply({credentialId: account.credentialId, access: await this.access()}, 201);
   }
   async access() {
-    const day = new Date().toISOString().slice(0, 10), allowance = Math.max(0, Math.min(100, Number(this.env.FREE_DAILY_ALLOWANCE ?? 3)));
+    const day = new Date().toISOString().slice(0, 10), allowance = freeDailyAllowance(this.env);
     const usage = await this.state.storage.get('usage'), credits = (await this.state.storage.get('credits')) ?? 0;
     return {features: [], generationCredits: credits, freeGenerationsRemaining: Math.max(0, allowance - (usage?.day === day ? usage.used : 0)), allowanceResetsAt: new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString()};
   }
@@ -83,7 +93,7 @@ export class Account {
     if (!/^[0-9a-f-]{36}$/.test(generationId) || typeof fingerprint !== 'string') return fail('invalid_request', 'Invalid generation.', 400);
     const jobKey = 'job:' + generationId, existing = await this.state.storage.get(jobKey);
     if (existing) return existing.fingerprint === fingerprint ? reply({job: existing, access: await this.access()}) : fail('idempotency_conflict', 'Generation ID was already used.', 409);
-    const day = new Date().toISOString().slice(0, 10), allowance = Math.max(0, Math.min(100, Number(this.env.FREE_DAILY_ALLOWANCE ?? 3)),), usage = await this.state.storage.get('usage');
+    const day = new Date().toISOString().slice(0, 10), allowance = freeDailyAllowance(this.env), usage = await this.state.storage.get('usage');
     const used = usage?.day === day ? usage.used : 0; let credits = (await this.state.storage.get('credits')) ?? 0;
     if (used >= allowance && credits < 1) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
     const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId);
@@ -111,7 +121,7 @@ async function generate(request, env, account) {
   const encoded = JSON.stringify({subject: input.subject, model, ...size}), reservation = await call(env, account.id, '/reserve', {generationId, fingerprint: await digest(encoded)});
   if (reservation.status === 429) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
   if (reservation.status >= 400) return fail('generation_unavailable', 'Could not start generation.', reservation.status);
-  if (reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
+  if (reservation.status === 200 || reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
   try {
     const started = Date.now(), result = await fetch('https://api.openai.com/v1/images/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + env.OPENAI_API_KEY, 'Content-Type': 'application/json'}, body: JSON.stringify({model, n: 1, size: size.width + 'x' + size.height, quality: 'low', output_format: 'png', prompt: 'Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: ' + input.subject.trim()}), signal: AbortSignal.timeout(180000)});
     if (!result.ok) { const message = result.status >= 500 || result.status === 429 ? 'Image generation is temporarily unavailable.' : 'OpenAI could not generate this image. Try a simpler description.'; await call(env, account.id, '/complete', {generationId, result: {state: 'failed', message}}); return fail('upstream_failed', message, 502); }
