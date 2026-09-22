@@ -11,6 +11,7 @@ final class ColoringViewModel: ObservableObject {
     private var displayScale: CGFloat = 2
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var result: ColoringResult?
+    @Published private(set) var access: AccessSnapshot = .free
     let isMock: Bool
     private let service: any GenerationServing
     private let defaults: UserDefaults
@@ -48,7 +49,9 @@ final class ColoringViewModel: ObservableObject {
             do {
                 let image = try await service.generate(request)
                 guard attempt == current, !Task.isCancelled else { return }
-                result = image; phase = .result
+                result = image
+                if let access = image.access { self.access = access }
+                phase = .result
             } catch {
                 guard attempt == current else { return }
                 phase = .error((error as? GenerationError)?.localizedDescription ?? GenerationError.uncertain.localizedDescription)

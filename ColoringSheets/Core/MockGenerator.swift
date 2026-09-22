@@ -6,7 +6,8 @@ struct MockGenerator: GenerationServing {
         try Task.checkCancellation()
         let image = Self.sampleImage(size: GenerationSize(width: request.width, height: request.height))
         let metrics = GenerationMetrics.decode("{\"requestedModel\":\"\(request.model.rawValue)\",\"inputTokens\":100,\"imageInputTokens\":0,\"outputTokens\":200,\"totalTokens\":300,\"estimatedTotalUsd\":0.0065,\"elapsedMs\":12000,\"estimateBasis\":\"Illustrative mock metrics only. No paid request was sent.\"}")
-        return ColoringResult(data: image.pngData()!, image: image, requestedModel: request.model, metrics: metrics)
+        return ColoringResult(data: image.pngData()!, image: image, requestedModel: request.model, metrics: metrics,
+                              access: AccessSnapshot(features: [], generationCredits: 0, freeGenerationsRemaining: 3, allowanceResetsAt: nil))
     }
 
     static func sampleImage(size: GenerationSize = .a4Default) -> UIImage {

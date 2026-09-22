@@ -1,25 +1,15 @@
 #!/usr/bin/env python3
-"""Build a bundled configuration without putting secrets in build settings or logs."""
+"""Build the public service configuration without putting credentials in the app."""
 import os
 import plistlib
 from pathlib import Path
 
-root = Path(os.environ["SRCROOT"])
 mode = os.environ.get("COLORING_MODE", "mock")
-release = os.environ.get("CONFIGURATION") == "Release"
 if mode not in ("mock", "live"):
     raise SystemExit("error: COLORING_MODE must be mock or live.")
-if release and mode != "live":
-    raise SystemExit("error: Release requires live configuration and a local Worker credential.")
-credential = ""
-if mode == "live":
-    path = root / ".secrets/worker-password"
-    try:
-        credential = path.read_text()
-    except OSError:
-        raise SystemExit("error: Worker credential missing. Run python3 Scripts/setup_secret.py in Terminal.") from None
-    if not credential or credential != credential.strip() or any(ord(c) < 33 or ord(c) > 126 for c in credential):
-        raise SystemExit("error: Worker credential must be non-empty printable ASCII without spaces.")
+service_url = os.environ.get("COLORING_SERVICE_URL", "https://coloring-sheets-api.jordan-erenrich.workers.dev")
+if not service_url.startswith("https://") or service_url.rstrip("/") != service_url:
+    raise SystemExit("error: COLORING_SERVICE_URL must be an HTTPS origin without a trailing slash.")
 output = Path(os.environ["TARGET_BUILD_DIR"]) / os.environ["UNLOCALIZED_RESOURCES_FOLDER_PATH"] / "ServiceConfiguration.plist"
 output.parent.mkdir(parents=True, exist_ok=True)
-output.write_bytes(plistlib.dumps({"credential": credential, "mock": mode == "mock"}, fmt=plistlib.FMT_BINARY))
+output.write_bytes(plistlib.dumps({"mock": mode == "mock", "serviceURL": service_url}, fmt=plistlib.FMT_BINARY))

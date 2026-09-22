@@ -1,11 +1,11 @@
 # coloring-sheets-api
 
-Cloudflare Worker used by the iPad app for authenticated image generation. The Worker keeps the OpenAI API key server-side and accepts requests at `POST /generate`.
+Cloudflare Worker used by the iPad app for anonymous, authenticated image generation. The Worker keeps the OpenAI API key server-side and exposes `/v1` endpoints.
 
 ## Files
 
-- `src/index.mjs` — dependency-free Worker entry point and small browser client.
-- `wrangler.jsonc` — deployment identity, runtime compatibility date, and required secret names.
+- `src/index.mjs` — dependency-free Worker entry point and Durable Object account ledger.
+- `wrangler.jsonc` — deployment identity, runtime compatibility date, Durable Object, and R2 bindings.
 
 ## Test locally
 
@@ -23,10 +23,10 @@ Authenticate Wrangler with the intended Cloudflare account, then run these comma
 
 ```sh
 npx wrangler secret put OPENAI_API_KEY
-npx wrangler secret put APP_PASSWORD
+npx wrangler secret put ACCOUNT_TOKEN_SECRET
 npx wrangler deploy
 ```
 
-If those secrets already exist on the deployed `coloring-sheets-api` Worker, do not rotate or replace them just to deploy source changes. The Wrangler config validates that both required secrets exist before deployment.
+Create the `coloring-sheets-generations` R2 bucket in the intended account before deployment. Generate `ACCOUNT_TOKEN_SECRET` with a password manager and retain it securely: rotating it invalidates every anonymous session. The app no longer contains a shared Worker password.
 
 Deployment is intentionally manual. Review source changes and run the offline test before deploying because a Worker change affects both the app and browser clients.

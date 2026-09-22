@@ -3,10 +3,23 @@
   "main": "src/index.mjs",
   "compatibility_date": "2026-09-20",
   "workers_dev": true,
-  "secrets": {
-    "required": [
-      "OPENAI_API_KEY",
-      "APP_PASSWORD"
+  "vars": {
+    "FREE_DAILY_ALLOWANCE": "3",
+    "GLOBAL_DAILY_GENERATION_LIMIT": "100"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ACCOUNTS", "class_name": "Account" },
+      { "name": "BUDGET", "class_name": "Budget" }
     ]
+  },
+  "migrations": [
+    { "tag": "v1-anonymous-accounts", "new_sqlite_classes": ["Account", "Budget"] }
+  ],
+  "r2_buckets": [
+    { "binding": "GENERATIONS", "bucket_name": "coloring-sheets-generations" }
+  ],
+  "secrets": {
+    "required": ["OPENAI_API_KEY", "ACCOUNT_TOKEN_SECRET"]
   }
 }

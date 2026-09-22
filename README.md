@@ -27,23 +27,13 @@ Debug builds default to `COLORING_MODE = mock`. Choose an iPad simulator and pre
 
 The UI uses a bottom composer with a whole-year age menu from 3 to 18 and always generates with Sunburst. The landscape sheet fills the space above it, with Share, Save to Photos, Print, and usage details in the top toolbar. No description or sheet title is repeated above the preview. The composer stays above the on-screen keyboard and the complete image scales to the remaining space while typing; the text field retains focus. Done dismisses the keyboard. Minimize and Edit description collapse and reopen the composer without clearing the prompt or image. A successful generation automatically minimizes it unless the user is already typing a new description. New sheet clears only the description and preserves the last image until a replacement succeeds. Generation progress, cancellation, and errors remain accessible in either composer state. Long text can move within the bounded field; there is no main-page scroll container.
 
-## Developer-local Worker credential
+## Anonymous service account
 
-Run this in Terminal from the project directory:
-
-```sh
-python3 Scripts/setup_secret.py
-```
-
-At the hidden prompt, enter the existing Cloudflare Worker **APP_PASSWORD**, not an OpenAI key. Do not paste it into chat, shell command arguments, Xcode build settings, or an xcconfig. The script writes `.secrets/worker-password` with owner-only permissions. `.secrets/` is ignored by Git. Never force-add it.
-
-The build phase reads this file directly and generates a binary `ServiceConfiguration.plist` inside the built app. It never prints the credential. Mock builds bundle an empty credential even when a local password exists. Live builds and Release builds fail if the credential is missing. Release defaults to live and refuses mock mode. Do not upload build products, archives, or diagnostics containing the app to public storage.
-
-**The bundled Worker credential is extractable by recipients.** Binary plist storage does not provide secrecy. The OpenAI key stays in Cloudflare. Rotating APP_PASSWORD requires rebuilding and redistributing the app. Add server-side generation limits before wider distribution; the current client cannot enforce a global spending limit.
+The app contains only the HTTPS Worker origin. On first live use, it creates a random server account and stores a short-lived access token in the device Keychain. No name, email address, Apple ID, or sign-in screen is involved. The Worker, not the app, applies the free daily generation allowance and records idempotent generation results.
 
 ## Deploy the updated Worker, then enable live mode
 
-`workers/coloring-sheets-api/src/index.mjs` is the complete, dependency-free Cloudflare module Worker. Its adjacent `wrangler.jsonc` makes this Worker independently deployable and declares the required `OPENAI_API_KEY` and `APP_PASSWORD` secret names without storing their values. See `workers/coloring-sheets-api/README.md` for Wrangler commands. You can also replace the entire deployed source in the dashboard editor with `src/index.mjs`, keeping the existing secrets. Deploy the Worker before rebuilding/running the updated app in live mode. No Cloudflare deployment is performed automatically by this project.
+`workers/coloring-sheets-api/src/index.mjs` is the complete, dependency-free Cloudflare module Worker. Its adjacent `wrangler.jsonc` declares the required OpenAI and token-signing secrets, a Durable Object for account state, and R2 storage for temporary result recovery. See `workers/coloring-sheets-api/README.md` for the deployment prerequisites. Deploy the Worker before rebuilding/running the updated app in live mode. No Cloudflare deployment is performed automatically by this project.
 
 The updated endpoint accepts dimensions in pixels:
 
@@ -56,7 +46,7 @@ The updated endpoint accepts dimensions in pixels:
 }
 ```
 
-Send `POST /generate`, `Content-Type: application/json`, and `Authorization: Bearer <APP_PASSWORD>` as before. Both dimensions must be supplied together, as positive integers divisible by 16. Each edge must be at most 3,840 pixels, the aspect ratio must be between 1:3 and 3:1, and total pixels must be between 655,360 and 3,686,400. Invalid dimensions return HTTP 400 before contacting OpenAI. This Worker deliberately caps resolution at the non-experimental pixel range to bound image buffering. See the [official OpenAI size documentation](https://developers.openai.com/api/docs/guides/image-generation#size-and-quality-options).
+The public contract is `POST /v1/installations`, then authenticated `POST /v1/generations` with a UUID `Idempotency-Key`. Both dimensions must be supplied together, as positive integers divisible by 16. Each edge must be at most 3,840 pixels, the aspect ratio must be between 1:3 and 3:1, and total pixels must be between 655,360 and 3,686,400. `GET /v1/generations/{id}` recovers a completed image after an interrupted response. Invalid dimensions return HTTP 400 before contacting OpenAI. See the [official OpenAI size documentation](https://developers.openai.com/api/docs/guides/image-generation#size-and-quality-options).
 
 Omitting both dimensions defaults to **1024 × 1456**, an approximation of A4 portrait. This keeps older app versions and the Worker's browser page compatible. Explicit dimensions are forwarded exactly as `size: "WIDTHxHEIGHT"`; the Worker does not resize, crop, or silently substitute a size. Quality stays `low`. Successful responses remain PNGs, with `requestedSize` and `size` in the optional `X-Generation-Metrics` header. `size` uses upstream metadata when supplied and otherwise falls back to the request; the app's Usage sheet also shows the actual decoded PNG dimensions.
 

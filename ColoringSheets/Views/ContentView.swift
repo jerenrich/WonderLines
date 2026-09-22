@@ -206,6 +206,9 @@ struct ContentView: View {
                 .accessibilityIdentifier("age")
                 Spacer(minLength: 0)
                 if store.isMock && !narrow { Text("DEMO · NO CHARGES").font(.caption) }
+                else if let remaining = store.access.freeGenerationsRemaining, !narrow {
+                    Text("\(remaining) free today").font(.caption).foregroundStyle(.secondary)
+                }
                 Button { showAbout = true } label: {
                     Image(systemName: "info.circle").frame(width: 44, height: 44)
                 }

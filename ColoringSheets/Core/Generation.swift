@@ -124,14 +124,23 @@ struct ColoringResult {
     let image: UIImage
     let requestedModel: ImageModel
     let metrics: GenerationMetrics?
+    let access: AccessSnapshot?
+    let generationID: UUID?
+
+    init(data: Data, image: UIImage, requestedModel: ImageModel, metrics: GenerationMetrics?,
+         access: AccessSnapshot? = nil, generationID: UUID? = nil) {
+        self.data = data; self.image = image; self.requestedModel = requestedModel
+        self.metrics = metrics; self.access = access; self.generationID = generationID
+    }
 }
 
 enum GenerationError: LocalizedError, Equatable {
-    case validation(String), configuration, upstream(String), server(Int), invalidImage, uncertain, cancelled
+    case validation(String), configuration, allowance, upstream(String), server(Int), invalidImage, uncertain, cancelled
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
+        case .allowance: return "Today’s free sheet allowance has been used. Please try again after it resets."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
         case .invalidImage: return "The service did not return a valid PNG. Generation may have been charged. Check usage before trying again."
         case .uncertain: return "The connection was interrupted or timed out. Generation may still finish and be charged. Check usage before choosing to generate again."
@@ -153,12 +162,33 @@ final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sen
 }
 
 final class WorkerClient: GenerationServing {
-    static let endpoint = URL(string: "https://coloring-sheets-api.jordan-erenrich.workers.dev/generate")!
-    private let credential: String
+    static let defaultServiceURL = URL(string: "https://coloring-sheets-api.jordan-erenrich.workers.dev")!
+    static let endpoint = defaultServiceURL.appending(path: "/v1/generations")
+    private let serviceURL: URL
+    private let endpoint: URL
+    // This exists solely for isolated legacy-parser/network tests. The app does not
+    // bundle or use shared credentials.
+    private let legacyCredential: String?
+    private let identities: AnonymousIdentityStore?
     private let session: URLSession
 
+    init(serviceURL: URL = defaultServiceURL, session: URLSession? = nil, identities: AnonymousIdentityStore = AnonymousIdentityStore()) {
+        self.serviceURL = serviceURL
+        self.endpoint = serviceURL.appending(path: "/v1/generations")
+        self.legacyCredential = nil
+        self.identities = identities
+        self.session = Self.makeSession(session)
+    }
+
     init(credential: String, session: URLSession? = nil) {
-        self.credential = credential
+        self.serviceURL = Self.defaultServiceURL
+        self.endpoint = Self.endpoint
+        self.legacyCredential = credential
+        self.identities = nil
+        self.session = Self.makeSession(session)
+    }
+
+    private static func makeSession(_ supplied: URLSession?) -> URLSession {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 240
         config.timeoutIntervalForResource = 240
@@ -167,25 +197,73 @@ final class WorkerClient: GenerationServing {
         config.urlCache = nil
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.waitsForConnectivity = false
-        self.session = session ?? URLSession(configuration: config, delegate: NoRedirectDelegate(), delegateQueue: nil)
+        return supplied ?? URLSession(configuration: config, delegate: NoRedirectDelegate(), delegateQueue: nil)
     }
 
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
-        guard !credential.isEmpty else { throw GenerationError.configuration }
-        var http = URLRequest(url: Self.endpoint)
+        var http = URLRequest(url: endpoint)
         http.httpMethod = "POST"
-        http.setValue("Bearer " + credential, forHTTPHeaderField: "Authorization")
+        let authorization = try await authorization()
+        let generationID = UUID()
+        http.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        http.setValue(generationID.uuidString, forHTTPHeaderField: "Idempotency-Key")
+        http.setValue("1", forHTTPHeaderField: "X-Coloring-API-Version")
         http.httpBody = try request.encoded()
         let data: Data
         let response: URLResponse
         do { (data, response) = try await session.data(for: http) }
         catch {
             if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw GenerationError.cancelled }
-            throw GenerationError.uncertain
+            if legacyCredential != nil { throw GenerationError.uncertain }
+            return try await recover(generationID, authorization: authorization, requestedModel: request.model)
         }
         guard let response = response as? HTTPURLResponse else { throw GenerationError.uncertain }
+        if response.statusCode == 202 {
+            return try await recover(generationID, authorization: authorization, requestedModel: request.model)
+        }
         return try Self.parse(data, response: response, requestedModel: request.model)
+    }
+
+    private func recover(_ generationID: UUID, authorization: String, requestedModel: ImageModel) async throws -> ColoringResult {
+        // Polling a recorded job never repeats the paid provider request. Three short
+        // checks cover an interrupted foreground response without trapping the UI.
+        for attempt in 0..<3 {
+            if attempt > 0 {
+                do { try await Task.sleep(for: .seconds(5)) }
+                catch { throw GenerationError.cancelled }
+            }
+            var request = URLRequest(url: endpoint.appending(path: generationID.uuidString))
+            request.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
+            do {
+                let (data, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse else { continue }
+                if http.statusCode == 202 { continue }
+                return try Self.parse(data, response: http, requestedModel: requestedModel)
+            } catch is CancellationError { throw GenerationError.cancelled }
+            catch { continue }
+        }
+        throw GenerationError.uncertain
+    }
+
+    private func authorization() async throws -> String {
+        if let legacyCredential, !legacyCredential.isEmpty { return legacyCredential }
+        guard let identities else { throw GenerationError.configuration }
+        if let saved = await identities.session(), saved.isUsable { return saved.accessToken }
+        var request = URLRequest(url: serviceURL.appending(path: "/v1/installations"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        let data: Data; let response: URLResponse
+        do { (data, response) = try await session.data(for: request) }
+        catch { throw GenerationError.uncertain }
+        guard let http = response as? HTTPURLResponse, http.statusCode == 201,
+              let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
+              let accountID = UUID(uuidString: created.accountID) else { throw GenerationError.configuration }
+        let saved = AnonymousSession(accountID: accountID, accessToken: created.accessToken,
+                                     expiresAt: Date(timeIntervalSince1970: created.expiresAt))
+        do { try await identities.save(saved) } catch { throw GenerationError.configuration }
+        return saved.accessToken
     }
 
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
@@ -193,6 +271,7 @@ final class WorkerClient: GenerationServing {
         guard response.statusCode == 200 else {
             switch response.statusCode {
             case 401, 403, 404, 405, 415, 503: throw GenerationError.configuration
+            case 429: throw GenerationError.allowance
             case 400, 413: throw GenerationError.validation("The service rejected the description or page size. Revise the description or check the app and Worker versions.")
             case 504: throw GenerationError.uncertain
             case 502:
@@ -213,6 +292,21 @@ final class WorkerClient: GenerationServing {
             throw GenerationError.invalidImage
         }
         return ColoringResult(data: data, image: image, requestedModel: requestedModel,
-                              metrics: .decode(response.value(forHTTPHeaderField: "X-Generation-Metrics")))
+                              metrics: .decode(response.value(forHTTPHeaderField: "X-Generation-Metrics")),
+                              access: Self.decodeAccess(response.value(forHTTPHeaderField: "X-Access-Snapshot")),
+                              generationID: response.value(forHTTPHeaderField: "X-Generation-ID").flatMap { UUID(uuidString: $0) })
     }
+
+    private static func decodeAccess(_ header: String?) -> AccessSnapshot? {
+        guard let header, let data = header.removingPercentEncoding?.data(using: .utf8) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(AccessSnapshot.self, from: data)
+    }
+}
+
+private struct InstallationResponse: Decodable {
+    let accountID: String
+    let accessToken: String
+    let expiresAt: TimeInterval
 }

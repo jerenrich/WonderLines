@@ -8,11 +8,11 @@ final class LiveIntegrationTests: XCTestCase {
             throw XCTSkip("Paid integration check requires explicit opt-in.")
         }
         let configuration = AppConfiguration.load()
-        guard !configuration.mock, !configuration.credential.isEmpty else {
+        guard !configuration.mock else {
             XCTFail("Live build configuration is required.")
             return
         }
-        let client = WorkerClient(credential: configuration.credential)
+        let client = WorkerClient(serviceURL: configuration.serviceURL)
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("LiveVerification", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

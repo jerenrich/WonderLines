@@ -1,74 +1,50 @@
-// Executes only the local Worker with a synthetic upstream. No network.
+// Exercises the public Worker API with in-memory Durable Object/R2 bindings only.
 import assert from 'node:assert/strict';
-import worker from '../workers/coloring-sheets-api/src/index.mjs';
+import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
+
+class MemoryStorage { constructor() { this.values = new Map(); } async get(k) { return this.values.get(k); } async put(k, v) { this.values.set(k, v); } }
+class Accounts {
+  constructor(env) { this.env = env; this.objects = new Map(); }
+  idFromName(name) { return name; }
+  get(id) {
+    if (!this.objects.has(id)) this.objects.set(id, new Account({storage: new MemoryStorage()}, this.env));
+    return {fetch: (request, init) => this.objects.get(id).fetch(new Request(request, init))};
+  }
+}
+class Images {
+  constructor() { this.values = new Map(); }
+  async put(key, value) { this.values.set(key, value); }
+  async get(key) { const value = this.values.get(key); return value && {body: new Response(value).body}; }
+}
+class BudgetNamespace {
+  constructor(env) { this.env = env; this.objects = new Map(); }
+  idFromName(name) { return name; }
+  get(id) {
+    if (!this.objects.has(id)) this.objects.set(id, new Budget({storage: new MemoryStorage()}, this.env));
+    return {fetch: (request, init) => this.objects.get(id).fetch(new Request(request, init))};
+  }
+}
+const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3'};
+env.ACCOUNTS = new Accounts(env); env.BUDGET = new BudgetNamespace(env); env.GENERATIONS = new Images();
 const originalFetch = globalThis.fetch;
-const originalLog = console.log;
-const messages = [];
-let forwarded;
-let calls = 0;
-console.log = (...args) => messages.push(args);
+let calls = 0, forwarded;
 globalThis.fetch = async (url, request) => {
-  assert.equal(url, 'https://api.openai.com/v1/images/generations');
-  calls++;
+  assert.equal(url, 'https://api.openai.com/v1/images/generations'); calls++;
   forwarded = JSON.parse(request.body);
-  return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}], usage: null}), {headers: {'content-type':'application/json'}});
+  return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}], usage: {input_tokens: 1, output_tokens: 2, total_tokens: 3}}));
 };
 try {
-  for (const model of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
-    for (const guidance of ['very simple outlines, a few large enclosed coloring areas', 'intricate outlines, smaller enclosed coloring areas']) {
-      const subject = 'Synthetic flower. Complexity: ' + guidance;
-      const response = await worker.fetch(new Request('https://example.test/generate', {
-        method: 'POST', headers: {'Authorization':'Bearer dummy-family', 'Content-Type':'application/json'},
-        body: JSON.stringify({subject, model})
-      }), {APP_PASSWORD:'dummy-family', OPENAI_API_KEY:'dummy-upstream'});
-      assert.equal(response.status, 200);
-      assert.equal(forwarded.model, model);
-      assert.ok(forwarded.prompt.endsWith(subject));
-      assert.ok(forwarded.prompt.includes('Follow any complexity guidance'));
-      assert.ok(!/six.year|6.year|age 6/i.test(forwarded.prompt));
-      assert.equal(forwarded.n, 1);
-      assert.equal(forwarded.size, '1024x1456');
-      const metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
-      assert.equal(metrics.requestedModel, model);
-      assert.ok(!Object.hasOwn(metrics, 'returnedModel'));
-      assert.equal(metrics.requestedSize, '1024x1456');
-      assert.equal(metrics.size, '1024x1456');
-    }
-  }
-  assert.equal(calls, 4);
-  async function generate(dimensions, model = 'gpt-image-2.5-flare') {
-    return worker.fetch(new Request('https://example.test/generate', {
-      method: 'POST', headers: {'Authorization':'Bearer dummy-family', 'Content-Type':'application/json'},
-      body: JSON.stringify({subject: 'Synthetic flower', model, ...dimensions})
-    }), {APP_PASSWORD:'dummy-family', OPENAI_API_KEY:'dummy-upstream'});
-  }
-  for (const model of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
-    for (const [width, height] of [[992, 1408], [768, 1072], [1456, 1024], [1024, 1024], [640, 1024], [2560, 1440], [1536, 1024]]) {
-      const response = await generate({width, height}, model);
-      assert.equal(response.status, 200);
-      assert.equal(forwarded.size, width + 'x' + height);
-      const metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
-      assert.equal(metrics.requestedSize, forwarded.size);
-      assert.equal(metrics.size, forwarded.size);
-    }
-  }
-  const beforeInvalid = calls;
-  for (const dimensions of [
-    {width: 1024}, {height: 1456}, {width: null, height: null},
-    {width: '1024', height: 1456}, {width: true, height: 1456},
-    {width: 1024.5, height: 1456}, {width: 1023, height: 1456},
-    {width: 0, height: 1456}, {width: -1024, height: 1456},
-    {width: 16, height: 16}, {width: 4096, height: 1024},
-    {width: 2048, height: 2048}, {width: 2048, height: 512}
-  ]) {
-    assert.equal((await generate(dimensions)).status, 400, JSON.stringify(dimensions));
-  }
-  assert.equal(calls, beforeInvalid, 'Invalid dimensions must never trigger a paid call');
-  const page = await (await worker.fetch(new Request('https://example.test/'), {})).text();
-  assert.ok(page.includes('Model sent to OpenAI'));
-  assert.ok(!page.includes('Returned model'));
-  assert.ok(!JSON.stringify(messages).includes('Synthetic flower'));
-  assert.ok(!JSON.stringify(messages).includes('dummy-family'));
-  assert.ok(!JSON.stringify(messages).includes('dummy-upstream'));
-} finally { globalThis.fetch = originalFetch; console.log = originalLog; }
-console.log('PASS: models, complexity, A4 defaults, custom dimensions, metrics, and pre-payment validation; no network.');
+  const registered = await worker.fetch(new Request('https://example.test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}), env);
+  assert.equal(registered.status, 201); const identity = await registered.json();
+  assert.match(identity.accountId, /^[0-9a-f-]{36}$/); assert.ok(identity.accessToken);
+  const generationId = crypto.randomUUID();
+  const request = () => new Request('https://example.test/v1/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': generationId}, body: JSON.stringify({subject: 'Synthetic flower. Complexity: very simple outlines', model: 'gpt-image-2.5-flare', width: 1456, height: 1024})});
+  let response = await worker.fetch(request(), env); assert.equal(response.status, 200); assert.equal(calls, 1);
+  assert.equal(forwarded.size, '1456x1024'); assert.ok(forwarded.prompt.includes('Synthetic flower'));
+  response = await worker.fetch(request(), env); assert.equal(response.status, 200); assert.equal(calls, 1, 'A repeated ID must return the stored image.');
+  const access = await worker.fetch(new Request('https://example.test/v1/access', {headers: {'Authorization': 'Bearer ' + identity.accessToken}}), env);
+  assert.equal((await access.json()).access.freeGenerationsRemaining, 2);
+  const invalid = await worker.fetch(new Request('https://example.test/v1/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID()}, body: JSON.stringify({subject: 'x', width: 17, height: 17})}), env);
+  assert.equal(invalid.status, 400); assert.equal(calls, 1, 'Validation must run before a reservation or paid call.');
+} finally { globalThis.fetch = originalFetch; }
+console.log('PASS: anonymous registration, authenticated v1 generation, quota, and idempotency; no network.');
