@@ -294,8 +294,9 @@ final class ControlledService: GenerationServing {
 
 @MainActor
 final class StateTests: XCTestCase {
-    func waitFor(_ condition: @escaping () -> Bool) async {
-        for _ in 0..<100 {
+    func waitFor(timeout: TimeInterval = 1, _ condition: @escaping () -> Bool) async {
+        let deadline = ContinuousClock.now + .seconds(timeout)
+        while ContinuousClock.now < deadline {
             if condition() { return }
             try? await Task.sleep(for: .milliseconds(10))
         }
@@ -362,13 +363,21 @@ final class StateTests: XCTestCase {
         await waitFor { service.pendingCount == ColoringViewModel.batchSize }
         XCTAssertEqual(service.calls, ColoringViewModel.batchSize)
         service.succeed(at: 2)
-        await waitFor { store.results.count == 1 }
+        await waitFor { store.readyCount == 1 }
+        let firstReceived = ContinuousClock.now
+        XCTAssertTrue(store.results.isEmpty)
+        XCTAssertNil(store.result)
+        service.succeed(at: 1)
+        await waitFor { store.readyCount == 2 }
+        store.selectResult(at: 1)
+        XCTAssertNil(store.selectedResultID, "Buffered images cannot be paged through")
+        try await Task.sleep(for: .seconds(4))
+        XCTAssertTrue(store.results.isEmpty, "Do not reveal images before the five-second window ends")
+        await waitFor(timeout: 2) { store.results.count == 2 }
+        XCTAssertGreaterThanOrEqual(firstReceived.duration(to: .now), .seconds(4.95))
         let first = try XCTUnwrap(store.result)
         XCTAssertTrue(store.isGenerating)
-        XCTAssertEqual(store.readyCount, 1)
-        service.succeed(at: 1)
-        await waitFor { store.results.count == 2 }
-        XCTAssertEqual(store.result?.id, first.id, "An arriving image must not change the selected sheet")
+        XCTAssertEqual(store.readyCount, 2)
         store.selectResult(at: 1)
         let second = try XCTUnwrap(store.result)
         XCTAssertNotEqual(first.data, second.data)
@@ -412,9 +421,10 @@ final class StateTests: XCTestCase {
         store.generate()
         await waitFor { service.pendingCount == ColoringViewModel.batchSize }
         service.succeed(at: 2)
-        await waitFor { store.results.count == 1 }
-        let retainedID = store.result?.id
+        await waitFor { store.readyCount == 1 }
+        XCTAssertTrue(store.results.isEmpty)
         store.cancel()
+        let retainedID = try XCTUnwrap(store.result?.id)
         XCTAssertFalse(store.isGenerating)
         XCTAssertNotNil(store.batchMessage)
         XCTAssertEqual(store.result?.id, retainedID)
@@ -428,15 +438,73 @@ final class StateTests: XCTestCase {
         service.succeed(at: ColoringViewModel.batchSize + 1)
         await waitFor { store.completedCount == 1 }
         XCTAssertEqual(store.results.count, 1)
-        XCTAssertNotEqual(store.result?.id, retainedID)
-        let newID = store.result?.id
+        XCTAssertEqual(store.result?.id, retainedID, "Retain the previous gallery during the reveal delay")
         store.enteredBackground()
+        let newID = try XCTUnwrap(store.result?.id)
+        XCTAssertNotEqual(newID, retainedID)
         service.succeed()
         try await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(store.result?.id, newID)
         XCTAssertEqual(store.results.count, 1)
         XCTAssertEqual(store.completedCount, 1)
         XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 2)
+    }
+
+    func testCompletedBatchRevealsImmediatelyAndLaterArrivalsPreserveSelection() async throws {
+        let name = "BatchRevealTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 8; store.description = "A moon bicycle"
+        store.generate()
+        await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        service.succeed(at: 0)
+        await waitFor { store.readyCount == 1 }
+        XCTAssertTrue(store.results.isEmpty)
+        service.succeed()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, ColoringViewModel.batchSize, "Completion bypasses the five-second delay")
+        store.selectResult(at: 3)
+        let previousID = store.result?.id
+
+        store.generate()
+        await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        service.succeed(at: 7)
+        await waitFor { store.readyCount == 1 }
+        XCTAssertEqual(store.result?.id, previousID)
+        await waitFor(timeout: 6) { store.results.count == 1 }
+        XCTAssertNotEqual(store.result?.id, previousID)
+        service.succeed(at: 6)
+        await waitFor { store.results.count == 2 }
+        store.selectResult(at: 1)
+        let selectedID = store.result?.id
+        service.succeed(at: 5)
+        await waitFor { store.results.count == 3 }
+        XCTAssertEqual(store.result?.id, selectedID)
+        service.fail()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.result?.id, selectedID)
+    }
+
+    func testPartialFailureRevealsBufferedSuccessWithoutWaiting() async {
+        let name = "BatchPartialRevealTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 8; store.description = "A moon bicycle"
+        store.generate()
+        await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        service.fail(at: 0)
+        service.succeed(at: 2)
+        await waitFor { store.completedCount == 2 }
+        XCTAssertTrue(store.results.isEmpty)
+        service.fail()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertEqual(store.failedCount, 4)
+        XCTAssertNotNil(store.batchMessage)
     }
 
     func testCancelBeforeTasksStartAndInvalidInputMakeNoRequests() async throws {

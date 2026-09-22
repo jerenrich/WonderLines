@@ -23,6 +23,9 @@ final class ColoringViewModel: ObservableObject {
     private var tasks: [Task<Void, Never>] = []
     private var attempt = UUID()
     private var receivedFirstResult = false
+    private var pendingResults: [ColoringResult] = []
+    private var revealTask: Task<Void, Never>?
+    private var hasRevealedResults = false
     private var firstFailure: String?
 
     init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard) {
@@ -67,6 +70,8 @@ final class ColoringViewModel: ObservableObject {
         phase = .generating
         completedCount = 0; failedCount = 0; batchMessage = nil
         receivedFirstResult = false; firstFailure = nil
+        revealTask?.cancel(); revealTask = nil
+        pendingResults = []; hasRevealedResults = false
         let current = UUID(); attempt = current
         // Each task starts its own request without waiting for the other requests.
         // Validate and capture every composition before starting any paid request.
@@ -89,13 +94,20 @@ final class ColoringViewModel: ObservableObject {
         switch outcome {
         case .success(let image):
             if let access = image.access { self.access = access }
-            // Keep the previous gallery until a replacement actually arrives.
-            // Append in arrival order; later results never move the selected page.
+            pendingResults.append(image)
+            // Start one window at the first success; later arrivals do not reset it.
             if !receivedFirstResult {
                 receivedFirstResult = true
-                results = [image]; selectedResultID = image.id
-            } else {
-                results.append(image)
+                revealTask = Task { [weak self] in
+                    do { try await Task.sleep(for: .seconds(5)) }
+                    catch { return }
+                    guard let self, !Task.isCancelled, self.attempt == current, self.isGenerating else { return }
+                    self.revealPendingResults()
+                    self.revealTask = nil
+                }
+            }
+            if hasRevealedResults {
+                revealPendingResults()
             }
         case .failure(let error):
             failedCount += 1
@@ -105,6 +117,8 @@ final class ColoringViewModel: ObservableObject {
         }
         guard completedCount == Self.batchSize else { return }
         tasks = []
+        revealTask?.cancel(); revealTask = nil
+        revealPendingResults()
         if receivedFirstResult {
             if failedCount > 0 {
                 batchMessage = "\(readyCount) of \(Self.batchSize) sheets are ready. \(failedCount) could not finish. " + (firstFailure ?? "")
@@ -115,10 +129,26 @@ final class ColoringViewModel: ObservableObject {
         }
     }
 
+    private func revealPendingResults() {
+        guard let first = pendingResults.first else { return }
+        if hasRevealedResults {
+            // Append in arrival order without moving the selected page.
+            results.append(contentsOf: pendingResults)
+        } else {
+            // Keep the old gallery until the new batch is ready to browse.
+            results = pendingResults
+            selectedResultID = first.id
+            hasRevealedResults = true
+        }
+        pendingResults = []
+    }
+
     func cancel() {
         guard isGenerating else { return }
         attempt = UUID()
         tasks.forEach { $0.cancel() }; tasks = []
+        revealTask?.cancel(); revealTask = nil
+        revealPendingResults()
         let message = "Stopped waiting. Any sheets already received are still available. The unfinished generations may still complete and be charged."
         if receivedFirstResult {
             batchMessage = message; phase = .result
