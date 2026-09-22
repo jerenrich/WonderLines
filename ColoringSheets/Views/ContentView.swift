@@ -5,7 +5,9 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var descriptionFocused: Bool
+    @State private var composerMinimized = false
     @State private var export: ExportItem?
     @State private var retainedExport: ExportItem?
     @State private var exportError: String?
@@ -18,29 +20,31 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let compact = geometry.size.height < 600 || geometry.size.width < 700 || descriptionFocused || typeSize.isAccessibilitySize
-            let horizontal = geometry.size.width >= 700 || descriptionFocused
-            let layout = horizontal
-                ? AnyLayout(HStackLayout(alignment: .top, spacing: 24))
-                : AnyLayout(VStackLayout(spacing: 16))
-            // Preserve the text field's identity while focus or window size changes.
-            // Replacing its parent branch on focus destroys the active responder.
-            layout {
-                controls(compact: compact)
-                    .frame(width: descriptionFocused
-                           ? min(640, geometry.size.width - 32)
-                           : horizontal ? min(340, geometry.size.width * 0.36) : nil)
-                if !descriptionFocused { preview }
+            let narrow = geometry.size.width < 600 || typeSize.isAccessibilitySize
+            let inset: CGFloat = narrow ? 12 : 24
+            VStack(spacing: 12) {
+                header(narrow: narrow)
+                preview
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(compact ? 16 : 24)
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
-            .background(Color(red: 0.97, green: 0.96, blue: 0.92))
+            .padding(.horizontal, inset)
+            .padding(.top, 8)
+            // SwiftUI lifts this inset with the system keyboard. The preview and
+            // editor keep their identity throughout focus and size changes.
+            .safeAreaInset(edge: .bottom, spacing: 12) {
+                composer(narrow: narrow)
+                    .padding(.horizontal, inset)
+                    .padding(.bottom, 8)
+            }
             .foregroundStyle(ink)
         }
+        .background(Color(red: 0.97, green: 0.96, blue: 0.92).ignoresSafeArea())
         .tint(ink)
         .preferredColorScheme(.light)
         .onChange(of: scenePhase) { _, phase in if phase == .background { store.enteredBackground() } }
+        .onChange(of: store.phase) { _, phase in
+            // Do not interrupt a new description being typed as a request finishes.
+            if phase == .result && !descriptionFocused { setComposerMinimized(true) }
+        }
         .sheet(item: $export, onDismiss: cleanExport) { item in
             switch item.kind {
             case .share: ShareSheet(item: item, finish: finishExport)
@@ -68,74 +72,150 @@ struct ContentView: View {
         } message: { Text(photoSaveConfirmation ?? "") }
     }
 
-    private func controls(compact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: compact ? 10 : 18) {
+    private func header(narrow: Bool) -> some View {
+        HStack(spacing: 12) {
+            if !narrow {
+                Label("Coloring Sheets", systemImage: "pencil.and.outline").font(.headline)
+                Spacer(minLength: 0)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { exportButtons; usageButton }
+                HStack(spacing: 8) { exportButtons; usageButton }.labelStyle(.iconOnly)
+            }
+            .buttonStyle(.bordered)
+            .disabled(store.result == nil)
+            if narrow { Spacer(minLength: 0) }
+        }
+        .frame(minHeight: 44)
+    }
+
+    private func setComposerMinimized(_ minimized: Bool) {
+        if minimized { descriptionFocused = false }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            composerMinimized = minimized
+        }
+    }
+
+    private func composer(narrow: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if composerMinimized {
+                HStack(spacing: 12) {
+                    Button {
+                        setComposerMinimized(false)
+                    } label: {
+                        Label("Edit description", systemImage: "square.and.pencil")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityIdentifier("expandComposer")
+                    Button {
+                        store.description = ""
+                        setComposerMinimized(false)
+                        descriptionFocused = true
+                    } label: {
+                        Label("New sheet", systemImage: "plus")
+                            .foregroundStyle(.white).frame(minHeight: 32)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.isGenerating)
+                    .accessibilityIdentifier("newSheet")
+                }
+            } else {
+                controls(narrow: narrow)
+            }
+            generationStatus
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, composerMinimized ? 6 : 12)
+        .background(.white, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(ink.opacity(0.12)))
+        .shadow(color: ink.opacity(0.06), radius: 8, y: 3)
+        .accessibilityIdentifier("composer")
+    }
+
+    private func controls(narrow: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("What shall we draw?").font(.headline)
+                Text("What shall we draw?").font(.subheadline.weight(.semibold))
                 Spacer(minLength: 4)
                 if descriptionFocused {
-                    Button("Done") { descriptionFocused = false }.font(.headline)
-                } else {
-                    Button { showAbout = true } label: { Image(systemName: "info.circle") }
-                        .accessibilityLabel("About age and generation costs")
+                    Button("Done") { descriptionFocused = false }
+                        .accessibilityIdentifier("dismissKeyboard")
+                } else if store.result != nil {
+                    Button { setComposerMinimized(true) } label: {
+                        Label("Minimize", systemImage: "chevron.down")
+                    }
+                    .accessibilityIdentifier("minimizeComposer")
                 }
             }
-            if store.isMock { Text("DEMO · NO CHARGES").font(.caption.bold()) }
-            TextField("Describe your coloring sheet…", text: $store.description, axis: .vertical)
-                .lineLimit(compact ? 2 : 4, reservesSpace: true)
-                .focused($descriptionFocused)
-                .padding(12).background(.white, in: RoundedRectangle(cornerRadius: 12))
-                .accessibilityIdentifier("subject")
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text("Child’s age").font(.headline)
-                    Spacer()
-                    Text(store.age == 0 ? "Slide to choose" : "\(store.age) years").monospacedDigit()
-                }
-                Slider(value: Binding(
-                    get: { Double(max(3, store.age)) },
-                    set: { store.age = Int($0.rounded()) }
-                ), in: 3...18, step: 1, onEditingChanged: { editing in
-                    if editing && store.age == 0 { store.age = 3 }
-                })
-                .accessibilityLabel("Child’s age")
-                .accessibilityValue(store.age == 0 ? "Not selected" : "\(store.age) years")
-                .accessibilityIdentifier("age")
-                if !compact {
-                    HStack { Text("3 years"); Spacer(); Text("18 years") }
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            Button {
-                descriptionFocused = false
-                store.generate()
-            } label: {
-                Label(store.isMock ? "Make a demo sheet" : "Generate coloring sheet", systemImage: "sparkles")
+            .frame(minHeight: 32)
+
+            // Never swap this field's parent when focus or window width changes.
+            HStack(alignment: .center, spacing: 12) {
+                TextField("Describe your coloring sheet…", text: $store.description, axis: .vertical)
+                    .lineLimit(1...3)
+                    .focused($descriptionFocused)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 44)
+                    .accessibilityLabel("Description")
+                    .accessibilityIdentifier("subject")
+                Button {
+                    descriptionFocused = false
+                    store.generate()
+                } label: {
+                    Group {
+                        if narrow {
+                            Image(systemName: "sparkles").frame(minWidth: 28, minHeight: 32)
+                        } else {
+                            Label(store.isMock ? "Make a demo sheet" : "Generate sheet", systemImage: "sparkles")
+                                .frame(minHeight: 32)
+                        }
+                    }
                     .foregroundStyle(store.isGenerating || store.validationMessage != nil ? ink : .white)
-                    .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(store.isGenerating || store.validationMessage != nil)
-            .accessibilityIdentifier("generate")
-            if store.isGenerating {
-                HStack {
-                    ProgressView()
-                    Text("Drawing…").font(.callout)
-                    Spacer()
-                    Button("Stop waiting", role: .cancel, action: store.cancel)
                 }
-                .accessibilityHint("Keep the app open. Generation may take a few minutes.")
-            } else if case .error(let message) = store.phase {
-                Button { detailMessage = message + "\n\nNo automatic retry was made." } label: {
-                    Label("Generation needs attention", systemImage: "exclamationmark.circle")
-                        .font(.footnote)
-                }
-            } else if let message = store.validationMessage {
-                Button { detailMessage = message } label: {
-                    Label(validationSummary, systemImage: "info.circle")
-                        .font(.footnote).lineLimit(1)
-                }.accessibilityIdentifier("validation")
+                .buttonStyle(.borderedProminent)
+                .disabled(store.isGenerating || store.validationMessage != nil)
+                .accessibilityLabel(store.isMock ? "Make a demo sheet" : "Generate coloring sheet")
+                .accessibilityIdentifier("generate")
             }
+            Divider()
+            HStack(spacing: 8) {
+                Text("Child’s age").font(.subheadline)
+                Picker("Child’s age", selection: $store.age) {
+                    Text("Choose").tag(0)
+                    ForEach(3...18, id: \.self) { age in Text("\(age) years").tag(age) }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("age")
+                Spacer(minLength: 0)
+                if store.isMock && !narrow { Text("DEMO · NO CHARGES").font(.caption) }
+                Button { showAbout = true } label: {
+                    Image(systemName: "info.circle").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("About age and generation costs")
+            }
+        }
+    }
+
+    @ViewBuilder private var generationStatus: some View {
+        if store.isGenerating {
+            HStack {
+                ProgressView()
+                Text("Drawing…").font(.callout)
+                Spacer()
+                Button("Stop waiting", role: .cancel, action: store.cancel)
+            }
+            .accessibilityHint("Keep the app open. Generation may take a few minutes.")
+        } else if case .error(let message) = store.phase {
+            Button { detailMessage = message + "\n\nNo automatic retry was made." } label: {
+                Label("Generation needs attention", systemImage: "exclamationmark.circle")
+                    .font(.footnote)
+            }
+        } else if let message = store.validationMessage, !composerMinimized {
+            Button { detailMessage = message } label: {
+                Label(validationSummary, systemImage: "info.circle")
+                    .font(.footnote).lineLimit(1)
+            }.accessibilityIdentifier("validation")
         }
     }
 
@@ -146,41 +226,36 @@ struct ContentView: View {
     }
 
     private var preview: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Your coloring sheet").font(.headline)
-            GeometryReader { canvas in
-                let page = store.pageFormat.fittedSize(in: canvas.size)
-                ZStack {
-                    Rectangle().fill(.white)
-                    if let result = store.result {
-                        Image(uiImage: result.image).resizable().scaledToFit()
-                            .frame(width: page.width, height: page.height)
-                            .accessibilityLabel("Generated coloring sheet preview")
-                    } else {
-                        VStack(spacing: 12) {
-                            Image(systemName: "pencil.and.outline").font(.system(size: 40, weight: .ultraLight))
-                            Text("Your sheet will appear here.").font(.callout).multilineTextAlignment(.center)
-                        }.padding(16).foregroundStyle(.secondary)
-                    }
+        GeometryReader { canvas in
+            let page = store.pageFormat.fittedSize(in: canvas.size)
+            ZStack {
+                Rectangle().fill(.white)
+                if let result = store.result {
+                    Image(uiImage: result.image).resizable().scaledToFit()
+                        .frame(width: page.width, height: page.height)
+                        .accessibilityLabel("Generated coloring sheet preview")
+                        .accessibilityIdentifier("sheetPreview")
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "pencil.and.outline").font(.system(size: 40, weight: .ultraLight))
+                        Text("Your sheet will appear here.").font(.callout).multilineTextAlignment(.center)
+                    }.padding(16).foregroundStyle(.secondary)
                 }
-                .frame(width: page.width, height: page.height)
-                .frame(width: canvas.size.width, height: canvas.size.height)
-                .onAppear { store.updatePreview(size: canvas.size, displayScale: displayScale) }
-                .onChange(of: canvas.size) { _, size in store.updatePreview(size: size, displayScale: displayScale) }
-                .onChange(of: displayScale) { _, scale in store.updatePreview(size: canvas.size, displayScale: scale) }
             }
-            // Reserve the toolbar before generation so the displayed page keeps its size.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { exportButtons; Spacer(minLength: 0); usageButton }
-                HStack(spacing: 8) { exportButtons; Spacer(minLength: 0); usageButton }.labelStyle(.iconOnly)
-            }
-            .buttonStyle(.bordered).controlSize(.regular)
-            .frame(minHeight: 44)
-            .opacity(store.result == nil ? 0 : 1)
-            .disabled(store.result == nil)
-            .accessibilityHidden(store.result == nil)
+            .frame(width: page.width, height: page.height)
+            .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
+            .frame(width: canvas.size.width, height: canvas.size.height)
+            .onAppear { updateGenerationSize(canvas.size) }
+            .onChange(of: canvas.size) { _, size in updateGenerationSize(size) }
+            .onChange(of: displayScale) { _, _ in updateGenerationSize(canvas.size) }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func updateGenerationSize(_ size: CGSize) {
+        // The keyboard changes only the display, not the next image's resolution.
+        guard !descriptionFocused else { return }
+        store.updatePreview(size: size, displayScale: displayScale)
     }
 
     private var usageButton: some View {

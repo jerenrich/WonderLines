@@ -49,7 +49,7 @@ enum PageFormat: CaseIterable {
 
 struct GenerationSize: Equatable {
     static let minPixels = 655360, maxPixels = 3686400
-    static let a4Default = GenerationSize(width: 1024, height: 1456)
+    static let a4Default = GenerationSize(width: 1456, height: 1024)
     let width: Int
     let height: Int
     var isValid: Bool {

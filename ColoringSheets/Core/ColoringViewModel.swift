@@ -6,8 +6,8 @@ final class ColoringViewModel: ObservableObject {
     static let generationModel: ImageModel = .sunburst
     @Published var description = ""
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
-    @Published var pageFormat: PageFormat = .a4Portrait
-    private var previewSize = CGSize(width: 512, height: 728)
+    @Published var pageFormat: PageFormat = .a4Landscape
+    private var previewSize = CGSize(width: 728, height: 512)
     private var displayScale: CGFloat = 2
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var result: ColoringResult?
@@ -33,7 +33,7 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func updatePreview(size: CGSize, displayScale: CGFloat) {
-        // Retain the last visible page while the keyboard temporarily hides the preview.
+        // Ignore transient zero-sized layouts while the window is resizing.
         guard size.width > 0, size.height > 0 else { return }
         previewSize = size; self.displayScale = displayScale
     }

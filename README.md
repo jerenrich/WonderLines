@@ -21,7 +21,7 @@ Future Cloudflare Workers should be added as sibling directories under `workers/
 
 Debug builds default to `COLORING_MODE = mock`. Choose an iPad simulator and press Run. Enter a description, select a child’s age, and tap **Make a demo sheet**. The sample flower and usage values are deterministic fixtures; there is no network call or charge. The first launch has no assumed age. Subsequent launches restore the selected age locally.
 
-The UI includes a whole-year age slider from 3 to 18 with a live value label and always generates with Sunburst. It includes an indeterminate progress indicator, stopping a request, PNG preview, Share, Save to Photos, Print, and a compact usage-details popover. The main page has no vertical scroll container: both iPad orientations place controls beside a preview that scales to available height, while narrow windows use a compact stacked layout. Share/Save/Print and the small usage icon remain below the fitted image. Editing the description temporarily prioritizes the form above the keyboard, with a Done button to return to the preview. Long text can move within the bounded text field; optional usage details and system export sheets retain their native behavior. No gallery, child name, birth date, or password-entry screen is included.
+The UI uses a bottom composer with a whole-year age menu from 3 to 18 and always generates with Sunburst. The landscape sheet fills the space above it, with Share, Save to Photos, Print, and usage details in the top toolbar. No description or sheet title is repeated above the preview. The composer stays above the on-screen keyboard and the complete image scales to the remaining space while typing; the text field retains focus. Done dismisses the keyboard. Minimize and Edit description collapse and reopen the composer without clearing the prompt or image. A successful generation automatically minimizes it unless the user is already typing a new description. New sheet clears only the description and preserves the last image until a replacement succeeds. Generation progress, cancellation, and errors remain accessible in either composer state. Long text can move within the bounded field; there is no main-page scroll container.
 
 ## Developer-local Worker credential
 
@@ -47,8 +47,8 @@ The updated endpoint accepts dimensions in pixels:
 {
   "subject": "A friendly dinosaur riding a bicycle. Complexity: simple outlines.",
   "model": "gpt-image-2.5-flare",
-  "width": 992,
-  "height": 1408
+  "width": 1408,
+  "height": 992
 }
 ```
 
@@ -56,11 +56,11 @@ Send `POST /generate`, `Content-Type: application/json`, and `Authorization: Bea
 
 Omitting both dimensions defaults to **1024 × 1456**, an approximation of A4 portrait. This keeps older app versions and the Worker's browser page compatible. Explicit dimensions are forwarded exactly as `size: "WIDTHxHEIGHT"`; the Worker does not resize, crop, or silently substitute a size. Quality stays `low`. Successful responses remain PNGs, with `requestedSize` and `size` in the optional `X-Generation-Metrics` header. `size` uses upstream metadata when supplied and otherwise falls back to the request; the app's Usage sheet also shows the actual decoded PNG dimensions.
 
-The app defaults to **A4 portrait (210:297)**. Its preview fits that page inside the available layout and reserves the export toolbar space before generation. It converts the fitted page's point dimensions to pixels using SwiftUI's display scale, scales proportionally to the supported pixel range, and rounds to 16-pixel increments. Consequently, generated aspect ratios approximate A4, with a small amount of white space possible when fitting them; images are never stretched or cropped. Tiny windows use the API's minimum pixel area and large displays use the Worker cap. This is display-based resolution, not a fixed 300-DPI print setting.
+The app defaults to **A4 landscape (297:210)** in either device orientation. Its preview fits that page inside the available layout and reserves the top toolbar space before generation. The native print sheet selects landscape from the generated image dimensions. It converts the fitted page's point dimensions to pixels using SwiftUI's display scale, scales proportionally to the supported pixel range, and rounds to 16-pixel increments. Consequently, generated aspect ratios approximate A4, with a small amount of white space possible when fitting them; images are never stretched or cropped. Tiny windows use the API's minimum pixel area and large displays use the Worker cap. This is display-based resolution, not a fixed 300-DPI print setting.
 
-Sizing is captured on each deliberate Generate tap. Window rotation/resizing changes the next request, never triggers a paid regeneration, and never changes an in-flight request. While typing hides the preview, the app retains its last visible allocation. `PageFormat` and `ColoringViewModel.pageFormat` own the policy; A4 landscape and square are already supported internally for a future app-side format picker. The Worker accepts those dimensions without another API change. The demo generator honors the same requested dimensions, and export keeps the original PNG bytes.
+Sizing is captured on each deliberate Generate tap. Window rotation/resizing changes the next request, never triggers a paid regeneration, and never changes an in-flight request. While typing reduces the preview, generation sizing retains the allocation from before editing. `PageFormat` and `ColoringViewModel.pageFormat` own the policy; A4 portrait and square are also supported internally for a future app-side format picker. The Worker accepts those dimensions without another API change. The demo generator honors the same requested dimensions, and export keeps the original PNG bytes.
 
-After confirming deployment, copy `Config/Local.example.xcconfig` to `Config/Local.xcconfig`, set `COLORING_MODE = live`, and enter your Apple development team ID if known. The local file is ignored. Rebuild and Run. The demo badge should disappear and the button should say **Generate coloring sheet**. Recipients will never enter a credential.
+After confirming deployment, copy `Config/Local.example.xcconfig` to `Config/Local.xcconfig`, set `COLORING_MODE = live`, and enter your Apple development team ID if known. The local file is ignored. Rebuild and Run. The demo badge should disappear and the button should say **Generate sheet**. Recipients will never enter a credential.
 
 To force mock mode during development, set `COLORING_MODE = mock` or add the Debug launch argument `--mock`. Remove that argument before testing live behavior.
 
@@ -117,3 +117,7 @@ Layout verification: mock result captures were inspected at 1080 × 786, 810 × 
 Keyboard regression: focusing the description previously replaced its parent view, disrupting the active responder. The layout now uses AnyLayout to preserve the field. The focus/type/dismiss/refocus test passed in both the iOS simulator and the physical ninth-generation iPad on 19 September 2026. This test uses a mock service and makes no paid request.
 
 Image sizing update: ten offline XCTest cases passed, the paid integration test skipped, and Worker/build-configuration checks passed. The updated Worker has not been deployed and no paid generations were sent for this change. Earlier 1024 × 1536 live results above refer to the previous Worker.
+
+Bottom composer update (20 September 2026): the app now requests A4 landscape pages, keeps the preview visible during editing, and minimizes the composer after a successful generation unless the user is typing. Thirteen offline XCTest cases passed, the paid integration test skipped, and Worker/configuration checks passed. Simulator captures were inspected at 1080 × 786, 810 × 1056, and 500 × 700 points, plus keyboard-focus and minimized states. No paid generation, Worker deployment, or physical-device installation was performed for this update. Live landscape generation requires the dimension-aware Worker update described above.
+
+Physical iPad update (22 September 2026): built the bottom-composer version in live mode with the existing signing configuration, installed it on the paired ninth-generation iPad, and successfully launched it with devicectl. No paid generation or Worker deployment was performed during installation; the dimension-aware Worker deployment requirement above still applies.

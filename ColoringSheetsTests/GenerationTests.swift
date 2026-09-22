@@ -13,8 +13,8 @@ final class GenerationTests: XCTestCase {
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: young.encoded()) as? [String: Any])
             XCTAssertEqual(Set(json.keys), ["subject", "model", "width", "height"])
             XCTAssertEqual(json["model"] as? String, model.rawValue)
-            XCTAssertEqual(json["width"] as? Int, 1024)
-            XCTAssertEqual(json["height"] as? Int, 1456)
+            XCTAssertEqual(json["width"] as? Int, 1456)
+            XCTAssertEqual(json["height"] as? Int, 1024)
             XCTAssertEqual(try GenerationRequest(description: "A test flower", age: 3, model: model), young)
         }
     }
@@ -194,24 +194,25 @@ final class StateTests: XCTestCase {
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
         XCTAssertEqual(store.age, 0)
+        XCTAssertEqual(store.pageFormat, .a4Landscape)
         store.age = 3; store.description = "Synthetic flower"
         store.updatePreview(size: CGSize(width: 600, height: 700), displayScale: 2)
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, 3)
         store.generate(); store.generate()
         await waitFor { service.calls == 1 }
         XCTAssertEqual(service.captured[0].model, .sunburst)
-        XCTAssertEqual(service.captured[0].width, 992)
-        XCTAssertEqual(service.captured[0].height, 1408)
+        XCTAssertEqual(service.captured[0].width, 1200)
+        XCTAssertEqual(service.captured[0].height, 848)
         store.updatePreview(size: CGSize(width: 380, height: 890), displayScale: 2)
-        XCTAssertEqual(service.captured[0].width, 992, "Resizing must not change an in-flight request")
+        XCTAssertEqual(service.captured[0].width, 1200, "Resizing must not change an in-flight request")
         store.age = 18; store.description = "Synthetic tree"
         XCTAssertTrue(service.captured[0].subject.contains("very simple"))
         service.succeed()
         await waitFor { store.phase == .result }
         let previous = store.result?.data
         store.generate(); await waitFor { service.calls == 2 }
-        XCTAssertEqual(service.captured[1].width, 768)
-        XCTAssertEqual(service.captured[1].height, 1072)
+        XCTAssertEqual(service.captured[1].width, 960)
+        XCTAssertEqual(service.captured[1].height, 688)
         service.fail(); await waitFor { !store.isGenerating }
         XCTAssertEqual(store.result?.data, previous)
         XCTAssertEqual(store.description, "Synthetic tree")
@@ -236,11 +237,27 @@ final class KeyboardFocusTests: XCTestCase {
         return view.subviews.lazy.compactMap { self.textInput(in: $0) }.first
     }
 
+    private func capture(_ name: String, view: UIView) {
+        let image = UIGraphicsImageRenderer(bounds: view.bounds).image { _ in
+            view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
+        }
+        let attachment = XCTAttachment(image: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func testDescriptionRetainsResponderWhenKeyboardChangesLayout() async throws {
         let suite = "KeyboardFocusTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        store.age = 6
+        store.description = "Synthetic flower"
+        store.generate()
+        for _ in 0..<200 where store.result == nil { try await Task.sleep(for: .milliseconds(10)) }
+        let previousImage = try XCTUnwrap(store.result?.data)
+        store.description = ""
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
         let previousWindow = scene.windows.first(where: \.isKeyWindow)
         let window = UIWindow(windowScene: scene)
@@ -248,8 +265,10 @@ final class KeyboardFocusTests: XCTestCase {
         window.rootViewController = host
         window.makeKeyAndVisible()
         defer { window.isHidden = true; previousWindow?.makeKey() }
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeLeft))
         host.view.layoutIfNeeded()
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(600))
+        capture("Landscape sheet with expanded composer", view: window)
         let input = try XCTUnwrap(textInput(in: host.view))
 
         XCTAssertTrue(input.becomeFirstResponder())
@@ -260,6 +279,8 @@ final class KeyboardFocusTests: XCTestCase {
         keyboardInput.insertText("Synthetic scene")
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(store.description, "Synthetic scene")
+        XCTAssertEqual(store.result?.data, previousImage, "Typing must retain the generated image")
+        capture("Landscape sheet while keyboard is open", view: window)
 
         XCTAssertTrue(input.resignFirstResponder())
         try await Task.sleep(for: .milliseconds(350))
@@ -270,5 +291,80 @@ final class KeyboardFocusTests: XCTestCase {
         XCTAssertTrue(input.isFirstResponder)
         XCTAssertEqual(store.description, "Synthetic scene")
         input.resignFirstResponder()
+    }
+
+    func testSuccessfulGenerationMinimizesComposerButNeverInterruptsTyping() async throws {
+        let suite = "ComposerTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 6; store.description = "Synthetic flower"
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let host = UIHostingController(rootView: ContentView(store: store))
+        window.rootViewController = host; window.makeKeyAndVisible()
+        defer { window.isHidden = true; previousWindow?.makeKey() }
+        try await Task.sleep(for: .milliseconds(150))
+        let input = try XCTUnwrap(textInput(in: host.view))
+        store.generate()
+        for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertTrue(input.becomeFirstResponder())
+        try await Task.sleep(for: .milliseconds(350))
+        service.succeed()
+        try await Task.sleep(for: .milliseconds(350))
+        XCTAssertEqual(store.phase, .result)
+        XCTAssertTrue(input.isFirstResponder, "A finishing generation must not interrupt typing")
+        XCTAssertTrue(input === textInput(in: host.view))
+
+        input.resignFirstResponder()
+        try await Task.sleep(for: .milliseconds(350))
+        store.generate()
+        for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        service.fail()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertNotNil(textInput(in: host.view), "Failure must leave the description available")
+        XCTAssertNotNil(store.result)
+
+        store.generate()
+        for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        service.succeed()
+        try await Task.sleep(for: .milliseconds(500))
+        XCTAssertNil(textInput(in: host.view), "Success should collapse an unfocused composer")
+        XCTAssertEqual(store.description, "Synthetic flower")
+        XCTAssertEqual(service.calls, 3)
+        capture("Landscape sheet with minimized composer", view: window)
+    }
+
+    func testComposerFitsLandscapePortraitAndNarrowWindows() async throws {
+        let suite = "ComposerLayoutTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        store.age = 6; store.description = "A flower in a sunny garden"
+        store.generate()
+        for _ in 0..<200 where store.result == nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertNotNil(store.result)
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let container = UIViewController()
+        window.rootViewController = container; window.makeKeyAndVisible()
+        defer { window.isHidden = true; previousWindow?.makeKey() }
+        for size in [CGSize(width: 1080, height: 786), CGSize(width: 810, height: 1056), CGSize(width: 500, height: 700)] {
+            let host = UIHostingController(rootView: ContentView(store: store))
+            container.addChild(host); container.view.addSubview(host.view)
+            host.view.frame = CGRect(origin: .zero, size: size)
+            host.didMove(toParent: container)
+            try await Task.sleep(for: .milliseconds(250))
+            host.view.layoutIfNeeded()
+            let input = try XCTUnwrap(textInput(in: host.view))
+            let inputFrame = input.convert(input.bounds, to: host.view)
+            XCTAssertTrue(host.view.bounds.contains(inputFrame), "Description must remain inside a \(size) window")
+            XCTAssertGreaterThan(inputFrame.width, 80)
+            capture("Composer layout \(Int(size.width)) by \(Int(size.height))", view: host.view)
+            host.willMove(toParent: nil); host.view.removeFromSuperview(); host.removeFromParent()
+        }
     }
 }
