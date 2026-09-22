@@ -55,9 +55,10 @@ final class GenerationTests: XCTestCase {
         // JSON escaping is counted too, independently of Swift Character count.
         XCTAssertLessThanOrEqual(try GenerationRequest(description: String(repeating: "\u{0001}", count: 300), age: 3, model: .flare).encoded().count, 4096)
     }
-    func response(_ status: Int = 200, type: String = "image/png", metrics: String? = nil) -> HTTPURLResponse {
+    func response(_ status: Int = 200, type: String = "image/png", metrics: String? = nil, headers extraHeaders: [String: String] = [:]) -> HTTPURLResponse {
         var headers = ["Content-Type": type]
         if let metrics { headers["x-generation-metrics"] = metrics }
+        headers.merge(extraHeaders) { _, new in new }
         return HTTPURLResponse(url: WorkerClient.endpoint, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!
     }
     func testPNGSurvivesMissingMalformedAndFutureMetrics() throws {
@@ -85,10 +86,27 @@ final class GenerationTests: XCTestCase {
             XCTAssertNotEqual($0 as? GenerationError, .configuration)
             XCTAssertTrue($0.localizedDescription.contains("quota"))
         }
-        for status in [302, 400, 413, 429, 500, 502, 504] {
+        for status in [302, 400, 413, 500, 502, 504] {
             XCTAssertThrowsError(try WorkerClient.parse(Data("<html>private diagnostics</html>".utf8), response: response(status, type: "text/html"), requestedModel: .flare)) {
                 XCTAssertFalse($0.localizedDescription.contains("private diagnostics"))
             }
+        }
+    }
+
+    func testLimitFailuresPreserveCategoryAndRequestID() {
+        let rateResponse = response(429, type: "text/plain", headers: [
+            "X-OpenAI-Error-Category": "rate_limit", "Retry-After": "4", "X-OpenAI-Request-ID": "req_rate_123"
+        ])
+        XCTAssertThrowsError(try WorkerClient.parse(Data(), response: rateResponse, requestedModel: .flare)) {
+            XCTAssertEqual($0 as? GenerationError, .limit(.temporaryRateLimit, retryAfter: 4, requestID: "req_rate_123"))
+            XCTAssertTrue($0.localizedDescription.contains("4 seconds"))
+        }
+        let creditResponse = response(429, type: "text/plain", headers: [
+            "X-OpenAI-Error-Category": "credit_balance_exhausted", "X-OpenAI-Request-ID": "req_credit_123"
+        ])
+        XCTAssertThrowsError(try WorkerClient.parse(Data(), response: creditResponse, requestedModel: .flare)) {
+            XCTAssertEqual($0 as? GenerationError, .limit(.creditBalanceExhausted, retryAfter: nil, requestID: "req_credit_123"))
+            XCTAssertTrue($0.localizedDescription.contains("credit"))
         }
     }
     @MainActor func testPrintFitAndExportPNG() throws {
@@ -151,6 +169,47 @@ final class NetworkingTests: XCTestCase {
         catch { XCTAssertEqual(error as? GenerationError, .uncertain) }
         XCTAssertEqual(calls, 3)
     }
+    func testRetriesOnlyTemporaryRateLimitsAtMostTwice() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let client = WorkerClient(credential: "synthetic-dummy", session: session, retryJitter: { 0 })
+        var calls = 0
+        MockURLProtocol.handler = { request in
+            calls += 1
+            if calls <= WorkerClient.maximumRateLimitRetries {
+                return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: [
+                    "Content-Type": "text/plain", "X-OpenAI-Error-Category": "rate_limit", "Retry-After": "1", "X-OpenAI-Request-ID": "req_\(calls)"
+                ])!, Data())
+            }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "image/png"])!, MockGenerator.sampleImage().pngData()!)
+        }
+        _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare))
+        XCTAssertEqual(calls, WorkerClient.maximumRateLimitRetries + 1)
+
+        calls = 0
+        MockURLProtocol.handler = { request in
+            calls += 1
+            return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: [
+                "Content-Type": "text/plain", "X-OpenAI-Error-Category": "credit_balance_exhausted"
+            ])!, Data())
+        }
+        do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected credit failure") }
+        catch { XCTAssertEqual(error as? GenerationError, .limit(.creditBalanceExhausted, retryAfter: nil, requestID: nil)) }
+        XCTAssertEqual(calls, 1)
+
+        calls = 0
+        MockURLProtocol.handler = { request in
+            calls += 1
+            return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: [
+                "Content-Type": "text/plain", "X-OpenAI-Error-Category": "rate_limit", "Retry-After": "1"
+            ])!, Data())
+        }
+        do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected rate limit failure") }
+        catch { XCTAssertEqual(error as? GenerationError, .limit(.temporaryRateLimit, retryAfter: 1, requestID: nil)) }
+        XCTAssertEqual(calls, WorkerClient.maximumRateLimitRetries + 1)
+    }
     func testRedirectIsRejected() {
         let delegate = NoRedirectDelegate()
         let task = URLSession.shared.dataTask(with: WorkerClient.endpoint)
@@ -166,16 +225,24 @@ final class NetworkingTests: XCTestCase {
 final class ControlledService: GenerationServing {
     var calls = 0
     var captured: [GenerationRequest] = []
-    var continuation: CheckedContinuation<ColoringResult, Error>?
+    var continuations: [Int: CheckedContinuation<ColoringResult, Error>] = [:]
+    var pendingCount: Int { continuations.count }
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
         calls += 1; captured.append(request)
-        return try await withCheckedThrowingContinuation { continuation = $0 }
+        let index = calls - 1
+        return try await withCheckedThrowingContinuation { continuations[index] = $0 }
     }
     func succeed() {
-        let image = MockGenerator.sampleImage()
-        continuation?.resume(returning: ColoringResult(data: image.pngData()!, image: image, requestedModel: .flare, metrics: nil)); continuation = nil
+        for index in continuations.keys.sorted() { succeed(at: index) }
     }
-    func fail() { continuation?.resume(throwing: GenerationError.uncertain); continuation = nil }
+    func succeed(at index: Int) {
+        let image = MockGenerator.sampleImage(variation: index % ColoringViewModel.batchSize)
+        continuations.removeValue(forKey: index)?.resume(returning: ColoringResult(data: image.pngData()!, image: image, requestedModel: .sunburst, metrics: nil))
+    }
+    func fail() {
+        for index in continuations.keys.sorted() { fail(at: index) }
+    }
+    func fail(at index: Int) { continuations.removeValue(forKey: index)?.resume(throwing: GenerationError.uncertain) }
 }
 
 @MainActor
@@ -199,7 +266,18 @@ final class StateTests: XCTestCase {
         store.updatePreview(size: CGSize(width: 600, height: 700), displayScale: 2)
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, 3)
         store.generate(); store.generate()
-        await waitFor { service.calls == 1 }
+        await waitFor { service.calls == ColoringViewModel.batchSize }
+        XCTAssertEqual(service.pendingCount, ColoringViewModel.batchSize, "All requests start before any completes")
+        XCTAssertEqual(ColoringViewModel.batchSize, 5)
+        XCTAssertEqual(Set(service.captured.map(\.subject)).count, 5)
+        XCTAssertTrue(service.captured.allSatisfy {
+            $0.subject.hasPrefix("Synthetic flower\n\n") && $0.subject.contains("very simple") &&
+            $0.model == .sunburst && $0.width == 1200 && $0.height == 848
+        })
+        XCTAssertEqual(Set(service.captured.map(\.subject)), Set(SheetComposition.allCases.map {
+            "Synthetic flower\n\n" + (try! GenerationRequest.guidance(age: 3)) + "\n\n" + $0.guidance
+        }))
+        XCTAssertEqual(store.description, "Synthetic flower", "Composition guidance must not change the editable prompt")
         XCTAssertEqual(service.captured[0].model, .sunburst)
         XCTAssertEqual(service.captured[0].width, 1200)
         XCTAssertEqual(service.captured[0].height, 848)
@@ -210,20 +288,150 @@ final class StateTests: XCTestCase {
         service.succeed()
         await waitFor { store.phase == .result }
         let previous = store.result?.data
-        store.generate(); await waitFor { service.calls == 2 }
-        XCTAssertEqual(service.captured[1].width, 960)
-        XCTAssertEqual(service.captured[1].height, 688)
+        store.generate(); await waitFor { service.calls == ColoringViewModel.batchSize * 2 }
+        XCTAssertEqual(service.captured[ColoringViewModel.batchSize].width, 960)
+        XCTAssertEqual(service.captured[ColoringViewModel.batchSize].height, 688)
         service.fail(); await waitFor { !store.isGenerating }
         XCTAssertEqual(store.result?.data, previous)
         XCTAssertEqual(store.description, "Synthetic tree")
-        store.generate(); await waitFor { service.calls == 3 }
+        store.generate(); await waitFor { service.calls == ColoringViewModel.batchSize * 3 }
         store.enteredBackground(); service.succeed()
         await waitFor { !store.isGenerating }
-        XCTAssertEqual(service.calls, 3)
+        XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 3)
         XCTAssertEqual(store.result?.data, previous)
         if case .error(let message) = store.phase { XCTAssertTrue(message.contains("charge")) } else { XCTFail("Expected uncertainty") }
         defaults.set(99, forKey: "childAge")
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, 0)
+    }
+
+    func testParallelArrivalsSelectionExportsAndPartialFailure() async throws {
+        let name = "BatchTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 6; store.description = "Dinosaur riding a bike on the moon"
+        store.generate(); store.generate()
+        await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        XCTAssertEqual(service.calls, ColoringViewModel.batchSize)
+        service.succeed(at: 2)
+        await waitFor { store.results.count == 1 }
+        let first = try XCTUnwrap(store.result)
+        XCTAssertTrue(store.isGenerating)
+        XCTAssertEqual(store.readyCount, 1)
+        service.succeed(at: 1)
+        await waitFor { store.results.count == 2 }
+        XCTAssertEqual(store.result?.id, first.id, "An arriving image must not change the selected sheet")
+        store.selectResult(at: 1)
+        let second = try XCTUnwrap(store.result)
+        XCTAssertNotEqual(first.data, second.data)
+        service.fail(at: 0)
+        service.fail(at: 3)
+        service.fail(at: 4)
+        await waitFor { !store.isGenerating }
+        XCTAssertEqual(store.phase, .result)
+        XCTAssertEqual(store.results.count, 2)
+        XCTAssertEqual(store.completedCount, ColoringViewModel.batchSize)
+        XCTAssertEqual(store.failedCount, 3)
+        XCTAssertNotNil(store.batchMessage)
+        XCTAssertEqual(store.result?.id, second.id)
+        XCTAssertEqual(store.results.first?.id, first.id, "Later results append without reordering")
+        store.selectResult(at: -1); store.selectResult(at: 2)
+        XCTAssertEqual(store.result?.id, second.id, "Invalid navigation must keep the selection")
+        let exported = try ExportItem(kind: .share, result: XCTUnwrap(store.result))
+        defer { exported.cleanUp() }
+        XCTAssertEqual(try Data(contentsOf: exported.url), second.data)
+        XCTAssertTrue(exported.image === second.image)
+        XCTAssertEqual(service.calls, ColoringViewModel.batchSize, "Browsing and exporting must not generate or retry")
+
+        store.generate()
+        await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        XCTAssertEqual(store.result?.id, second.id, "Retain the previous selection while drawing")
+        service.fail()
+        await waitFor { !store.isGenerating }
+        XCTAssertEqual(store.results.count, 2)
+        XCTAssertEqual(store.result?.id, second.id, "A completely failed batch preserves the gallery")
+        XCTAssertNil(store.batchMessage)
+        if case .error = store.phase {} else { XCTFail("Expected a full-batch error") }
+    }
+
+    func testCancellationRetainsCompletedSheetsAndIgnoresStaleCompletions() async throws {
+        let name = "BatchCancellationTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 8; store.description = "A moon bicycle"
+        store.generate()
+        await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        service.succeed(at: 2)
+        await waitFor { store.results.count == 1 }
+        let retainedID = store.result?.id
+        store.cancel()
+        XCTAssertFalse(store.isGenerating)
+        XCTAssertNotNil(store.batchMessage)
+        XCTAssertEqual(store.result?.id, retainedID)
+
+        store.generate()
+        await waitFor { service.calls == ColoringViewModel.batchSize * 2 }
+        for index in [0, 1, 3, 4] { service.succeed(at: index) }
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(store.completedCount, 0, "Cancelled responses cannot enter a new batch")
+        XCTAssertEqual(store.result?.id, retainedID)
+        service.succeed(at: ColoringViewModel.batchSize + 1)
+        await waitFor { store.completedCount == 1 }
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertNotEqual(store.result?.id, retainedID)
+        let newID = store.result?.id
+        store.enteredBackground()
+        service.succeed()
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(store.result?.id, newID)
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertEqual(store.completedCount, 1)
+        XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 2)
+    }
+
+    func testCancelBeforeTasksStartAndInvalidInputMakeNoRequests() async throws {
+        let name = "BatchValidationTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.generate()
+        XCTAssertFalse(store.isGenerating)
+        store.age = 6; store.description = "A friendly dinosaur"
+        store.generate(); store.cancel()
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(service.calls, 0)
+        XCTAssertTrue(store.results.isEmpty)
+    }
+
+    func testAllCompositionsValidateBeforeAnyRequestStarts() async throws {
+        let name = "CompositionValidationTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 6
+        let longest = try XCTUnwrap(SheetComposition.allCases.max { $0.guidance.utf16.count < $1.guidance.utf16.count })
+        let overhead = try GenerationRequest.guidance(age: 6).utf16.count + longest.guidance.utf16.count + 4
+        let limit = 500 - overhead
+        let valid = String(repeating: "😀", count: limit / 2) + (limit % 2 == 1 ? "x" : "")
+        let request = try GenerationRequest(description: valid, age: 6, model: .sunburst, composition: longest)
+        XCTAssertEqual(request.subject.utf16.count, 500)
+        XCTAssertLessThanOrEqual(try request.encoded().count, 4096)
+        store.description = valid
+        XCTAssertNil(store.validationMessage)
+        store.description += "x"
+        // The first composition fits, but a later one exceeds the limit.
+        XCTAssertNoThrow(try GenerationRequest(description: store.description, age: 6, model: .sunburst, composition: .side))
+        XCTAssertNotNil(store.validationMessage)
+        store.generate()
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(service.calls, 0, "A later invalid composition must prevent the entire paid batch")
+        XCTAssertFalse(store.isGenerating)
+        XCTAssertEqual(store.description, valid + "x", "Never silently truncate a user's description")
     }
 }
 
@@ -278,7 +486,7 @@ final class KeyboardFocusTests: XCTestCase {
         store.age = 6
         store.description = "Synthetic flower"
         store.generate()
-        for _ in 0..<200 where store.result == nil { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<200 where store.isGenerating { try await Task.sleep(for: .milliseconds(10)) }
         let previousImage = try XCTUnwrap(store.result?.data)
         store.description = ""
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
@@ -332,7 +540,7 @@ final class KeyboardFocusTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
         let input = try XCTUnwrap(textInput(in: host.view))
         store.generate()
-        for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<100 where service.pendingCount < ColoringViewModel.batchSize { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertTrue(input.becomeFirstResponder())
         try await Task.sleep(for: .milliseconds(350))
         service.succeed()
@@ -344,19 +552,19 @@ final class KeyboardFocusTests: XCTestCase {
         input.resignFirstResponder()
         try await Task.sleep(for: .milliseconds(350))
         store.generate()
-        for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<100 where service.pendingCount < ColoringViewModel.batchSize { try await Task.sleep(for: .milliseconds(10)) }
         service.fail()
         try await Task.sleep(for: .milliseconds(150))
         XCTAssertNotNil(textInput(in: host.view), "Failure must leave the description available")
         XCTAssertNotNil(store.result)
 
         store.generate()
-        for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<100 where service.pendingCount < ColoringViewModel.batchSize { try await Task.sleep(for: .milliseconds(10)) }
         service.succeed()
         try await Task.sleep(for: .milliseconds(500))
         XCTAssertNil(textInput(in: host.view), "Success should collapse an unfocused composer")
         XCTAssertEqual(store.description, "Synthetic flower")
-        XCTAssertEqual(service.calls, 3)
+        XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 3)
         capture("Landscape sheet with minimized composer", view: window)
     }
 
@@ -373,7 +581,7 @@ final class KeyboardFocusTests: XCTestCase {
         let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
         store.age = 6; store.description = "A flower in a sunny garden"
         store.generate()
-        for _ in 0..<200 where store.result == nil { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<200 where store.isGenerating { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertNotNil(store.result)
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
         let previousWindow = scene.windows.first(where: \.isKeyWindow)
@@ -427,7 +635,7 @@ final class KeyboardFocusTests: XCTestCase {
             host.didMove(toParent: container)
             try await Task.sleep(for: .milliseconds(100))
             store.generate()
-            for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+            for _ in 0..<100 where service.pendingCount < ColoringViewModel.batchSize { try await Task.sleep(for: .milliseconds(10)) }
             service.succeed()
             try await Task.sleep(for: .milliseconds(400))
             XCTAssertNil(textInput(in: host.view), "A successful generation must minimize the composer on \(device)")
