@@ -99,6 +99,14 @@ final class GenerationTests: XCTestCase {
             XCTAssertEqual($0 as? GenerationError, .allowance)
         }
     }
+    func testWorkerResponseDiagnosticRejectsSensitiveText() {
+        let safe = Data(#"{"error":{"code":"service_unavailable","message":"token=private prompt=secret"}}"#.utf8)
+        XCTAssertEqual(WorkerClient.workerErrorCode(safe, response: response(503, type: "application/json; charset=utf-8")), "service_unavailable")
+        let unsafe = Data(#"{"error":{"code":"token=private prompt=secret"}}"#.utf8)
+        XCTAssertNil(WorkerClient.workerErrorCode(unsafe, response: response(503, type: "application/json")))
+        XCTAssertNil(WorkerClient.workerErrorCode(safe, response: response(200, type: "application/json")))
+        XCTAssertNil(WorkerClient.workerErrorCode(safe, response: response(503, type: "text/html")))
+    }
     @MainActor func testPrintFitAndExportPNG() throws {
         for paper in [CGRect(x: 18, y: 18, width: 559, height: 806), CGRect(x: 18, y: 18, width: 756, height: 576)] {
             for size in [CGSize(width: 1024, height: 1536), GenerationSize.a4Default.cgSize] {
