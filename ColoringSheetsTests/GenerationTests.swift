@@ -231,10 +231,33 @@ import SwiftUI
 
 @MainActor
 final class KeyboardFocusTests: XCTestCase {
+    private let recentIPadLandscapeSizes: [(String, CGSize)] = [
+        ("iPad 9th generation", CGSize(width: 1080, height: 810)),
+        ("iPad mini 6", CGSize(width: 1133, height: 744)),
+        ("iPad 10th generation", CGSize(width: 1180, height: 820)),
+        ("iPad Air 11 inch", CGSize(width: 1180, height: 820)),
+        ("iPad Air 13 inch", CGSize(width: 1366, height: 1024)),
+        ("iPad Pro 11 inch", CGSize(width: 1210, height: 834)),
+        ("iPad Pro 13 inch", CGSize(width: 1376, height: 1032))
+    ]
+
     private func textInput(in view: UIView) -> UIView? {
         if view is UITextField { return view }
         if let text = view as? UITextView, text.isEditable { return text }
         return view.subviews.lazy.compactMap { self.textInput(in: $0) }.first
+    }
+
+    private func allSubviews(in view: UIView) -> [UIView] {
+        [view] + view.subviews.flatMap(allSubviews)
+    }
+
+    private func assertMainPageDoesNotScroll(_ host: UIHostingController<ContentView>, file: StaticString = #filePath, line: UInt = #line) {
+        let largeScrollingView = allSubviews(in: host.view).compactMap { $0 as? UIScrollView }.first { scrollView in
+            let frame = scrollView.convert(scrollView.bounds, to: host.view)
+            return frame.height >= host.view.bounds.height * 0.6 &&
+                scrollView.contentSize.height > scrollView.bounds.height + 1
+        }
+        XCTAssertNil(largeScrollingView, "The main page must fit without scrolling.", file: file, line: line)
     }
 
     private func capture(_ name: String, view: UIView) {
@@ -343,7 +366,7 @@ final class KeyboardFocusTests: XCTestCase {
         XCTAssertEqual(ContentView.minimizedPrompt(from: ""), "Edit description")
     }
 
-    func testComposerFitsLandscapePortraitAndNarrowWindows() async throws {
+    func testComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {
         let suite = "ComposerLayoutTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -358,7 +381,7 @@ final class KeyboardFocusTests: XCTestCase {
         let container = UIViewController()
         window.rootViewController = container; window.makeKeyAndVisible()
         defer { window.isHidden = true; previousWindow?.makeKey() }
-        for size in [CGSize(width: 1080, height: 786), CGSize(width: 810, height: 1056), CGSize(width: 500, height: 700)] {
+        for (device, size) in recentIPadLandscapeSizes {
             let host = UIHostingController(rootView: ContentView(store: store))
             container.addChild(host); container.view.addSubview(host.view)
             host.view.frame = CGRect(origin: .zero, size: size)
@@ -367,9 +390,49 @@ final class KeyboardFocusTests: XCTestCase {
             host.view.layoutIfNeeded()
             let input = try XCTUnwrap(textInput(in: host.view))
             let inputFrame = input.convert(input.bounds, to: host.view)
-            XCTAssertTrue(host.view.bounds.contains(inputFrame), "Description must remain inside a \(size) window")
+            XCTAssertTrue(host.view.bounds.contains(inputFrame), "Description must remain inside the \(device) landscape window")
             XCTAssertGreaterThan(inputFrame.width, 80)
-            capture("Composer layout \(Int(size.width)) by \(Int(size.height))", view: host.view)
+            assertMainPageDoesNotScroll(host)
+            capture("Expanded composer \(device)", view: host.view)
+
+            XCTAssertTrue(input.becomeFirstResponder())
+            try await Task.sleep(for: .milliseconds(150))
+            XCTAssertTrue(input.isFirstResponder, "The editor must remain focused on \(device)")
+            let focusedFrame = input.convert(input.bounds, to: host.view)
+            XCTAssertTrue(host.view.bounds.contains(focusedFrame), "The focused editor must remain visible on \(device)")
+            assertMainPageDoesNotScroll(host)
+            input.resignFirstResponder()
+            host.willMove(toParent: nil); host.view.removeFromSuperview(); host.removeFromParent()
+        }
+    }
+
+    func testMinimizedComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let container = UIViewController()
+        window.rootViewController = container; window.makeKeyAndVisible()
+        defer { window.isHidden = true; previousWindow?.makeKey() }
+
+        for (device, size) in recentIPadLandscapeSizes {
+            let suite = "MinimizedComposerLayoutTests-" + UUID().uuidString
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let service = ControlledService()
+            let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+            store.age = 6; store.description = "A dinosaur riding a bicycle in a flower garden"
+            let host = UIHostingController(rootView: ContentView(store: store))
+            container.addChild(host); container.view.addSubview(host.view)
+            host.view.frame = CGRect(origin: .zero, size: size)
+            host.didMove(toParent: container)
+            try await Task.sleep(for: .milliseconds(100))
+            store.generate()
+            for _ in 0..<100 where service.continuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+            service.succeed()
+            try await Task.sleep(for: .milliseconds(400))
+            XCTAssertNil(textInput(in: host.view), "A successful generation must minimize the composer on \(device)")
+            assertMainPageDoesNotScroll(host)
+            capture("Minimized composer \(device)", view: host.view)
             host.willMove(toParent: nil); host.view.removeFromSuperview(); host.removeFromParent()
         }
     }
