@@ -14,9 +14,12 @@ struct ContentView: View {
     @State private var photoSaveConfirmation: String?
     @State private var isSavingPhoto = false
     @State private var showUsage = false
+    @State private var showSettings = false
     @State private var showAbout = false
     @State private var detailMessage: String?
     private let ink = Color(red: 0.12, green: 0.25, blue: 0.29)
+    private var sheetCountLabel: String { "\(store.imageCount) \(store.imageCount == 1 ? "sheet" : "sheets")" }
+    private var demoCountLabel: String { "\(store.imageCount) demo \(store.imageCount == 1 ? "sheet" : "sheets")" }
 
     var body: some View {
         GeometryReader { geometry in
@@ -54,12 +57,13 @@ struct ContentView: View {
         .popover(isPresented: $showUsage) {
             usageSheet.presentationCompactAdaptation(.popover)
         }
+        .sheet(isPresented: $showSettings) { settingsSheet }
         .alert("About generation", isPresented: $showAbout) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(store.isMock
-                 ? "Demo mode makes \(ColoringViewModel.batchSize) sample pictures with illustrative usage. No paid request is sent. Swipe between them to choose a sheet."
-                 : "Each tap generates \(ColoringViewModel.batchSize) sheets in parallel using paid API credit for all \(ColoringViewModel.batchSize). Swipe to choose a sheet; Share, Save to Photos, and Print use the visible sheet. Age stays on this iPad. Keep the app open while generating; stopping or leaving it may still result in charges.")
+                 ? "Demo mode makes \(sheetCountLabel) with illustrative usage. No paid request is sent. Swipe between them to choose a sheet."
+                 : "Each tap generates \(sheetCountLabel) in parallel using paid API credit for each image. Swipe to choose a sheet; Share, Save to Photos, and Print use the visible sheet. Age stays on this iPad. Keep the app open while generating; stopping or leaving it may still result in charges.")
         }
         .alert("Generation details", isPresented: Binding(get: { detailMessage != nil }, set: { if !$0 { detailMessage = nil } })) {
             Button("OK", role: .cancel) { detailMessage = nil }
@@ -85,6 +89,11 @@ struct ContentView: View {
             }
             .buttonStyle(.bordered)
             .disabled(store.result == nil)
+            Button { showSettings = true } label: {
+                Image(systemName: "gearshape").frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("Settings")
+            .accessibilityIdentifier("settings")
             if narrow { Spacer(minLength: 0) }
         }
         .frame(minHeight: 44)
@@ -213,7 +222,7 @@ struct ContentView: View {
                         if narrow {
                             Image(systemName: "sparkles").frame(minWidth: 28, minHeight: 32)
                         } else {
-                            Label(store.isMock ? "Make \(ColoringViewModel.batchSize) demo sheets" : "Generate \(ColoringViewModel.batchSize) sheets", systemImage: "sparkles")
+                            Label(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)", systemImage: "sparkles")
                                 .frame(minHeight: 32)
                         }
                     }
@@ -221,7 +230,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(store.isGenerating || store.validationMessage != nil)
-                .accessibilityLabel(store.isMock ? "Make \(ColoringViewModel.batchSize) demo sheets" : "Generate \(ColoringViewModel.batchSize) coloring sheets")
+                .accessibilityLabel(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)")
                 .accessibilityIdentifier("generate")
             }
             Divider()
@@ -258,7 +267,7 @@ struct ContentView: View {
             .accessibilityHint("Keep the app open. Generation may take a few minutes.")
         } else if let message = store.batchMessage {
             Button { detailMessage = message } label: {
-                Label("\(store.results.count) sheets available · Details", systemImage: "exclamationmark.circle")
+                Label("\(store.results.count) \(store.results.count == 1 ? "sheet" : "sheets") available · Details", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
         } else if case .error(let message) = store.phase {
@@ -303,7 +312,7 @@ struct ContentView: View {
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "pencil.and.outline").font(.system(size: 40, weight: .ultraLight))
-                        Text("\(ColoringViewModel.batchSize) sheets to choose from.\nDescribe an idea below to begin.").font(.callout).multilineTextAlignment(.center)
+                        Text("\(sheetCountLabel) to choose from.\nDescribe an idea below to begin.").font(.callout).multilineTextAlignment(.center)
                     }.padding(16).foregroundStyle(.secondary)
                         .frame(width: page.width, height: page.height)
                         .background(.white)
@@ -334,6 +343,34 @@ struct ContentView: View {
         }
             .buttonStyle(.plain)
             .accessibilityLabel("Usage and estimated cost")
+    }
+    private var settingsSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Generation") {
+                    Picker("Model", selection: $store.model) {
+                        ForEach(ImageModel.allCases) { model in
+                            Text(model.label).tag(model)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("modelSetting")
+                    Picker("Images per generation", selection: Binding(
+                        get: { store.imageCount }, set: { store.setImageCount($0) })) {
+                        ForEach(1...ColoringViewModel.batchSize, id: \.self) { count in
+                            Text("\(count)").tag(count)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("imageCountSetting")
+                    Text("Each image uses one generation. Changes apply to the next batch.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
+        }
     }
     private var usageSheet: some View {
         NavigationStack {

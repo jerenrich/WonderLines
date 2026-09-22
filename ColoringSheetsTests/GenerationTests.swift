@@ -302,6 +302,44 @@ final class StateTests: XCTestCase {
         }
         XCTFail("State did not settle")
     }
+    func testSettingsPersistAndControlNextBatch() async {
+        let name = "SettingsTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        XCTAssertEqual(store.model, .sunburst)
+        XCTAssertEqual(store.imageCount, 5)
+        store.model = .flare
+        store.setImageCount(1)
+        store.age = 8; store.description = "Synthetic flower"
+        let restored = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        XCTAssertEqual(restored.model, .flare)
+        XCTAssertEqual(restored.imageCount, 1)
+        store.generate()
+        await waitFor { service.pendingCount == 1 }
+        XCTAssertEqual(service.captured.map(\.model), [.flare])
+        XCTAssertEqual(store.activeBatchSize, 1)
+        store.setImageCount(5)
+        store.model = .sunburst
+        service.succeed()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 1)
+        store.generate()
+        await waitFor { service.pendingCount == 5 }
+        XCTAssertEqual(service.captured.dropFirst().map(\.model), Array(repeating: .sunburst, count: 5))
+        service.succeed()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 5)
+        store.setImageCount(99)
+        XCTAssertEqual(store.imageCount, 5)
+        store.setImageCount(0)
+        XCTAssertEqual(store.imageCount, 1)
+        defaults.set(-4, forKey: "imageCount")
+        XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 1)
+        defaults.set("unsupported", forKey: "generationModel")
+        XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).model, .sunburst)
+    }
     func testSelectionPersistenceDuplicatesFailureAndBackground() async {
         let name = "ColoringTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!

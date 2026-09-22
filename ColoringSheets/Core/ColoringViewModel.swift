@@ -3,10 +3,11 @@ import SwiftUI
 @MainActor
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
-    static let generationModel: ImageModel = .sunburst
     static let batchSize = SheetComposition.allCases.count
     @Published var description = ""
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
+    @Published var model: ImageModel { didSet { defaults.set(model.rawValue, forKey: "generationModel") } }
+    @Published private(set) var imageCount: Int { didSet { defaults.set(imageCount, forKey: "imageCount") } }
     @Published var pageFormat: PageFormat = .a4Landscape
     private var previewSize = CGSize(width: 728, height: 512)
     private var displayScale: CGFloat = 2
@@ -15,6 +16,7 @@ final class ColoringViewModel: ObservableObject {
     @Published var selectedResultID: UUID?
     @Published private(set) var completedCount = 0
     @Published private(set) var failedCount = 0
+    @Published private(set) var activeBatchSize = 0
     @Published private(set) var batchMessage: String?
     @Published private(set) var access: AccessSnapshot = .free
     let isMock: Bool
@@ -32,14 +34,22 @@ final class ColoringViewModel: ObservableObject {
         self.service = service; self.isMock = isMock; self.defaults = defaults
         let stored = defaults.integer(forKey: "childAge")
         age = (3...18).contains(stored) ? stored : 0
+        model = ImageModel(rawValue: defaults.string(forKey: "generationModel") ?? "") ?? .sunburst
+        let storedCount = defaults.object(forKey: "imageCount") as? Int ?? Self.batchSize
+        imageCount = min(max(storedCount, 1), Self.batchSize)
     }
 
     var isGenerating: Bool { phase == .generating }
     var result: ColoringResult? { results.first(where: { $0.id == selectedResultID }) ?? results.first }
     var selectedIndex: Int { results.firstIndex(where: { $0.id == selectedResultID }) ?? 0 }
     var readyCount: Int { completedCount - failedCount }
+    private var activeSheetLabel: String { "\(activeBatchSize) \(activeBatchSize == 1 ? "sheet" : "sheets")" }
     var progressText: String {
-        "Drawing \(Self.batchSize) sheets · \(readyCount) ready" + (failedCount > 0 ? " · \(failedCount) unavailable" : "")
+        "Drawing \(activeSheetLabel) · \(readyCount) ready" + (failedCount > 0 ? " · \(failedCount) unavailable" : "")
+    }
+
+    func setImageCount(_ count: Int) {
+        imageCount = min(max(count, 1), Self.batchSize)
     }
 
     func selectResult(at index: Int) {
@@ -51,8 +61,8 @@ final class ColoringViewModel: ObservableObject {
     }
     private func requests() throws -> [GenerationRequest] {
         let size = pageFormat.imageSize(for: previewSize, displayScale: displayScale)
-        return try SheetComposition.allCases.map { composition in
-            try GenerationRequest(description: description, age: age, model: Self.generationModel,
+        return try SheetComposition.allCases.prefix(imageCount).map { composition in
+            try GenerationRequest(description: description, age: age, model: model,
                                   size: size, composition: composition)
         }
     }
@@ -68,6 +78,7 @@ final class ColoringViewModel: ObservableObject {
         let requests: [GenerationRequest]
         do { requests = try self.requests() } catch { phase = .error(error.localizedDescription); return }
         phase = .generating
+        activeBatchSize = requests.count
         completedCount = 0; failedCount = 0; batchMessage = nil
         receivedFirstResult = false; firstFailure = nil
         revealTask?.cancel(); revealTask = nil
@@ -115,17 +126,19 @@ final class ColoringViewModel: ObservableObject {
                 firstFailure = (error as? GenerationError)?.localizedDescription ?? GenerationError.uncertain.localizedDescription
             }
         }
-        guard completedCount == Self.batchSize else { return }
+        guard completedCount == activeBatchSize else { return }
         tasks = []
         revealTask?.cancel(); revealTask = nil
         revealPendingResults()
         if receivedFirstResult {
             if failedCount > 0 {
-                batchMessage = "\(readyCount) of \(Self.batchSize) sheets are ready. \(failedCount) could not finish. " + (firstFailure ?? "")
+                batchMessage = "\(readyCount) of \(activeSheetLabel) are ready. \(failedCount) could not finish. " + (firstFailure ?? "")
             }
             phase = .result
         } else {
-            phase = .error("None of the \(Self.batchSize) sheets could finish. " + (firstFailure ?? ""))
+            phase = .error(activeBatchSize == 1
+                           ? "The sheet could not finish. " + (firstFailure ?? "")
+                           : "None of the \(activeSheetLabel) could finish. " + (firstFailure ?? ""))
         }
     }
 

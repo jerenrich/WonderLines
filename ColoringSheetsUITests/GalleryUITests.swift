@@ -1,6 +1,23 @@
 import XCTest
 
 final class GalleryUITests: XCTestCase {
+    @MainActor
+    func testSettingsScreenShowsModelAndImageCount() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock"]
+        app.launch()
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "modelSetting").firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "imageCountSetting").firstMatch.exists)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Settings screen"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        app.buttons["Done"].tap()
+        XCTAssertFalse(app.navigationBars["Settings"].exists)
+    }
+
     // Opt-in smoke check of the actual app, Keychain and deployed Worker. One
     // button tap only; never automatically retry a paid generation.
     @MainActor
