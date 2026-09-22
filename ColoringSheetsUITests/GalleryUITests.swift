@@ -21,7 +21,7 @@ final class GalleryUITests: XCTestCase {
         let position = app.staticTexts["sheetPosition"]
         func expectPage(_ number: Int) {
             let expectation = XCTNSPredicateExpectation(
-                predicate: NSPredicate(format: "label == %@", "Sheet \(number) of 3"), object: position)
+                predicate: NSPredicate(format: "label == %@", "Sheet \(number) of 5"), object: position)
             XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 8), .completed)
         }
         expectPage(1)
@@ -38,23 +38,27 @@ final class GalleryUITests: XCTestCase {
         gallery.swipeLeft()
         expectPage(3)
         gallery.swipeLeft()
-        expectPage(3)
+        expectPage(4)
+        gallery.swipeLeft()
+        expectPage(5)
+        gallery.swipeLeft()
+        expectPage(5)
         XCTAssertFalse(app.buttons["nextSheet"].isEnabled)
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        screenshot.name = "Three-sheet landscape gallery"
+        screenshot.name = "Five-sheet landscape gallery"
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
         app.buttons["expandComposer"].tap()
         subject.tap()
         subject.typeText(" with stars")
-        expectPage(3)
+        expectPage(5)
         XCTAssertTrue(gallery.exists)
         app.buttons["dismissKeyboard"].tap()
         app.buttons["minimizeComposer"].tap()
-        expectPage(3)
+        expectPage(5)
         XCTAssertTrue(app.buttons["expandComposer"].label.contains("with stars"))
         app.buttons["previousSheet"].tap()
-        expectPage(2)
+        expectPage(4)
     }
 }

@@ -61,6 +61,22 @@ struct GenerationSize: Equatable {
     var cgSize: CGSize { CGSize(width: width, height: height) }
 }
 
+enum SheetComposition: CaseIterable {
+    case side, front, wide, close, elevated
+
+    var guidance: String {
+        let view: String
+        switch self {
+        case .side: view = "side view, full subject in profile"
+        case .front: view = "front view, subject facing the viewer"
+        case .wide: view = "wide view, smaller subject within its surroundings"
+        case .close: view = "close view, subject filling most of the page, no cropping"
+        case .elevated: view = "elevated view, looking down at the scene"
+        }
+        return "Composition preference: \(view). Preserve the subject; explicit user instructions take priority."
+    }
+}
+
 struct GenerationRequest: Encodable, Equatable {
     let subject: String
     let model: ImageModel
@@ -77,15 +93,17 @@ struct GenerationRequest: Encodable, Equatable {
         }
     }
 
-    init(description: String, age: Int, model: ImageModel, size: GenerationSize = .a4Default) throws {
+    init(description: String, age: Int, model: ImageModel, size: GenerationSize = .a4Default,
+         composition: SheetComposition? = nil) throws {
         guard size.isValid else { throw GenerationError.validation("The page size is unsupported. Choose a smaller page size.") }
         width = size.width; height = size.height
         let original = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !original.isEmpty else { throw GenerationError.validation("Describe what you’d like on the sheet.") }
-        subject = original + "\n\n" + (try Self.guidance(age: age))
+        subject = original + "\n\n" + (try Self.guidance(age: age)) +
+            (composition.map { "\n\n" + $0.guidance } ?? "")
         self.model = model
         guard subject.utf16.count <= 500 else {
-            throw GenerationError.validation("Please shorten the description. It must fit within 500 characters including the complexity guidance.")
+            throw GenerationError.validation("Please shorten the description. It must fit within 500 characters including the age and composition guidance.")
         }
         _ = try encoded()
     }

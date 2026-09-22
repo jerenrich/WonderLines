@@ -4,7 +4,7 @@ import SwiftUI
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
     static let generationModel: ImageModel = .sunburst
-    static let batchSize = 3
+    static let batchSize = SheetComposition.allCases.count
     @Published var description = ""
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
     @Published var pageFormat: PageFormat = .a4Landscape
@@ -43,11 +43,14 @@ final class ColoringViewModel: ObservableObject {
         selectedResultID = results[index].id
     }
     var validationMessage: String? {
-        do { _ = try request(); return nil } catch { return error.localizedDescription }
+        do { _ = try requests(); return nil } catch { return error.localizedDescription }
     }
-    private func request() throws -> GenerationRequest {
-        try GenerationRequest(description: description, age: age, model: Self.generationModel,
-                              size: pageFormat.imageSize(for: previewSize, displayScale: displayScale))
+    private func requests() throws -> [GenerationRequest] {
+        let size = pageFormat.imageSize(for: previewSize, displayScale: displayScale)
+        return try SheetComposition.allCases.map { composition in
+            try GenerationRequest(description: description, age: age, model: Self.generationModel,
+                                  size: size, composition: composition)
+        }
     }
 
     func updatePreview(size: CGSize, displayScale: CGFloat) {
@@ -58,15 +61,16 @@ final class ColoringViewModel: ObservableObject {
 
     func generate() {
         guard !isGenerating else { return }
-        let request: GenerationRequest
-        do { request = try self.request() } catch { phase = .error(error.localizedDescription); return }
+        let requests: [GenerationRequest]
+        do { requests = try self.requests() } catch { phase = .error(error.localizedDescription); return }
         phase = .generating
         completedCount = 0; failedCount = 0; batchMessage = nil
         receivedFirstResult = false; firstFailure = nil
         let current = UUID(); attempt = current
         // Each task starts its own request without waiting for the other requests.
-        // Capture one validated request so editing/resizing cannot change a batch.
-        tasks = (0..<Self.batchSize).map { _ in
+        // Validate and capture every composition before starting any paid request.
+        // Editing/resizing cannot change the subject, age, or size of this batch.
+        tasks = requests.map { request in
             Task { [weak self, service] in
                 guard !Task.isCancelled else { return }
                 let outcome: Result<ColoringResult, Error>
