@@ -5,7 +5,7 @@
   "workers_dev": true,
   "vars": {
     "FREE_DAILY_ALLOWANCE": "3",
-    "GLOBAL_DAILY_GENERATION_LIMIT": "100"
+    "GLOBAL_DAILY_GENERATION_LIMIT": "10000"
   },
   "durable_objects": {
     "bindings": [
