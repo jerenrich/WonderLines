@@ -4,7 +4,7 @@ final class GalleryUITests: XCTestCase {
     @MainActor
     func testSettingsScreenShowsModelAndImageCount() {
         let app = XCUIApplication()
-        app.launchArguments = ["--mock"]
+        app.launchArguments = ["--mock", "-imageCount", "5"]
         app.launch()
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
@@ -16,6 +16,109 @@ final class GalleryUITests: XCTestCase {
         add(screenshot)
         app.buttons["Done"].tap()
         XCTAssertFalse(app.navigationBars["Settings"].exists)
+    }
+
+    @MainActor
+    func testPortraitGalleryActionsAndKeyboardSurviveRotation() throws {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-imageCount", "5"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        subject.typeText("A friendly flower")
+        XCTAssertTrue(app.buttons["dismissKeyboard"].isHittable)
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["age"].tap()
+        app.buttons["6 years"].tap()
+        app.buttons["generate"].tap()
+        let position = app.staticTexts["sheetPosition"]
+        func assertVisibleSheetMatchesSelection() {
+            let visible = app.images.matching(identifier: "sheetPreview").allElementsBoundByIndex.filter(\.isHittable)
+            XCTAssertEqual(visible.count, 1)
+            XCTAssertEqual(visible.first?.value as? String, position.label,
+                           "The displayed image must match the sheet used for export")
+        }
+        XCTAssertTrue(position.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["nextSheet"].isHittable)
+        XCTAssertTrue(app.buttons["settings"].isHittable)
+        app.buttons["nextSheet"].tap()
+        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        assertVisibleSheetMatchesSelection()
+
+        if app.buttons["sheetActions"].exists {
+            app.buttons["sheetActions"].tap()
+            XCTAssertTrue(app.buttons["Share"].exists)
+            XCTAssertTrue(app.buttons["Save to Photos"].exists)
+            XCTAssertTrue(app.buttons["Print"].exists)
+        }
+        app.buttons["usage"].tap()
+        XCTAssertTrue(app.navigationBars["Usage & estimated cost"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Done"].isHittable)
+        let usage = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        usage.name = "Portrait usage fits the display"
+        usage.lifetime = .keepAlways
+        add(usage)
+        app.buttons["Done"].tap()
+        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        assertVisibleSheetMatchesSelection()
+
+        let portrait = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        portrait.name = "Portrait gallery"
+        portrait.lifetime = .keepAlways
+        add(portrait)
+        app.buttons["expandComposer"].tap()
+        subject.tap()
+        subject.typeText(" with stars")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.buttons["dismissKeyboard"].waitForExistence(timeout: 5))
+        // The keyboard and editable field must remain usable after rotation.
+        XCTAssertTrue(subject.isHittable)
+        subject.typeText(" and a moon")
+        let keyboard = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        keyboard.name = "Landscape editing with keyboard"
+        keyboard.lifetime = .keepAlways
+        add(keyboard)
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["minimizeComposer"].tap()
+        XCTAssertTrue(app.buttons["expandComposer"].label.contains("and a moon"))
+        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        assertVisibleSheetMatchesSelection()
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.buttons["nextSheet"].isHittable)
+        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        assertVisibleSheetMatchesSelection()
+    }
+
+    @MainActor
+    func testPortraitControlsWithAccessibilityText() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-imageCount", "1", "-childAge", "6",
+                               "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        subject.typeText("A flower")
+        // The composer scrolls when larger text and the keyboard exhaust its space.
+        if !app.buttons["dismissKeyboard"].isHittable { subject.swipeDown() }
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["generate"].tap()
+        XCTAssertTrue(app.staticTexts["sheetPosition"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["settings"].isHittable)
+        XCTAssertTrue(app.buttons["sheetActions"].isHittable)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Portrait gallery with accessibility text"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Done"].isHittable)
     }
 
     // Opt-in smoke check of the actual app, Keychain and deployed Worker. One
@@ -53,7 +156,7 @@ final class GalleryUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["--mock"]
+        app.launchArguments = ["--mock", "-imageCount", "5"]
         app.launch()
 
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch

@@ -95,5 +95,45 @@ try {
   assert.equal(concurrentCalls, 1);
   releaseUpstream();
   assert.equal((await first).status, 200);
+  // Expiry must not create a new account or strand its credits and saved jobs.
+  const storedAccount = env.ACCOUNTS.objects.get(identity.accountId);
+  await storedAccount.state.storage.put('credits', 7);
+  const beforeRenewal = await storedAccount.access();
+  const accountCount = env.ACCOUNTS.objects.size;
+  const originalNow = Date.now;
+  const renewRequest = credential => new Request('https://example.test/v1/installations/renew', {
+    method: 'POST', headers: {'Authorization': 'Bearer ' + credential, 'Content-Type': 'application/json'}, body: '{}'
+  });
+  try {
+    Date.now = () => originalNow() + 31 * 24 * 60 * 60 * 1000;
+    response = await worker.fetch(request(), env);
+    assert.equal(response.status, 401, 'Expired credentials cannot generate images.');
+    response = await worker.fetch(renewRequest(identity.accessToken), env);
+    assert.equal(response.status, 200);
+    const renewed = await response.json();
+    assert.equal(renewed.accountId, identity.accountId);
+    assert.ok(renewed.expiresAt > Date.now() / 1000);
+    assert.deepEqual(renewed.access, beforeRenewal);
+    assert.equal(env.ACCOUNTS.objects.size, accountCount, 'Renewal cannot initialize another account.');
+    response = await worker.fetch(new Request('https://example.test/v1/generations/' + generationId, {
+      headers: {'Authorization': 'Bearer ' + renewed.accessToken}
+    }), env);
+    assert.equal(response.status, 200, 'Renewed identity can recover its old images.');
+    assert.equal(concurrentCalls, 1, 'Renewal and recovery do not call the image provider.');
+    assert.equal((await worker.fetch(renewRequest(identity.accessToken + 'x'), env)).status, 401);
+    const savedAccount = await storedAccount.state.storage.get('account');
+    await storedAccount.state.storage.put('account', {...savedAccount, credentialId: crypto.randomUUID()});
+    assert.equal((await worker.fetch(renewRequest(identity.accessToken), env)).status, 401,
+                 'Expired credentials still require the current, unrevoked credential ID.');
+    await storedAccount.state.storage.put('account', savedAccount);
+  } finally { Date.now = originalNow; }
+  env.GLOBAL_DAILY_GENERATION_LIMIT = '0';
+  env.BUDGET = new BudgetNamespace(env);
+  response = await worker.fetch(new Request('https://example.test/v1/generations', {method: 'POST', headers: {
+    'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID()
+  }, body: JSON.stringify({subject: 'Synthetic flower'})}), env);
+  assert.equal(response.status, 429);
+  assert.equal((await response.json()).error.code, 'service_budget_exhausted', 'Keep service and personal limits distinct.');
+  assert.deepEqual(await storedAccount.access(), beforeRenewal, 'A full service budget cannot spend account credits.');
 } finally { globalThis.fetch = originalFetch; }
-console.log('PASS: registration, v1 generation, 1,000-image allowance, concurrent reservations, idempotency, and fail-closed global budget; no network.');
+console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, and service/personal budgets; no network.');

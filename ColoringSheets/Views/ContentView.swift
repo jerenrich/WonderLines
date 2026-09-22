@@ -8,6 +8,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var descriptionFocused: Bool
     @State private var composerMinimized = false
+    @State private var composerHeight: CGFloat = 240
     @State private var export: ExportItem?
     @State private var retainedExport: ExportItem?
     @State private var exportError: String?
@@ -25,18 +26,35 @@ struct ContentView: View {
         GeometryReader { geometry in
             let narrow = geometry.size.width < 600 || typeSize.isAccessibilitySize
             let inset: CGFloat = narrow ? 12 : 24
+            let editingInShortWindow = descriptionFocused && geometry.size.height < 300
+            let composerLimit = max(44, geometry.size.height - (editingInShortWindow ? 8 : 112))
             VStack(spacing: 12) {
-                header(narrow: narrow)
+                header(narrow: narrow || geometry.size.height < 400)
+                    .frame(height: editingInShortWindow ? 0 : nil)
+                    .clipped()
+                    .accessibilityHidden(editingInShortWindow)
                 preview
+                    .clipped()
             }
             .padding(.horizontal, inset)
             .padding(.top, 8)
             // SwiftUI lifts this inset with the system keyboard. The preview and
             // editor keep their identity throughout focus and size changes.
             .safeAreaInset(edge: .bottom, spacing: 12) {
-                composer(narrow: narrow)
-                    .padding(.horizontal, inset)
-                    .padding(.bottom, 8)
+                // Keep one editor in the hierarchy across rotation and keyboard changes.
+                // Scrolling is needed only when short windows or large text exhaust the space.
+                ScrollView {
+                    composer(narrow: narrow)
+                        .background(GeometryReader { content in
+                            Color.clear
+                                .onAppear { composerHeight = content.size.height }
+                                .onChange(of: content.size.height) { _, height in composerHeight = height }
+                        })
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(height: min(composerHeight, composerLimit))
+                .padding(.horizontal, inset)
+                .padding(.bottom, 8)
             }
             .foregroundStyle(ink)
         }
@@ -55,7 +73,8 @@ struct ContentView: View {
             }
         }
         .popover(isPresented: $showUsage) {
-            usageSheet.presentationCompactAdaptation(.popover)
+            usageSheet
+                .presentationCompactAdaptation(.sheet)
         }
         .sheet(isPresented: $showSettings) { settingsSheet }
         .alert("About generation", isPresented: $showAbout) {
@@ -63,7 +82,7 @@ struct ContentView: View {
         } message: {
             Text(store.isMock
                  ? "Demo mode makes \(sheetCountLabel) with illustrative usage. No paid request is sent. Swipe between them to choose a sheet."
-                 : "Each tap generates \(sheetCountLabel) in parallel using paid API credit for each image. Swipe to choose a sheet; Share, Save to Photos, and Print use the visible sheet. Age stays on this iPad. Keep the app open while generating; stopping or leaving it may still result in charges.")
+                 : "Each tap generates \(sheetCountLabel) in parallel using paid API credit for each image. Swipe to choose a sheet; Share, Save to Photos, and Print use the visible sheet. Age stays on this device. Keep the app open while generating; stopping or leaving it may still result in charges.")
         }
         .alert("Generation details", isPresented: Binding(get: { detailMessage != nil }, set: { if !$0 { detailMessage = nil } })) {
             Button("OK", role: .cancel) { detailMessage = nil }
@@ -83,18 +102,33 @@ struct ContentView: View {
                 Spacer(minLength: 0)
             }
             if !store.results.isEmpty { galleryNavigation }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { exportButtons; usageButton }
-                HStack(spacing: 8) { exportButtons; usageButton }.labelStyle(.iconOnly)
+            if narrow {
+                Spacer(minLength: 0)
+                Menu {
+                    exportButtons
+                    Button { showUsage = true } label: {
+                        Label("Usage and estimated cost", systemImage: "chart.bar.xaxis")
+                    }
+                    .accessibilityIdentifier("usage")
+                } label: {
+                    Image(systemName: "ellipsis.circle").frame(width: 44, height: 44)
+                }
+                .disabled(store.result == nil)
+                .accessibilityLabel("Sheet actions")
+                .accessibilityIdentifier("sheetActions")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) { exportButtons; usageButton }
+                    HStack(spacing: 8) { exportButtons; usageButton }.labelStyle(.iconOnly)
+                }
+                .buttonStyle(.bordered)
+                .disabled(store.result == nil)
             }
-            .buttonStyle(.bordered)
-            .disabled(store.result == nil)
             Button { showSettings = true } label: {
                 Image(systemName: "gearshape").frame(width: 44, height: 44)
             }
             .accessibilityLabel("Settings")
             .accessibilityIdentifier("settings")
-            if narrow { Spacer(minLength: 0) }
         }
         .frame(minHeight: 44)
     }
@@ -109,7 +143,8 @@ struct ContentView: View {
             .accessibilityIdentifier("previousSheet")
             Text("\(store.selectedIndex + 1) of \(store.results.count)")
                 .font(.subheadline.weight(.medium)).monospacedDigit()
-                .fixedSize()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .accessibilityLabel("Sheet \(store.selectedIndex + 1) of \(store.results.count)")
                 .accessibilityIdentifier("sheetPosition")
             Button { movePage(by: 1) } label: {
@@ -294,26 +329,36 @@ struct ContentView: View {
             let page = store.pageFormat.fittedSize(in: canvas.size)
             Group {
                 if !store.results.isEmpty {
-                    TabView(selection: $store.selectedResultID) {
-                        ForEach(store.results) { result in
+                    // Page-style TabView can report its first page while rotation and
+                    // the keyboard collapse its canvas. Keep the selection while editing.
+                    TabView(selection: Binding(
+                        get: { store.selectedResultID },
+                        set: { if !descriptionFocused { store.selectedResultID = $0 } })) {
+                        ForEach(Array(store.results.enumerated()), id: \.element.id) { index, result in
                             Image(uiImage: result.image).resizable().scaledToFit()
                                 .frame(width: page.width, height: page.height)
                                 .background(.white)
                                 .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
                                 .frame(width: canvas.size.width, height: canvas.size.height)
                                 .accessibilityLabel("Generated coloring sheet preview")
+                                .accessibilityValue("Sheet \(index + 1) of \(store.results.count)")
                                 .accessibilityHint("Swipe left or right to choose a sheet")
                                 .accessibilityIdentifier("sheetPreview")
                                 .tag(Optional(result.id))
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
+                    .allowsHitTesting(!descriptionFocused)
                     .accessibilityIdentifier("sheetGallery")
                 } else {
                     VStack(spacing: 12) {
-                        Image(systemName: "pencil.and.outline").font(.system(size: 40, weight: .ultraLight))
-                        Text("\(sheetCountLabel) to choose from.\nDescribe an idea below to begin.").font(.callout).multilineTextAlignment(.center)
-                    }.padding(16).foregroundStyle(.secondary)
+                        Image(systemName: "pencil.and.outline")
+                            .font(.system(size: min(40, page.height * 0.4), weight: .ultraLight))
+                        if page.height >= 140 {
+                            Text("\(sheetCountLabel) to choose from.\nDescribe an idea below to begin.")
+                                .font(.callout).multilineTextAlignment(.center)
+                        }
+                    }.padding(8).foregroundStyle(.secondary)
                         .frame(width: page.width, height: page.height)
                         .background(.white)
                         .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
@@ -343,6 +388,7 @@ struct ContentView: View {
         }
             .buttonStyle(.plain)
             .accessibilityLabel("Usage and estimated cost")
+            .accessibilityIdentifier("usage")
     }
     private var settingsSheet: some View {
         NavigationStack {
@@ -403,7 +449,7 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showUsage = false } } }
         }
-        .frame(minWidth: 420, idealWidth: 460, minHeight: 520)
+        .frame(idealWidth: 460, idealHeight: 520)
     }
     @ViewBuilder private var exportButtons: some View {
         Button { beginExport(.share) } label: { Label("Share", systemImage: "square.and.arrow.up") }

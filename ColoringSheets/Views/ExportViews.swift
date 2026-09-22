@@ -111,9 +111,15 @@ struct PrintSheet: UIViewControllerRepresentable {
             info.orientation = image.size.width > image.size.height ? .landscape : .portrait
             controller.printInfo = info
             controller.printPageRenderer = ColoringPrintRenderer(image: image)
-            let shown = controller.present(from: CGRect(x: view.bounds.midX, y: 24, width: 1, height: 1), in: view, animated: true) { _, _, error in
+            let completion: UIPrintInteractionController.CompletionHandler = { _, _, error in
                 controller.printPageRenderer = nil
                 self.finish(error == nil ? nil : "Printing could not finish. Please try again.")
+            }
+            let shown: Bool
+            if traitCollection.userInterfaceIdiom == .pad {
+                shown = controller.present(from: CGRect(x: view.bounds.midX, y: 24, width: 1, height: 1), in: view, animated: true, completionHandler: completion)
+            } else {
+                shown = controller.present(animated: true, completionHandler: completion)
             }
             if !shown { finish("The print dialog could not open.") }
         }

@@ -2,4 +2,5 @@
 DEVELOPMENT_TEAM = YOUR_TEAM_ID
 // Set COLORING_MODE to live only after verifying the deployed Worker.
 COLORING_MODE = mock
-COLORING_SERVICE_URL = https://coloring-sheets-api.jordan-erenrich.workers.dev
+// The empty build-setting expansion prevents // from starting an xcconfig comment.
+COLORING_SERVICE_URL = https:/$()/coloring-sheets-api.jordan-erenrich.workers.dev

@@ -23,10 +23,10 @@ function b64(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCod
 function unb64(s) { return Uint8Array.from(atob(s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
 async function key(secret) { return crypto.subtle.importKey('raw', encoder.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign', 'verify']); }
 async function token(sub, cid, secret) { const body = b64(encoder.encode(JSON.stringify({v: 1, sub, cid, exp: Math.floor(Date.now() / 1000) + TOKEN_SECONDS}))); return body + '.' + b64(new Uint8Array(await crypto.subtle.sign('HMAC', await key(secret), encoder.encode(body)))); }
-async function claims(header, secret) {
+async function claims(header, secret, allowExpired = false) {
   if (!header?.startsWith('Bearer ') || !secret) return null;
   const [body, signature, extra] = header.slice(7).split('.'); if (!body || !signature || extra) return null;
-  try { const value = JSON.parse(new TextDecoder().decode(unb64(body))); return await crypto.subtle.verify('HMAC', await key(secret), unb64(signature), encoder.encode(body)) && value.v === 1 && /^[0-9a-f-]{36}$/.test(value.sub) && /^[0-9a-f-]{36}$/.test(value.cid) && value.exp > Date.now() / 1000 ? value : null; } catch { return null; }
+  try { const value = JSON.parse(new TextDecoder().decode(unb64(body))); return await crypto.subtle.verify('HMAC', await key(secret), unb64(signature), encoder.encode(body)) && value.v === 1 && /^[0-9a-f-]{36}$/.test(value.sub) && /^[0-9a-f-]{36}$/.test(value.cid) && Number.isSafeInteger(value.exp) && (allowExpired || value.exp > Date.now() / 1000) ? value : null; } catch { return null; }
 }
 async function body(request) { if (!request.headers.get('Content-Type')?.startsWith('application/json')) return null; const text = await request.text(); if (text.length > 4096) return null; try { return JSON.parse(text); } catch { return null; } }
 async function digest(value) { return b64(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))); }
@@ -107,7 +107,7 @@ export class Account {
   async complete({generationId, result}) { const k = 'job:' + generationId, job = await this.state.storage.get(k); if (!job || job.state !== 'processing') return fail('not_found', 'Generation not found.', 404); Object.assign(job, result, {completedAt: Date.now()}); await this.state.storage.put(k, job); return reply({access: await this.access()}); }
 }
 
-async function authenticate(request, env) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, access: checked.value.access} : null; }
+async function authenticate(request, env, allowExpired = false) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, allowExpired); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, credentialId: c.cid, access: checked.value.access} : null; }
 async function saved(env, job, access) {
   if (job.state === 'completed') { const image = await env.GENERATIONS.get(job.objectKey); if (!image) return fail('result_unavailable', 'Saved image is unavailable.', 410); return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}}); }
   if (job.state === 'failed') return fail('upstream_failed', job.message, 502);
@@ -119,7 +119,7 @@ async function generate(request, env, account) {
   const size = dimensions(input), model = input.model ?? MODEL;
   if (!MODELS.includes(model) || typeof input.subject !== 'string' || !input.subject.trim() || input.subject.length > 500 || !size) return fail('invalid_request', 'Description, model, or dimensions are invalid.', 400);
   const encoded = JSON.stringify({subject: input.subject, model, ...size}), reservation = await call(env, account.id, '/reserve', {generationId, fingerprint: await digest(encoded)});
-  if (reservation.status === 429) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
+  if (reservation.status === 429) return reply(reservation.value, 429);
   if (reservation.status >= 400) return fail('generation_unavailable', 'Could not start generation.', reservation.status);
   if (reservation.status === 200 || reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
   try {
@@ -138,6 +138,14 @@ export default { async fetch(request, env) {
   const url = new URL(request.url);
   if (!env.ACCOUNT_TOKEN_SECRET || !env.OPENAI_API_KEY) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
   if (url.pathname === '/v1/installations') { if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400); const id = crypto.randomUUID(), made = await call(env, id, '/initialize', {accountId: id}); if (made.status !== 201) return fail('service_unavailable', 'Could not create an anonymous account.', 503); return reply({accountId: id, accessToken: await token(id, made.value.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: made.value.access}, 201); }
+  if (url.pathname === '/v1/installations/renew') {
+    if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400);
+    // Only renewal accepts an expired signed credential. The account must still
+    // exist and its credentialId must match, so revocation also blocks renewal.
+    const account = await authenticate(request, env, true);
+    if (!account) return fail('unauthorized', 'The saved account credential could not be renewed.', 401);
+    return reply({accountId: account.id, accessToken: await token(account.id, account.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: account.access});
+  }
   const account = await authenticate(request, env); if (!account) return fail('unauthorized', 'Register this app installation again.', 401);
   if (url.pathname === '/v1/access' && request.method === 'GET') return reply({access: account.access});
   if (url.pathname === '/v1/generations' && request.method === 'POST') return generate(request, env, account);

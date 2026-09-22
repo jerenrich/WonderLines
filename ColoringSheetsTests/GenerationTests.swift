@@ -99,6 +99,13 @@ final class GenerationTests: XCTestCase {
             XCTAssertEqual($0 as? GenerationError, .allowance)
         }
     }
+    func testServiceBudgetIsDistinctFromPersonalAllowance() {
+        let body = Data(#"{"error":{"code":"service_budget_exhausted"}}"#.utf8)
+        XCTAssertThrowsError(try WorkerClient.parse(body, response: response(429, type: "application/json"), requestedModel: .flare)) {
+            XCTAssertEqual($0 as? GenerationError, .serviceBudget)
+        }
+    }
+
     func testWorkerResponseDiagnosticRejectsSensitiveText() {
         let safe = Data(#"{"error":{"code":"service_unavailable","message":"token=private prompt=secret"}}"#.utf8)
         XCTAssertEqual(WorkerClient.workerErrorCode(safe, response: response(503, type: "application/json; charset=utf-8")), "service_unavailable")
@@ -265,6 +272,122 @@ final class NetworkingTests: XCTestCase {
         _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare))
         XCTAssertEqual(methods, ["POST", "GET"])
     }
+    func testRecoveryPreservesTerminalErrorsAndCancellation() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let client = WorkerClient(credential: "synthetic-token", session: session)
+        let request = try GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)
+        for (status, expected) in [(403, GenerationError.configuration), (429, .allowance), (200, .invalidImage), (-1, .cancelled)] {
+            var methods: [String] = []
+            MockURLProtocol.handler = { request in
+                methods.append(request.httpMethod!)
+                if request.httpMethod == "POST" {
+                    return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil, headerFields: nil)!, Data())
+                }
+                if status == -1 { throw URLError(.cancelled) }
+                return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                        headerFields: ["Content-Type": "application/json"])!, Data())
+            }
+            do { _ = try await client.generate(request); XCTFail("Expected recovery failure") }
+            catch { XCTAssertEqual(error as? GenerationError, expected) }
+            XCTAssertEqual(methods, ["POST", "GET"], "Do not poll terminal failures or cancelled recovery again")
+        }
+    }
+
+    func testExpiredIdentityRenewsOnceAndKeepsItsAccount() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let identities = AnonymousIdentityStore(service: "ColoringSheets.renewal-tests.\(UUID())")
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let saved = AnonymousSession(accountID: UUID(), accessToken: "expired-token", expiresAt: .distantPast)
+        try await identities.save(saved)
+        let renewal = try JSONSerialization.data(withJSONObject: ["accountId": saved.accountID.uuidString,
+            "accessToken": "renewed-token", "expiresAt": Date().timeIntervalSince1970 + 3600])
+        let png = MockGenerator.sampleImage().pngData()!
+        let lock = NSLock()
+        var renewals = 0, generations = 0
+        MockURLProtocol.handler = { request in
+            lock.lock(); defer { lock.unlock() }
+            if request.url!.path == "/v1/installations/renew" {
+                renewals += 1
+                XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer expired-token")
+                return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, renewal)
+            }
+            generations += 1
+            XCTAssertEqual(request.url!.path, "/v1/generations", "Never register a replacement account")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer renewed-token")
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "image/png"])!, png)
+        }
+        let client = WorkerClient(session: session, identities: identities)
+        let request = try GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<5 { group.addTask { _ = try await client.generate(request) } }
+            try await group.waitForAll()
+        }
+        XCTAssertEqual(renewals, 1)
+        XCTAssertEqual(generations, 5)
+        let persisted = await identities.session()
+        XCTAssertEqual(persisted?.accountID, saved.accountID)
+        XCTAssertEqual(persisted?.accessToken, "renewed-token")
+    }
+
+    func testFailedOrMismatchedRenewalRetainsSavedAccount() async throws {
+        let identities = AnonymousIdentityStore(service: "ColoringSheets.renewal-failure-tests.\(UUID())")
+        addTeardownBlock { await identities.remove() }
+        let saved = AnonymousSession(accountID: UUID(), accessToken: "expired-token", expiresAt: .distantPast)
+        try await identities.save(saved)
+        for mismatched in [false, true] {
+            do {
+                _ = try await identities.session(register: {
+                    XCTFail("An existing account must never be replaced by registration")
+                    throw GenerationError.configuration
+                }, renew: { identity in
+                    XCTAssertEqual(identity, saved)
+                    if !mismatched { throw GenerationError.uncertain }
+                    return AnonymousSession(accountID: UUID(), accessToken: "different-account", expiresAt: .distantFuture)
+                })
+                XCTFail("Expected renewal failure")
+            } catch { XCTAssertEqual(error as? GenerationError, mismatched ? .configuration : .uncertain) }
+            let persisted = await identities.session()
+            XCTAssertEqual(persisted, saved, "Failed renewal must leave the existing credential intact for another attempt")
+        }
+    }
+
+    func testCancellationDuringRenewalNeverStartsGeneration() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let identities = AnonymousIdentityStore(service: "ColoringSheets.renewal-cancel-tests.\(UUID())")
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let saved = AnonymousSession(accountID: UUID(), accessToken: "expired-token", expiresAt: .distantPast)
+        try await identities.save(saved)
+        let response = try JSONSerialization.data(withJSONObject: ["accountId": saved.accountID.uuidString,
+            "accessToken": "renewed-token", "expiresAt": Date().timeIntervalSince1970 + 3600])
+        let started = expectation(description: "Renewal started")
+        let release = DispatchSemaphore(value: 0)
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.url!.path, "/v1/installations/renew", "Cancellation must prevent a generation POST")
+            started.fulfill()
+            XCTAssertEqual(release.wait(timeout: .now() + 5), .success)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, response)
+        }
+        let client = WorkerClient(session: session, identities: identities)
+        let request = try GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)
+        let task = Task { try await client.generate(request) }
+        await fulfillment(of: [started], timeout: 3)
+        task.cancel()
+        release.signal()
+        do { _ = try await task.value; XCTFail("Expected cancellation") }
+        catch { XCTAssertEqual(error as? GenerationError, .cancelled) }
+        let persisted = await identities.session()
+        XCTAssertEqual(persisted?.accountID, saved.accountID)
+    }
+
     func testRedirectIsRejected() {
         let delegate = NoRedirectDelegate()
         let task = URLSession.shared.dataTask(with: WorkerClient.endpoint)
@@ -736,6 +859,9 @@ final class KeyboardFocusTests: XCTestCase {
     }
 
     func testComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else {
+            throw XCTSkip("iPad window fixtures require an iPad scene; phone layouts are covered by GalleryUITests.")
+        }
         let suite = "ComposerLayoutTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -776,6 +902,9 @@ final class KeyboardFocusTests: XCTestCase {
     }
 
     func testMinimizedComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else {
+            throw XCTSkip("iPad window fixtures require an iPad scene; phone layouts are covered by GalleryUITests.")
+        }
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
         let previousWindow = scene.windows.first(where: \.isKeyWindow)
         let window = UIWindow(windowScene: scene)

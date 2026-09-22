@@ -16,7 +16,10 @@ with tempfile.TemporaryDirectory() as directory:
     assert run('mock', 'Debug').returncode == 0
     assert run('mock', 'Release').returncode == 0
     assert run('live', 'Release').returncode == 0
-    assert run('live', 'Release', 'http://not-https.example').returncode != 0
+    for invalid in ['http://not-https.example', 'https:', 'https://', 'https://example.test/',
+                    'https://example.test/path', 'https://example.test?query', 'https://example.test#fragment',
+                    'https://user:password@example.test', 'https://example.test:99999', 'https://example.test\n']:
+        assert run('live', 'Release', invalid).returncode != 0, invalid
     config = plistlib.loads((root/'Test.app/ServiceConfiguration.plist').read_bytes())
     assert config == {'mock':False, 'serviceURL':'https://coloring-sheets-api.jordan-erenrich.workers.dev'}
 print('PASS: public service configuration is valid for mock and live builds; invalid origins fail.')

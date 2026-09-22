@@ -154,12 +154,13 @@ struct ColoringResult: Identifiable {
 }
 
 enum GenerationError: LocalizedError, Equatable {
-    case validation(String), configuration, allowance, upstream(String), server(Int), invalidImage, uncertain, cancelled
+    case validation(String), configuration, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
         case .allowance: return "Today’s free sheet allowance has been used. Please try again after it resets."
+        case .serviceBudget: return "The coloring service has reached today’s limit. Please try again after it resets."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
         case .invalidImage: return "The service did not return a valid PNG. Generation may have been charged. Check usage before trying again."
         case .uncertain: return "The connection was interrupted or timed out. Generation may still finish and be charged. Check usage before choosing to generate again."
@@ -224,6 +225,8 @@ final class WorkerClient: GenerationServing {
         var http = URLRequest(url: endpoint)
         http.httpMethod = "POST"
         let authorization = try await authorization()
+        // Shared identity registration/renewal can finish after this caller stops waiting.
+        guard !Task.isCancelled else { throw GenerationError.cancelled }
         let generationID = UUID()
         http.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -264,7 +267,11 @@ final class WorkerClient: GenerationServing {
                 if http.statusCode == 202 { continue }
                 return try Self.parse(data, response: http, requestedModel: requestedModel)
             } catch is CancellationError { throw GenerationError.cancelled }
+            catch let error as GenerationError { throw error }
             catch {
+                if Task.isCancelled || (error as? URLError)?.code == .cancelled {
+                    throw GenerationError.cancelled
+                }
                 if let urlError = error as? URLError {
                     Self.logger.error("Recovery transport failed id=\(generationID.uuidString, privacy: .public) attempt=\(attempt + 1) urlError=\(urlError.errorCode)")
                 } else {
@@ -279,32 +286,35 @@ final class WorkerClient: GenerationServing {
     private func authorization() async throws -> String {
         if let legacyCredential, !legacyCredential.isEmpty { return legacyCredential }
         guard let identities else { throw GenerationError.configuration }
-        let saved = try await identities.session { [serviceURL, session] in
-            var request = URLRequest(url: serviceURL.appending(path: "/v1/installations"))
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = Data("{}".utf8)
-            let data: Data; let response: URLResponse
-            do { (data, response) = try await session.data(for: request) }
-            catch {
-                Self.logger.error("Installation transport failed urlError=\((error as? URLError)?.errorCode ?? 0)")
-                throw GenerationError.uncertain
-            }
-            if let http = response as? HTTPURLResponse {
-                Self.logResponse("installation", data: data, response: http)
-            } else {
-                Self.logger.error("Installation returned no HTTP response")
-            }
-            guard let http = response as? HTTPURLResponse, http.statusCode == 201,
-                  let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
-                  let accountID = UUID(uuidString: created.accountID), !created.accessToken.isEmpty else {
-                Self.logger.error("Installation response could not be used")
-                throw GenerationError.configuration
-            }
-            return AnonymousSession(accountID: accountID, accessToken: created.accessToken,
-                                    expiresAt: Date(timeIntervalSince1970: created.expiresAt))
-        }
+        let saved = try await identities.session(
+            register: { [self] in try await installationSession() },
+            renew: { [self] saved in try await installationSession(renewing: saved) })
         return saved.accessToken
+    }
+
+    private func installationSession(renewing saved: AnonymousSession? = nil) async throws -> AnonymousSession {
+        let path = saved == nil ? "/v1/installations" : "/v1/installations/renew"
+        var request = URLRequest(url: serviceURL.appending(path: path))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let saved { request.setValue("Bearer " + saved.accessToken, forHTTPHeaderField: "Authorization") }
+        request.httpBody = Data("{}".utf8)
+        let data: Data; let response: URLResponse
+        do { (data, response) = try await session.data(for: request) }
+        catch {
+            Self.logger.error("Installation transport failed urlError=\((error as? URLError)?.errorCode ?? 0)")
+            throw GenerationError.uncertain
+        }
+        if let http = response as? HTTPURLResponse {
+            Self.logResponse(saved == nil ? "installation" : "renewal", data: data, response: http)
+        }
+        guard let http = response as? HTTPURLResponse, http.statusCode == (saved == nil ? 201 : 200),
+              let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
+              let accountID = UUID(uuidString: created.accountID), !created.accessToken.isEmpty else {
+            throw GenerationError.configuration
+        }
+        return AnonymousSession(accountID: accountID, accessToken: created.accessToken,
+                                expiresAt: Date(timeIntervalSince1970: created.expiresAt))
     }
 
     // Only log protocol fields. A response can contain a token, prompt, or image,
@@ -337,7 +347,11 @@ final class WorkerClient: GenerationServing {
         guard response.statusCode == 200 else {
             switch response.statusCode {
             case 401, 403, 404, 405, 415, 503: throw GenerationError.configuration
-            case 429: throw GenerationError.allowance
+            case 429:
+                if workerErrorCode(data, response: response) == "service_budget_exhausted" {
+                    throw GenerationError.serviceBudget
+                }
+                throw GenerationError.allowance
             case 400, 413: throw GenerationError.validation("The service rejected the description or page size. Revise the description or check the app and Worker versions.")
             case 504: throw GenerationError.uncertain
             case 502:
