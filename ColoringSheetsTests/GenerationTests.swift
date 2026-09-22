@@ -337,6 +337,12 @@ final class KeyboardFocusTests: XCTestCase {
         capture("Landscape sheet with minimized composer", view: window)
     }
 
+    func testMinimizedPromptUsesOnlyItsFirstLine() {
+        XCTAssertEqual(ContentView.minimizedPrompt(from: "A dinosaur in a garden\nwith flowers"),
+                       "A dinosaur in a garden")
+        XCTAssertEqual(ContentView.minimizedPrompt(from: ""), "Edit description")
+    }
+
     func testComposerFitsLandscapePortraitAndNarrowWindows() async throws {
         let suite = "ComposerLayoutTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!

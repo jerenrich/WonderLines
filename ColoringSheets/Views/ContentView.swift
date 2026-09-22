@@ -103,10 +103,17 @@ struct ContentView: View {
                     Button {
                         setComposerMinimized(false)
                     } label: {
-                        Label("Edit description", systemImage: "square.and.pencil")
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.pencil")
+                            Text(minimizedPrompt)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                             .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Edit description: \(minimizedPrompt)")
+                    .accessibilityHint("Opens the description editor")
                     .accessibilityIdentifier("expandComposer")
                     Button {
                         store.description = ""
@@ -132,6 +139,16 @@ struct ContentView: View {
         .shadow(color: ink.opacity(0.06), radius: 8, y: 3)
         .accessibilityIdentifier("composer")
     }
+
+    static func minimizedPrompt(from description: String) -> String {
+        let firstLine = description
+            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+            .first
+            .map(String.init) ?? ""
+        return firstLine.isEmpty ? "Edit description" : firstLine
+    }
+
+    private var minimizedPrompt: String { Self.minimizedPrompt(from: store.description) }
 
     private func controls(narrow: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
