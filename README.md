@@ -1,4 +1,6 @@
-# Coloring Sheets for iPhone and iPad
+# WonderLines — Coloring Sheets for iPhone and iPad
+
+Created by Jordan Erenrich.
 
 Project page: https://jerenrich.github.io/WonderLines/
 
