@@ -13,7 +13,10 @@ globalThis.fetch = async (url, request) => {
   calls++;
   forwarded = JSON.parse(request.body);
   if (upstreamFixtures.length) return upstreamFixtures.shift();
-  return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}], usage: null}), {headers: {'content-type':'application/json'}});
+  return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}], usage: null}), {headers: {
+    'content-type':'application/json', 'x-ratelimit-limit-requests':'12',
+    'x-ratelimit-remaining-requests':'11', 'x-ratelimit-reset-requests':'5s'
+  }});
 };
 try {
   for (const model of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
@@ -67,7 +70,10 @@ try {
   }
   assert.equal(calls, beforeInvalid, 'Invalid dimensions must never trigger a paid call');
   upstreamFixtures.push(new Response(JSON.stringify({error: {type: 'rate_limit_error', code: 'slow_down'}}), {
-    status: 429, headers: {'content-type': 'application/json', 'retry-after': '4', 'x-request-id': 'req_rate_123'}
+    status: 429, headers: {
+      'content-type': 'application/json', 'retry-after': '4', 'x-request-id': 'req_rate_123',
+      'x-ratelimit-limit-requests':'12', 'x-ratelimit-remaining-requests':'0', 'x-ratelimit-reset-requests':'5s'
+    }
   }));
   const rateLimited = await generate({});
   assert.equal(rateLimited.status, 429);
@@ -90,6 +96,11 @@ try {
   assert.ok(!JSON.stringify(messages).includes('Synthetic flower'));
   assert.ok(!JSON.stringify(messages).includes('dummy-family'));
   assert.ok(!JSON.stringify(messages).includes('dummy-upstream'));
-  assert.ok(messages.some(([entry]) => entry.event === 'coloring_sheet_failed' && entry.category === 'rate_limit'));
+  const successfulLog = messages.find(([entry]) => entry.event === 'coloring_sheet_generated');
+  assert.equal(successfulLog[0].openai_rate_limit_requests_limit, '12');
+  assert.equal(successfulLog[0].openai_rate_limit_requests_remaining, '11');
+  const rateLimitLog = messages.find(([entry]) => entry.event === 'coloring_sheet_failed' && entry.category === 'rate_limit');
+  assert.equal(rateLimitLog[0].openai_rate_limit_requests_remaining, '0');
+  assert.equal(rateLimitLog[0].openai_retry_after, '4');
 } finally { globalThis.fetch = originalFetch; console.log = originalLog; }
 console.log('PASS: models, complexity, A4 defaults, custom dimensions, metrics, and pre-payment validation; no network.');

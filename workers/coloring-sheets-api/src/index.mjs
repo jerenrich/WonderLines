@@ -100,7 +100,30 @@ function generationMetrics(data, requestId, elapsedMs, model, size) {
   };
 }
 
-function logGeneration(metrics) {
+function safeRateLimitValue(value) {
+  // Response headers are upstream-controlled. Keep logs one-line and bounded even
+  // if an intermediary sends an unexpected value.
+  return typeof value === 'string' && /^[\x20-\x7e]{1,64}$/.test(value) ? value : null;
+}
+
+function rateLimitSnapshot(headers) {
+  const value = name => safeRateLimitValue(headers.get(name));
+  // Deliberate allowlist: do not add every upstream header to Cloudflare logs.
+  return {
+    openai_rate_limit_requests_limit: value('x-ratelimit-limit-requests'),
+    openai_rate_limit_requests_remaining: value('x-ratelimit-remaining-requests'),
+    openai_rate_limit_requests_reset: value('x-ratelimit-reset-requests'),
+    openai_rate_limit_tokens_limit: value('x-ratelimit-limit-tokens'),
+    openai_rate_limit_tokens_remaining: value('x-ratelimit-remaining-tokens'),
+    openai_rate_limit_tokens_reset: value('x-ratelimit-reset-tokens'),
+    openai_rate_limit_project_tokens_limit: value('x-ratelimit-limit-project-tokens'),
+    openai_rate_limit_project_tokens_remaining: value('x-ratelimit-remaining-project-tokens'),
+    openai_rate_limit_project_tokens_reset: value('x-ratelimit-reset-project-tokens'),
+    openai_retry_after: value('retry-after'),
+  };
+}
+
+function logGeneration(metrics, rateLimits) {
   // Intentionally excludes the child's prompt, password, image, API key, and response body.
   // Keep an explicit field allowlist; do not spread metrics or the upstream response here.
   // Success telemetry only: sampled/expired logs and billed requests whose responses
@@ -115,6 +138,7 @@ function logGeneration(metrics) {
     estimated_cost_usd: metrics.estimatedTotalUsd,
     duration_ms: metrics.elapsedMs,
     openai_request_id: metrics.requestId,
+    ...rateLimits,
   });
 }
 
@@ -140,12 +164,13 @@ function safeRetryAfter(value) {
   return Number.isFinite(seconds) && seconds >= 1 && seconds <= 60 ? String(Math.ceil(seconds)) : null;
 }
 
-function logGenerationFailure({status, category, requestId, model, size}) {
+function logGenerationFailure({status, category, requestId, model, size, rateLimits}) {
   // Keep the same strict allowlist as successful telemetry: no prompt, credential,
   // image, upstream response body, or exception text reaches logs.
   console.log({
     event: 'coloring_sheet_failed', upstream_status: status, category,
     model, requested_size: size, openai_request_id: requestId,
+    ...rateLimits,
   });
 }
 
@@ -340,6 +365,7 @@ export default {
         // Keep upstream details and credentials out of responses and logs.
         const error = await result.json().catch(() => ({}));
         const requestId = safeRequestID(result.headers.get('x-request-id'));
+        const rateLimits = rateLimitSnapshot(result.headers);
         let message = 'OpenAI could not generate this image. Try a simpler description.';
         if (result.status === 401) message = 'OpenAI rejected the API key. Check OPENAI_API_KEY.';
         else if (result.status === 403) message = 'OpenAI denied model access. Check model access and any organization verification requirement in your OpenAI dashboard.';
@@ -354,14 +380,14 @@ export default {
             organization_usage_limit_exceeded: 'The OpenAI organization usage limit was reached.',
             unknown_limit: 'OpenAI rejected this request because of an account or rate limit.',
           };
-          logGenerationFailure({status: result.status, category, requestId, model, size});
+          logGenerationFailure({status: result.status, category, requestId, model, size, rateLimits});
           const headers = {'X-OpenAI-Error-Category': category};
           if (requestId) headers['X-OpenAI-Request-ID'] = requestId;
           if (retryAfter) headers['Retry-After'] = retryAfter;
           return reply(messages[category], 429, 'text/plain; charset=utf-8', headers);
         }
         else if (result.status >= 500) message = 'OpenAI is temporarily unavailable.';
-        logGenerationFailure({status: result.status, category: 'upstream_error', requestId, model, size});
+        logGenerationFailure({status: result.status, category: 'upstream_error', requestId, model, size, rateLimits});
         return reply(message + ' (OpenAI status ' + result.status + ')', 502);
       }
       const data = await result.json();
@@ -372,7 +398,7 @@ export default {
       // increasing resolution or requesting multiple images; large jobs may need storage.
       // Keep the PNG response compatible with existing clients; attach usage metadata.
       const metrics = generationMetrics(data, result.headers.get('x-request-id'), Date.now() - started, model, size);
-      logGeneration(metrics);
+      logGeneration(metrics, rateLimitSnapshot(result.headers));
       response.headers.set('X-Generation-Metrics', encodeURIComponent(JSON.stringify(metrics)));
       return response;
     } catch {
