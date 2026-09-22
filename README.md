@@ -1,5 +1,7 @@
 # Coloring Sheets for iPad
 
+Project page: https://jerenrich.github.io/WonderLines/
+
 Native SwiftUI family prototype, targeting iPadOS 17+. The intended physical test device is a ninth-generation iPad running iPadOS 27. Open `ColoringSheets.xcodeproj` in Xcode and select the shared **ColoringSheets** scheme.
 
 ![Landscape iPad simulator showing a dinosaur riding a bike on the moon](docs/images/ipad-simulator-dinosaur-moon.png)
