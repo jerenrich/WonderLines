@@ -257,12 +257,12 @@ struct ContentView: View {
             }
             .accessibilityHint("Keep the app open. Generation may take a few minutes.")
         } else if let message = store.batchMessage {
-            Button { detailMessage = message + "\n\nTemporary rate limits are retried automatically up to \(WorkerClient.maximumRateLimitRetries) times." } label: {
+            Button { detailMessage = message } label: {
                 Label("\(store.results.count) sheets available · Details", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
         } else if case .error(let message) = store.phase {
-            Button { detailMessage = message + "\n\nTemporary rate limits are retried automatically up to \(WorkerClient.maximumRateLimitRetries) times." } label: {
+            Button { detailMessage = message } label: {
                 Label("Generation needs attention", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
