@@ -1,15 +1,19 @@
 import UIKit
 
-struct MockGenerator: GenerationServing {
+@MainActor
+final class MockGenerator: GenerationServing {
+    private var nextVariation = 0
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
-        try await Task.sleep(for: .seconds(1))
+        let variation = nextVariation % ColoringViewModel.batchSize
+        nextVariation += 1
+        try await Task.sleep(for: .milliseconds(700 + variation * 180))
         try Task.checkCancellation()
-        let image = Self.sampleImage(size: GenerationSize(width: request.width, height: request.height))
+        let image = Self.sampleImage(size: GenerationSize(width: request.width, height: request.height), variation: variation)
         let metrics = GenerationMetrics.decode("{\"requestedModel\":\"\(request.model.rawValue)\",\"inputTokens\":100,\"imageInputTokens\":0,\"outputTokens\":200,\"totalTokens\":300,\"estimatedTotalUsd\":0.0065,\"elapsedMs\":12000,\"estimateBasis\":\"Illustrative mock metrics only. No paid request was sent.\"}")
         return ColoringResult(data: image.pngData()!, image: image, requestedModel: request.model, metrics: metrics)
     }
 
-    static func sampleImage(size: GenerationSize = .a4Default) -> UIImage {
+    nonisolated static func sampleImage(size: GenerationSize = .a4Default, variation: Int = 0) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         return UIGraphicsImageRenderer(size: size.cgSize, format: format).image { context in
@@ -26,8 +30,8 @@ struct MockGenerator: GenerationServing {
                 let path = UIBezierPath(ovalIn: rect); path.lineWidth = 7; path.stroke()
             }
             // Deliberately hand-drawn deterministic fixture, not an AI generation.
-            let sun = landscape ? CGPoint(x: 1280, y: 180) : CGPoint(x: 780, y: 210)
-            let flower = landscape ? CGPoint(x: 768, y: 430) : CGPoint(x: 512, y: 620)
+            let sun = landscape ? CGPoint(x: 1280 - variation * 220, y: 180) : CGPoint(x: 780, y: 210)
+            let flower = landscape ? CGPoint(x: 620 + variation * 70, y: 430) : CGPoint(x: 512, y: 620)
             ellipse(CGRect(x: sun.x - 70, y: sun.y - 70, width: 140, height: 140))
             for index in 0..<8 {
                 let angle = CGFloat(index) * .pi / 4
@@ -47,8 +51,9 @@ struct MockGenerator: GenerationServing {
             stem.lineWidth = 7; stem.stroke()
             ellipse(CGRect(x: flower.x - 192, y: flower.y + 220, width: 172, height: 90))
             ellipse(CGRect(x: flower.x + 20, y: flower.y + 310, width: 172, height: 90))
-            for index in 0..<8 {
-                let angle = CGFloat(index) * .pi / 4
+            let petals = 5 + variation
+            for index in 0..<petals {
+                let angle = CGFloat(index) * 2 * .pi / CGFloat(petals)
                 ellipse(CGRect(x: flower.x - 70 + cos(angle) * 160, y: flower.y - 70 + sin(angle) * 160, width: 140, height: 140))
             }
             UIColor.white.setFill()

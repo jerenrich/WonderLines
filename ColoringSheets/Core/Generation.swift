@@ -119,18 +119,45 @@ struct GenerationMetrics: Decodable {
     }
 }
 
-struct ColoringResult {
+struct ColoringResult: Identifiable {
+    let id = UUID()
     let data: Data
     let image: UIImage
     let requestedModel: ImageModel
     let metrics: GenerationMetrics?
 }
 
+enum UpstreamLimit: String, Equatable {
+    case temporaryRateLimit = "rate_limit"
+    case creditBalanceExhausted = "credit_balance_exhausted"
+    case organizationSpendLimitExceeded = "organization_spend_limit_exceeded"
+    case projectSpendLimitExceeded = "project_spend_limit_exceeded"
+    case organizationUsageLimitExceeded = "organization_usage_limit_exceeded"
+    case unknownLimit = "unknown_limit"
+}
+
 enum GenerationError: LocalizedError, Equatable {
-    case validation(String), configuration, upstream(String), server(Int), invalidImage, uncertain, cancelled
+    case validation(String), configuration, upstream(String), limit(UpstreamLimit, retryAfter: TimeInterval?, requestID: String?), server(Int), invalidImage, uncertain, cancelled
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
+        case .limit(let limit, let retryAfter, let requestID):
+            let requestDetail = requestID.map { " OpenAI request ID: \($0)." } ?? ""
+            switch limit {
+            case .temporaryRateLimit:
+                let wait = retryAfter.map { " Wait about \(Int($0.rounded(.up))) seconds before trying another batch." } ?? ""
+                return "OpenAI temporarily limited this request.\(wait)\(requestDetail)"
+            case .creditBalanceExhausted:
+                return "OpenAI API credit is exhausted. Add credit before trying again.\(requestDetail)"
+            case .organizationSpendLimitExceeded:
+                return "The OpenAI organization spend limit was reached. Increase the organization limit or wait for its reset.\(requestDetail)"
+            case .projectSpendLimitExceeded:
+                return "The OpenAI project spend limit was reached. Increase the project limit or wait for its reset.\(requestDetail)"
+            case .organizationUsageLimitExceeded:
+                return "The OpenAI organization usage limit was reached. Contact the OpenAI account administrator before trying again.\(requestDetail)"
+            case .unknownLimit:
+                return "OpenAI rejected this request because of an account or rate limit. Check API billing and limits before trying again.\(requestDetail)"
+            }
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
         case .invalidImage: return "The service did not return a valid PNG. Generation may have been charged. Check usage before trying again."
@@ -154,11 +181,14 @@ final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sen
 
 final class WorkerClient: GenerationServing {
     static let endpoint = URL(string: "https://coloring-sheets-api.jordan-erenrich.workers.dev/generate")!
+    static let maximumRateLimitRetries = 2
     private let credential: String
     private let session: URLSession
+    private let retryJitter: @Sendable () -> TimeInterval
 
-    init(credential: String, session: URLSession? = nil) {
+    init(credential: String, session: URLSession? = nil, retryJitter: @escaping @Sendable () -> TimeInterval = { Double.random(in: 0...0.5) }) {
         self.credential = credential
+        self.retryJitter = retryJitter
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 240
         config.timeoutIntervalForResource = 240
@@ -177,15 +207,27 @@ final class WorkerClient: GenerationServing {
         http.setValue("Bearer " + credential, forHTTPHeaderField: "Authorization")
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
         http.httpBody = try request.encoded()
-        let data: Data
-        let response: URLResponse
-        do { (data, response) = try await session.data(for: http) }
-        catch {
-            if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw GenerationError.cancelled }
-            throw GenerationError.uncertain
+        var retryCount = 0
+        while true {
+            let data: Data
+            let response: URLResponse
+            do { (data, response) = try await session.data(for: http) }
+            catch {
+                if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw GenerationError.cancelled }
+                throw GenerationError.uncertain
+            }
+            guard let response = response as? HTTPURLResponse else { throw GenerationError.uncertain }
+            do {
+                return try Self.parse(data, response: response, requestedModel: request.model)
+            } catch let error as GenerationError {
+                guard case let .limit(.temporaryRateLimit, retryAfter, _) = error,
+                      retryCount < Self.maximumRateLimitRetries else { throw error }
+                retryCount += 1
+                let delay = min(60, max(1, retryAfter ?? 2)) + min(0.5, max(0, retryJitter()))
+                do { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+                catch { throw GenerationError.cancelled }
+            }
         }
-        guard let response = response as? HTTPURLResponse else { throw GenerationError.uncertain }
-        return try Self.parse(data, response: response, requestedModel: request.model)
     }
 
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
@@ -195,6 +237,10 @@ final class WorkerClient: GenerationServing {
             case 401, 403, 404, 405, 415, 503: throw GenerationError.configuration
             case 400, 413: throw GenerationError.validation("The service rejected the description or page size. Revise the description or check the app and Worker versions.")
             case 504: throw GenerationError.uncertain
+            case 429:
+                let category = UpstreamLimit(rawValue: response.value(forHTTPHeaderField: "X-OpenAI-Error-Category") ?? "") ?? .unknownLimit
+                let retryAfter = category == .temporaryRateLimit ? Self.retryAfter(from: response) : nil
+                throw GenerationError.limit(category, retryAfter: retryAfter, requestID: Self.requestID(from: response))
             case 502:
                 // Only display the known sanitized Worker messages, never arbitrary response text.
                 let body = contentType == "text/plain" ? String(data: data.prefix(512), encoding: .utf8) ?? "" : ""
@@ -214,5 +260,18 @@ final class WorkerClient: GenerationServing {
         }
         return ColoringResult(data: data, image: image, requestedModel: requestedModel,
                               metrics: .decode(response.value(forHTTPHeaderField: "X-Generation-Metrics")))
+    }
+
+    private static func retryAfter(from response: HTTPURLResponse) -> TimeInterval? {
+        guard let value = response.value(forHTTPHeaderField: "Retry-After"),
+              let seconds = TimeInterval(value), seconds.isFinite, seconds >= 0 else { return nil }
+        return min(60, max(1, seconds))
+    }
+
+    private static func requestID(from response: HTTPURLResponse) -> String? {
+        guard let value = response.value(forHTTPHeaderField: "X-OpenAI-Request-ID"),
+              !value.isEmpty, value.count <= 200,
+              value.unicodeScalars.allSatisfy({ $0.value >= 0x21 && $0.value <= 0x7E }) else { return nil }
+        return value
     }
 }

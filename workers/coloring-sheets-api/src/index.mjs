@@ -6,7 +6,8 @@
 //   POST /generate: JSON {subject, model?, width?, height?}; dimensions are pixels.
 //   Authorization: Bearer <APP_PASSWORD>. Omit BOTH dimensions for the A4 default.
 //   Success: image/png plus URI-encoded JSON in X-Generation-Metrics.
-//   Failure: plain text with a non-2xx status; do not automatically retry paid requests.
+//   Failure: plain text with a non-2xx status. Only an explicit temporary 429 rate
+//   limit carries retry metadata; the iPad client may retry that request at most twice.
 // Browser login uses /login, /session and /logout on the same origin instead.
 // Before wider distribution: add rate limits, a durable generation quota, and
 // per-device credentials. Never embed APP_PASSWORD or OPENAI_API_KEY in app source.
@@ -117,6 +118,37 @@ function logGeneration(metrics) {
   });
 }
 
+function openAILimitCategory(error) {
+  const code = typeof error?.error?.code === 'string' ? error.error.code : '';
+  const type = typeof error?.error?.type === 'string' ? error.error.type : '';
+  if (code === 'credit_balance_exhausted') return 'credit_balance_exhausted';
+  if (code === 'organization_spend_limit_exceeded') return 'organization_spend_limit_exceeded';
+  if (code === 'project_spend_limit_exceeded') return 'project_spend_limit_exceeded';
+  if (code === 'organization_usage_limit_exceeded') return 'organization_usage_limit_exceeded';
+  // `insufficient_quota` is intentionally not retried: its broad type does not prove
+  // that this is a transient request-rate limit.
+  if (code === 'rate_limit_exceeded' || code === 'slow_down' || type === 'rate_limit_error') return 'rate_limit';
+  return 'unknown_limit';
+}
+
+function safeRequestID(value) {
+  return typeof value === 'string' && /^[\x21-\x7e]{1,200}$/.test(value) ? value : null;
+}
+
+function safeRetryAfter(value) {
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 1 && seconds <= 60 ? String(Math.ceil(seconds)) : null;
+}
+
+function logGenerationFailure({status, category, requestId, model, size}) {
+  // Keep the same strict allowlist as successful telemetry: no prompt, credential,
+  // image, upstream response body, or exception text reaches logs.
+  console.log({
+    event: 'coloring_sheet_failed', upstream_status: status, category,
+    model, requested_size: size, openai_request_id: requestId,
+  });
+}
+
 // Self-contained page for dashboard deployment. Keep user/API text out of this template;
 // render dynamic values using textContent. Split HTML/CSS/JS when moving to a repository.
 const PAGE = `<!doctype html>
@@ -220,7 +252,7 @@ form.addEventListener('submit',async event=>{
 });
 </script></html>`;
 
-function reply(body, status = 200, type = 'text/plain; charset=utf-8') {
+function reply(body, status = 200, type = 'text/plain; charset=utf-8', extraHeaders = {}) {
   // no-store covers images, session checks, metrics and errors.
   // Inline scripts/styles keep this single-file prototype portable. When extracting
   // the frontend, replace unsafe-inline with script hashes/nonces or external assets.
@@ -228,6 +260,7 @@ function reply(body, status = 200, type = 'text/plain; charset=utf-8') {
     'Content-Type': type, 'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
     'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    ...extraHeaders,
   }});
 }
 
@@ -291,8 +324,8 @@ export default {
     try {
       const started = Date.now();
       const result = await fetch('https://api.openai.com/v1/images/generations', {
-        // Intentionally no retries. A timeout/disconnection does not prove OpenAI stopped
-        // generating or billing. Future retry support needs persisted job/deduplication state.
+        // The Worker never retries paid calls. The client is allowed to retry only a
+        // confirmed temporary rate-limit response, and only after the supplied delay.
         method: 'POST',
         headers: {'Authorization': 'Bearer ' + env.OPENAI_API_KEY, 'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -306,12 +339,29 @@ export default {
       if (!result.ok) {
         // Keep upstream details and credentials out of responses and logs.
         const error = await result.json().catch(() => ({}));
+        const requestId = safeRequestID(result.headers.get('x-request-id'));
         let message = 'OpenAI could not generate this image. Try a simpler description.';
         if (result.status === 401) message = 'OpenAI rejected the API key. Check OPENAI_API_KEY.';
         else if (result.status === 403) message = 'OpenAI denied model access. Check model access and any organization verification requirement in your OpenAI dashboard.';
-        else if (error.error?.code === 'insufficient_quota') message = 'OpenAI reports insufficient credit or quota. Check your API billing balance.';
-        else if (result.status === 429) message = 'OpenAI reports a rate or quota limit. Check API billing and limits before trying again.';
+        else if (result.status === 429) {
+          const category = openAILimitCategory(error);
+          const retryAfter = category === 'rate_limit' ? safeRetryAfter(result.headers.get('retry-after')) : null;
+          const messages = {
+            rate_limit: 'OpenAI temporarily limited this request.',
+            credit_balance_exhausted: 'OpenAI API credit is exhausted.',
+            organization_spend_limit_exceeded: 'The OpenAI organization spend limit was reached.',
+            project_spend_limit_exceeded: 'The OpenAI project spend limit was reached.',
+            organization_usage_limit_exceeded: 'The OpenAI organization usage limit was reached.',
+            unknown_limit: 'OpenAI rejected this request because of an account or rate limit.',
+          };
+          logGenerationFailure({status: result.status, category, requestId, model, size});
+          const headers = {'X-OpenAI-Error-Category': category};
+          if (requestId) headers['X-OpenAI-Request-ID'] = requestId;
+          if (retryAfter) headers['Retry-After'] = retryAfter;
+          return reply(messages[category], 429, 'text/plain; charset=utf-8', headers);
+        }
         else if (result.status >= 500) message = 'OpenAI is temporarily unavailable.';
+        logGenerationFailure({status: result.status, category: 'upstream_error', requestId, model, size});
         return reply(message + ' (OpenAI status ' + result.status + ')', 502);
       }
       const data = await result.json();

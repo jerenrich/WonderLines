@@ -41,9 +41,9 @@ struct ContentView: View {
         .tint(ink)
         .preferredColorScheme(.light)
         .onChange(of: scenePhase) { _, phase in if phase == .background { store.enteredBackground() } }
-        .onChange(of: store.phase) { _, phase in
+        .onChange(of: store.results.first?.id) { _, firstID in
             // Do not interrupt a new description being typed as a request finishes.
-            if phase == .result && !descriptionFocused { setComposerMinimized(true) }
+            if firstID != nil && !descriptionFocused { setComposerMinimized(true) }
         }
         .sheet(item: $export, onDismiss: cleanExport) { item in
             switch item.kind {
@@ -58,8 +58,8 @@ struct ContentView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(store.isMock
-                 ? "Demo mode uses a sample picture and illustrative usage. No paid request is sent."
-                 : "Age stays on this iPad. We send a description of the level of detail. Each generation uses paid API credit. Review the sheet before sharing it with your child. Keep the app open while generating; stopping or leaving it may still result in a charge.")
+                 ? "Demo mode makes \(ColoringViewModel.batchSize) sample pictures with illustrative usage. No paid request is sent. Swipe between them to choose a sheet."
+                 : "Each tap generates \(ColoringViewModel.batchSize) sheets in parallel using paid API credit for all \(ColoringViewModel.batchSize). Swipe to choose a sheet; Share, Save to Photos, and Print use the visible sheet. Age stays on this iPad. Keep the app open while generating; stopping or leaving it may still result in charges.")
         }
         .alert("Generation details", isPresented: Binding(get: { detailMessage != nil }, set: { if !$0 { detailMessage = nil } })) {
             Button("OK", role: .cancel) { detailMessage = nil }
@@ -78,6 +78,7 @@ struct ContentView: View {
                 Label("Coloring Sheets", systemImage: "pencil.and.outline").font(.headline)
                 Spacer(minLength: 0)
             }
+            if !store.results.isEmpty { galleryNavigation }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) { exportButtons; usageButton }
                 HStack(spacing: 8) { exportButtons; usageButton }.labelStyle(.iconOnly)
@@ -87,6 +88,35 @@ struct ContentView: View {
             if narrow { Spacer(minLength: 0) }
         }
         .frame(minHeight: 44)
+    }
+
+    private var galleryNavigation: some View {
+        HStack(spacing: 0) {
+            Button { movePage(by: -1) } label: {
+                Image(systemName: "chevron.left").frame(width: 44, height: 44)
+            }
+            .disabled(store.selectedIndex == 0)
+            .accessibilityLabel("Previous sheet")
+            .accessibilityIdentifier("previousSheet")
+            Text("\(store.selectedIndex + 1) of \(store.results.count)")
+                .font(.subheadline.weight(.medium)).monospacedDigit()
+                .fixedSize()
+                .accessibilityLabel("Sheet \(store.selectedIndex + 1) of \(store.results.count)")
+                .accessibilityIdentifier("sheetPosition")
+            Button { movePage(by: 1) } label: {
+                Image(systemName: "chevron.right").frame(width: 44, height: 44)
+            }
+            .disabled(store.selectedIndex == store.results.count - 1)
+            .accessibilityLabel("Next sheet")
+            .accessibilityIdentifier("nextSheet")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func movePage(by offset: Int) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            store.selectResult(at: store.selectedIndex + offset)
+        }
     }
 
     private func setComposerMinimized(_ minimized: Bool) {
@@ -137,7 +167,6 @@ struct ContentView: View {
         .background(.white, in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(ink.opacity(0.12)))
         .shadow(color: ink.opacity(0.06), radius: 8, y: 3)
-        .accessibilityIdentifier("composer")
     }
 
     static func minimizedPrompt(from description: String) -> String {
@@ -184,7 +213,7 @@ struct ContentView: View {
                         if narrow {
                             Image(systemName: "sparkles").frame(minWidth: 28, minHeight: 32)
                         } else {
-                            Label(store.isMock ? "Make a demo sheet" : "Generate sheet", systemImage: "sparkles")
+                            Label(store.isMock ? "Make \(ColoringViewModel.batchSize) demo sheets" : "Generate \(ColoringViewModel.batchSize) sheets", systemImage: "sparkles")
                                 .frame(minHeight: 32)
                         }
                     }
@@ -192,7 +221,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(store.isGenerating || store.validationMessage != nil)
-                .accessibilityLabel(store.isMock ? "Make a demo sheet" : "Generate coloring sheet")
+                .accessibilityLabel(store.isMock ? "Make \(ColoringViewModel.batchSize) demo sheets" : "Generate \(ColoringViewModel.batchSize) coloring sheets")
                 .accessibilityIdentifier("generate")
             }
             Divider()
@@ -218,13 +247,19 @@ struct ContentView: View {
         if store.isGenerating {
             HStack {
                 ProgressView()
-                Text("Drawing…").font(.callout)
+                Text(store.progressText).font(.callout)
+                    .accessibilityIdentifier("generationProgress")
                 Spacer()
                 Button("Stop waiting", role: .cancel, action: store.cancel)
             }
             .accessibilityHint("Keep the app open. Generation may take a few minutes.")
+        } else if let message = store.batchMessage {
+            Button { detailMessage = message + "\n\nTemporary rate limits are retried automatically up to \(WorkerClient.maximumRateLimitRetries) times." } label: {
+                Label("\(store.results.count) sheets available · Details", systemImage: "exclamationmark.circle")
+                    .font(.footnote)
+            }
         } else if case .error(let message) = store.phase {
-            Button { detailMessage = message + "\n\nNo automatic retry was made." } label: {
+            Button { detailMessage = message + "\n\nTemporary rate limits are retried automatically up to \(WorkerClient.maximumRateLimitRetries) times." } label: {
                 Label("Generation needs attention", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
@@ -245,22 +280,33 @@ struct ContentView: View {
     private var preview: some View {
         GeometryReader { canvas in
             let page = store.pageFormat.fittedSize(in: canvas.size)
-            ZStack {
-                Rectangle().fill(.white)
-                if let result = store.result {
-                    Image(uiImage: result.image).resizable().scaledToFit()
-                        .frame(width: page.width, height: page.height)
-                        .accessibilityLabel("Generated coloring sheet preview")
-                        .accessibilityIdentifier("sheetPreview")
+            Group {
+                if !store.results.isEmpty {
+                    TabView(selection: $store.selectedResultID) {
+                        ForEach(store.results) { result in
+                            Image(uiImage: result.image).resizable().scaledToFit()
+                                .frame(width: page.width, height: page.height)
+                                .background(.white)
+                                .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
+                                .frame(width: canvas.size.width, height: canvas.size.height)
+                                .accessibilityLabel("Generated coloring sheet preview")
+                                .accessibilityHint("Swipe left or right to choose a sheet")
+                                .accessibilityIdentifier("sheetPreview")
+                                .tag(Optional(result.id))
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .accessibilityIdentifier("sheetGallery")
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "pencil.and.outline").font(.system(size: 40, weight: .ultraLight))
-                        Text("Your sheet will appear here.").font(.callout).multilineTextAlignment(.center)
+                        Text("\(ColoringViewModel.batchSize) sheets to choose from.\nDescribe an idea below to begin.").font(.callout).multilineTextAlignment(.center)
                     }.padding(16).foregroundStyle(.secondary)
+                        .frame(width: page.width, height: page.height)
+                        .background(.white)
+                        .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
                 }
             }
-            .frame(width: page.width, height: page.height)
-            .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
             .frame(width: canvas.size.width, height: canvas.size.height)
             .onAppear { updateGenerationSize(canvas.size) }
             .onChange(of: canvas.size) { _, size in updateGenerationSize(size) }
@@ -289,19 +335,28 @@ struct ContentView: View {
     private var usageSheet: some View {
         NavigationStack {
             List {
-                if let result = store.result {
-                    metric("Model", result.requestedModel.label)
-                    metric("Model sent to OpenAI", result.metrics?.requestedModel ?? "Unavailable")
-                    metric("Requested pixels", result.metrics?.requestedSize ?? "Unavailable")
-                    metric("Image pixels", "\(result.image.cgImage?.width ?? 0) × \(result.image.cgImage?.height ?? 0)")
-                    metric("Input tokens", count(result.metrics?.inputTokens))
-                    metric("Text / image input tokens", "\(count(result.metrics?.textInputTokens)) / \(count(result.metrics?.imageInputTokens))")
-                    metric("Output tokens", count(result.metrics?.outputTokens))
-                    metric("Total tokens", count(result.metrics?.totalTokens))
-                    metric("Duration", result.metrics?.elapsedMs.map { String(format: "%.1f seconds", $0 / 1000) } ?? "Unavailable")
-                    metric("Estimated cost", result.metrics?.estimatedTotalUsd.map { String(format: "$%.6f USD", $0) } ?? "Unavailable")
-                    Text(result.metrics?.estimateBasis ?? "Usage details were not returned. This does not mean the generation was free.")
+                Section("Gallery") {
+                    metric("Sheets available", "\(store.results.count)")
+                    let estimates = store.results.compactMap { $0.metrics?.estimatedTotalUsd }
+                    metric("Returned estimates combined", estimates.isEmpty ? "Unavailable" : String(format: "$%.6f USD", estimates.reduce(0, +)))
+                    Text("Only returned image estimates are included. Failed or unfinished generations may also be charged.")
                         .font(.footnote).foregroundStyle(.secondary)
+                }
+                if let result = store.result {
+                    Section("Selected sheet · \(store.selectedIndex + 1) of \(store.results.count)") {
+                        metric("Model", result.requestedModel.label)
+                        metric("Model sent to OpenAI", result.metrics?.requestedModel ?? "Unavailable")
+                        metric("Requested pixels", result.metrics?.requestedSize ?? "Unavailable")
+                        metric("Image pixels", "\(result.image.cgImage?.width ?? 0) × \(result.image.cgImage?.height ?? 0)")
+                        metric("Input tokens", count(result.metrics?.inputTokens))
+                        metric("Text / image input tokens", "\(count(result.metrics?.textInputTokens)) / \(count(result.metrics?.imageInputTokens))")
+                        metric("Output tokens", count(result.metrics?.outputTokens))
+                        metric("Total tokens", count(result.metrics?.totalTokens))
+                        metric("Duration", result.metrics?.elapsedMs.map { String(format: "%.1f seconds", $0 / 1000) } ?? "Unavailable")
+                        metric("Estimated cost", result.metrics?.estimatedTotalUsd.map { String(format: "$%.6f USD", $0) } ?? "Unavailable")
+                        Text(result.metrics?.estimateBasis ?? "Usage details were not returned. This does not mean the generation was free.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Usage & estimated cost")

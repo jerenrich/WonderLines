@@ -6,11 +6,13 @@ const originalLog = console.log;
 const messages = [];
 let forwarded;
 let calls = 0;
+const upstreamFixtures = [];
 console.log = (...args) => messages.push(args);
 globalThis.fetch = async (url, request) => {
   assert.equal(url, 'https://api.openai.com/v1/images/generations');
   calls++;
   forwarded = JSON.parse(request.body);
+  if (upstreamFixtures.length) return upstreamFixtures.shift();
   return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}], usage: null}), {headers: {'content-type':'application/json'}});
 };
 try {
@@ -64,11 +66,30 @@ try {
     assert.equal((await generate(dimensions)).status, 400, JSON.stringify(dimensions));
   }
   assert.equal(calls, beforeInvalid, 'Invalid dimensions must never trigger a paid call');
+  upstreamFixtures.push(new Response(JSON.stringify({error: {type: 'rate_limit_error', code: 'slow_down'}}), {
+    status: 429, headers: {'content-type': 'application/json', 'retry-after': '4', 'x-request-id': 'req_rate_123'}
+  }));
+  const rateLimited = await generate({});
+  assert.equal(rateLimited.status, 429);
+  assert.equal(rateLimited.headers.get('X-OpenAI-Error-Category'), 'rate_limit');
+  assert.equal(rateLimited.headers.get('Retry-After'), '4');
+  assert.equal(rateLimited.headers.get('X-OpenAI-Request-ID'), 'req_rate_123');
+  assert.match(await rateLimited.text(), /temporarily limited/);
+  upstreamFixtures.push(new Response(JSON.stringify({error: {type: 'insufficient_quota', code: 'credit_balance_exhausted'}}), {
+    status: 429, headers: {'content-type': 'application/json', 'x-request-id': 'req_credit_123'}
+  }));
+  const creditLimited = await generate({});
+  assert.equal(creditLimited.status, 429);
+  assert.equal(creditLimited.headers.get('X-OpenAI-Error-Category'), 'credit_balance_exhausted');
+  assert.equal(creditLimited.headers.get('Retry-After'), null);
+  assert.equal(creditLimited.headers.get('X-OpenAI-Request-ID'), 'req_credit_123');
+  assert.match(await creditLimited.text(), /credit is exhausted/);
   const page = await (await worker.fetch(new Request('https://example.test/'), {})).text();
   assert.ok(page.includes('Model sent to OpenAI'));
   assert.ok(!page.includes('Returned model'));
   assert.ok(!JSON.stringify(messages).includes('Synthetic flower'));
   assert.ok(!JSON.stringify(messages).includes('dummy-family'));
   assert.ok(!JSON.stringify(messages).includes('dummy-upstream'));
+  assert.ok(messages.some(([entry]) => entry.event === 'coloring_sheet_failed' && entry.category === 'rate_limit'));
 } finally { globalThis.fetch = originalFetch; console.log = originalLog; }
 console.log('PASS: models, complexity, A4 defaults, custom dimensions, metrics, and pre-payment validation; no network.');
