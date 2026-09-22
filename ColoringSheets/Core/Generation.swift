@@ -225,7 +225,7 @@ final class WorkerClient: GenerationServing {
         let generationID = UUID()
         http.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        http.setValue(generationID.uuidString, forHTTPHeaderField: "Idempotency-Key")
+        http.setValue(generationID.uuidString.lowercased(), forHTTPHeaderField: "Idempotency-Key")
         http.setValue("1", forHTTPHeaderField: "X-Coloring-API-Version")
         http.httpBody = try request.encoded()
         let data: Data
@@ -251,7 +251,7 @@ final class WorkerClient: GenerationServing {
                 do { try await Task.sleep(for: .seconds(5)) }
                 catch { throw GenerationError.cancelled }
             }
-            var request = URLRequest(url: endpoint.appending(path: generationID.uuidString))
+            var request = URLRequest(url: endpoint.appending(path: generationID.uuidString.lowercased()))
             request.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
             do {
                 let (data, response) = try await session.data(for: request)
@@ -267,20 +267,22 @@ final class WorkerClient: GenerationServing {
     private func authorization() async throws -> String {
         if let legacyCredential, !legacyCredential.isEmpty { return legacyCredential }
         guard let identities else { throw GenerationError.configuration }
-        if let saved = await identities.session(), saved.isUsable { return saved.accessToken }
-        var request = URLRequest(url: serviceURL.appending(path: "/v1/installations"))
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = Data("{}".utf8)
-        let data: Data; let response: URLResponse
-        do { (data, response) = try await session.data(for: request) }
-        catch { throw GenerationError.uncertain }
-        guard let http = response as? HTTPURLResponse, http.statusCode == 201,
-              let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
-              let accountID = UUID(uuidString: created.accountID) else { throw GenerationError.configuration }
-        let saved = AnonymousSession(accountID: accountID, accessToken: created.accessToken,
-                                     expiresAt: Date(timeIntervalSince1970: created.expiresAt))
-        do { try await identities.save(saved) } catch { throw GenerationError.configuration }
+        let saved = try await identities.session { [serviceURL, session] in
+            var request = URLRequest(url: serviceURL.appending(path: "/v1/installations"))
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = Data("{}".utf8)
+            let data: Data; let response: URLResponse
+            do { (data, response) = try await session.data(for: request) }
+            catch { throw GenerationError.uncertain }
+            guard let http = response as? HTTPURLResponse, http.statusCode == 201,
+                  let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
+                  let accountID = UUID(uuidString: created.accountID), !created.accessToken.isEmpty else {
+                throw GenerationError.configuration
+            }
+            return AnonymousSession(accountID: accountID, accessToken: created.accessToken,
+                                    expiresAt: Date(timeIntervalSince1970: created.expiresAt))
+        }
         return saved.accessToken
     }
 
@@ -318,7 +320,18 @@ final class WorkerClient: GenerationServing {
     private static func decodeAccess(_ header: String?) -> AccessSnapshot? {
         guard let header, let data = header.removingPercentEncoding?.data(using: .utf8) else { return nil }
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: value) { return date }
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let date = formatter.date(from: value) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid allowance reset date")
+            }
+            return date
+        }
         return try? decoder.decode(AccessSnapshot.self, from: data)
     }
 }
@@ -327,4 +340,9 @@ private struct InstallationResponse: Decodable {
     let accountID: String
     let accessToken: String
     let expiresAt: TimeInterval
+
+    enum CodingKeys: String, CodingKey {
+        case accountID = "accountId"
+        case accessToken, expiresAt
+    }
 }

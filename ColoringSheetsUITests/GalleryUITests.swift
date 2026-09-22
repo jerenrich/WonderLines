@@ -1,6 +1,36 @@
 import XCTest
 
 final class GalleryUITests: XCTestCase {
+    // Opt-in smoke check of the actual app, Keychain and deployed Worker. One
+    // button tap only; never automatically retry a paid generation.
+    @MainActor
+    func testExplicitLiveGeneration() throws {
+        guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_LIVE_UI_CHECK"] == "one-batch" else {
+            throw XCTSkip("Live UI generation requires explicit opt-in.")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 10))
+        subject.tap()
+        subject.typeText("Baby on moon")
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["age"].tap()
+        app.buttons["18 years"].tap()
+        app.buttons["generate"].tap()
+
+        let complete = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: app.staticTexts["generationProgress"])
+        XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 240), .completed)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Live iPad generation result"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        XCTAssertTrue(app.staticTexts["sheetPosition"].exists, "At least one live sheet must reach the gallery: \(app.debugDescription)")
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "configuration update")).firstMatch.exists)
+    }
+
     @MainActor
     func testSwipingAndArrowsSelectSheetsAndEditingRetainsGallery() throws {
         continueAfterFailure = false

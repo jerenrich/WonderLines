@@ -93,20 +93,10 @@ final class GenerationTests: XCTestCase {
         }
     }
 
-    func testLimitFailuresPreserveCategoryAndRequestID() {
-        let rateResponse = response(429, type: "text/plain", headers: [
-            "X-OpenAI-Error-Category": "rate_limit", "Retry-After": "4", "X-OpenAI-Request-ID": "req_rate_123"
-        ])
-        XCTAssertThrowsError(try WorkerClient.parse(Data(), response: rateResponse, requestedModel: .flare)) {
-            XCTAssertEqual($0 as? GenerationError, .limit(.temporaryRateLimit, retryAfter: 4, requestID: "req_rate_123"))
-            XCTAssertTrue($0.localizedDescription.contains("4 seconds"))
-        }
-        let creditResponse = response(429, type: "text/plain", headers: [
-            "X-OpenAI-Error-Category": "credit_balance_exhausted", "X-OpenAI-Request-ID": "req_credit_123"
-        ])
-        XCTAssertThrowsError(try WorkerClient.parse(Data(), response: creditResponse, requestedModel: .flare)) {
-            XCTAssertEqual($0 as? GenerationError, .limit(.creditBalanceExhausted, retryAfter: nil, requestID: "req_credit_123"))
-            XCTAssertTrue($0.localizedDescription.contains("credit"))
+    func testV1AllowanceResponse() {
+        let body = Data(#"{"error":{"code":"allowance_exhausted","message":"Today’s free sheet allowance has been used."}}"#.utf8)
+        XCTAssertThrowsError(try WorkerClient.parse(body, response: response(429, type: "application/json"), requestedModel: .flare)) {
+            XCTAssertEqual($0 as? GenerationError, .allowance)
         }
     }
     @MainActor func testPrintFitAndExportPNG() throws {
@@ -169,46 +159,103 @@ final class NetworkingTests: XCTestCase {
         catch { XCTAssertEqual(error as? GenerationError, .uncertain) }
         XCTAssertEqual(calls, 3)
     }
-    func testRetriesOnlyTemporaryRateLimitsAtMostTwice() async throws {
+    func testV1AllowanceDoesNotRepeatPaidPOST() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: configuration)
         defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
-        let client = WorkerClient(credential: "synthetic-dummy", session: session, retryJitter: { 0 })
+        let client = WorkerClient(credential: "synthetic-dummy", session: session)
         var calls = 0
         MockURLProtocol.handler = { request in
             calls += 1
-            if calls <= WorkerClient.maximumRateLimitRetries {
-                return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: [
-                    "Content-Type": "text/plain", "X-OpenAI-Error-Category": "rate_limit", "Retry-After": "1", "X-OpenAI-Request-ID": "req_\(calls)"
-                ])!, Data())
+            return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil,
+                                   headerFields: ["Content-Type": "application/json"])!,
+                    Data(#"{"error":{"code":"allowance_exhausted"}}"#.utf8))
+        }
+        do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected allowance failure") }
+        catch { XCTAssertEqual(error as? GenerationError, .allowance) }
+        XCTAssertEqual(calls, 1)
+    }
+
+    func testV1RegistrationIsSharedByBatchAndPersistsAcrossClients() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let service = "com.jordan.family.ColoringSheets.tests.\(UUID().uuidString)"
+        let identities = AnonymousIdentityStore(service: service)
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let client = WorkerClient(session: session, identities: identities)
+        let png = MockGenerator.sampleImage().pngData()!
+        var registrations = 0
+        var ids = Set<String>()
+        let lock = NSLock()
+        // Match the deployed Worker's spelling, numeric expiry, and JS ISO date.
+        let registration = try JSONSerialization.data(withJSONObject: [
+            "accountId": "860eca75-ca29-4271-9b13-a01f5c9dea52",
+            "accessToken": "synthetic-token", "expiresAt": Date().timeIntervalSince1970 + 3600
+        ])
+        let access = #"{"features":[],"generationCredits":0,"freeGenerationsRemaining":2,"allowanceResetsAt":"2026-09-23T00:00:00.000Z"}"#
+        MockURLProtocol.handler = { request in
+            lock.lock(); defer { lock.unlock() }
+            XCTAssertEqual(request.httpMethod, "POST")
+            if request.url!.path == "/v1/installations" {
+                registrations += 1
+                return (HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil,
+                                        headerFields: ["Content-Type": "application/json"])!, registration)
             }
-            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "image/png"])!, MockGenerator.sampleImage().pngData()!)
+            XCTAssertEqual(request.url!.path, "/v1/generations")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer synthetic-token")
+            let id = try XCTUnwrap(request.value(forHTTPHeaderField: "Idempotency-Key"))
+            XCTAssertNotNil(UUID(uuidString: id))
+            XCTAssertEqual(id, id.lowercased(), "Worker UUID validation requires lowercase")
+            XCTAssertTrue(ids.insert(id).inserted)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [
+                "Content-Type": "image/png", "X-Generation-ID": id,
+                "X-Access-Snapshot": access.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            ])!, png)
+        }
+        let request = try GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<5 {
+                group.addTask {
+                    let result = try await client.generate(request)
+                    XCTAssertNotNil(result.generationID)
+                    XCTAssertEqual(result.access?.freeGenerationsRemaining, 2)
+                    XCTAssertNotNil(result.access?.allowanceResetsAt)
+                }
+            }
+            try await group.waitForAll()
+        }
+        let nextClient = WorkerClient(session: session, identities: AnonymousIdentityStore(service: service))
+        _ = try await nextClient.generate(request)
+        XCTAssertEqual(registrations, 1, "A batch and later client must reuse the same account")
+        XCTAssertEqual(ids.count, 6)
+    }
+
+    func testRecoveryUsesSameLowercaseIDWithoutRepeatingPOST() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let client = WorkerClient(credential: "synthetic-token", session: session)
+        let png = MockGenerator.sampleImage().pngData()!
+        var methods: [String] = []
+        var generationID: String?
+        MockURLProtocol.handler = { request in
+            methods.append(request.httpMethod!)
+            if request.httpMethod == "POST" {
+                generationID = request.value(forHTTPHeaderField: "Idempotency-Key")
+                return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil,
+                                        headerFields: ["Content-Type": "application/json"])!, Data())
+            }
+            XCTAssertEqual(request.url!.lastPathComponent, generationID)
+            XCTAssertEqual(generationID, generationID?.lowercased())
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                    headerFields: ["Content-Type": "image/png"])!, png)
         }
         _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare))
-        XCTAssertEqual(calls, WorkerClient.maximumRateLimitRetries + 1)
-
-        calls = 0
-        MockURLProtocol.handler = { request in
-            calls += 1
-            return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: [
-                "Content-Type": "text/plain", "X-OpenAI-Error-Category": "credit_balance_exhausted"
-            ])!, Data())
-        }
-        do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected credit failure") }
-        catch { XCTAssertEqual(error as? GenerationError, .limit(.creditBalanceExhausted, retryAfter: nil, requestID: nil)) }
-        XCTAssertEqual(calls, 1)
-
-        calls = 0
-        MockURLProtocol.handler = { request in
-            calls += 1
-            return (HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: [
-                "Content-Type": "text/plain", "X-OpenAI-Error-Category": "rate_limit", "Retry-After": "1"
-            ])!, Data())
-        }
-        do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected rate limit failure") }
-        catch { XCTAssertEqual(error as? GenerationError, .limit(.temporaryRateLimit, retryAfter: 1, requestID: nil)) }
-        XCTAssertEqual(calls, WorkerClient.maximumRateLimitRetries + 1)
+        XCTAssertEqual(methods, ["POST", "GET"])
     }
     func testRedirectIsRejected() {
         let delegate = NoRedirectDelegate()

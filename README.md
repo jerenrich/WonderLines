@@ -32,7 +32,7 @@ Each landscape sheet fills the space above the composer. The composer stays abov
 
 ## Anonymous service account
 
-The app contains only the HTTPS Worker origin. On first live use, it creates a random server account and stores a short-lived access token in the device Keychain. No name, email address, Apple ID, or sign-in screen is involved. The Worker, not the app, applies the free daily generation allowance and records idempotent generation results.
+The app contains only the HTTPS Worker origin. On first live use, it creates a random server account and stores a short-lived access token in the device Keychain. Concurrent requests share that registration. The client maps the Worker's `accountId` field explicitly and sends lowercase UUIDs for generation and recovery. No name, email address, Apple ID, or sign-in screen is involved. The Worker, not the app, applies the free daily generation allowance and records idempotent generation results. The configured free allowance is currently three images per account per UTC day, so a five-sheet batch can return partial results and an allowance message.
 
 ## Deploy the updated Worker, then enable live mode
 
@@ -90,12 +90,14 @@ xcodebuild -project ColoringSheets.xcodeproj -scheme ColoringSheets \
   -configuration Debug \
   -destination 'platform=iOS Simulator,name=iPad Pro 11-inch (M5)' \
   -derivedDataPath .build/DerivedData \
-  CODE_SIGNING_ALLOWED=NO COLORING_MODE=mock test
+  COLORING_MODE=mock test
 ```
 
 The offline XCTest cases cover model serialization, age guidance and persistence, UTF-16 validation, optional/malformed metrics, PNG validation, HTTP failures, single-request networking and timeouts, redirect refusal, duplicate-tap/lifecycle behavior, retained results, export bytes/cleanup, print fit, description-field identity/focus through keyboard presentation and dismissal, A4 sizing across layouts/display scales, resolution limits, and request-size capture across resizing. Synthetic inputs and dummy credentials only. The Worker check replaces upstream fetch completely and confirms forwarding for both models and two complexity variants, A4 defaults, custom portrait/landscape/square sizes, size metrics, and rejection of invalid dimensions before upstream calls. Build configuration checks use a dummy credential in a temporary directory and verify missing Release secrets fail without printing values.
 
 `LiveIntegrationTests` is skipped in ordinary test runs. It requires a live build and the explicit test-host environment value `COLORING_EXPLICIT_LIVE_CHECK=two-generations`. The deliberate check sends Flare/simple and Sunburst/intricate once, stops if the first fails, and saves synthetic output PNGs in the simulator app’s Documents/LiveVerification directory. It creates an exclusive persistent claim before any network operation; a repeated run skips rather than sending more requests. Do not remove this claim or enable test repetitions to retry a failed paid generation. Inspect usage and make a new deliberate decision first. Never include this opt-in environment value in routine CI or the shared scheme.
+
+Registration regression tests use synthetic `/v1` responses to check the exact JSON keys, one account for concurrent requests, Keychain persistence across clients, lowercase generation/recovery IDs, and ISO timestamps with fractional seconds. Keep normal simulator signing enabled so Keychain access works. `GalleryUITests.testExplicitLiveGeneration` is a separate opt-in device check: set `COLORING_EXPLICIT_LIVE_UI_CHECK=one-batch` in the generated test runner environment only when deliberately verifying paid generation. It taps Generate once and requires a real result in the gallery; do not enable test repetitions or add this flag to the shared scheme.
 
 Batch coverage verifies that all five distinct composition requests start before any completes, invalid composition prompts prevent the entire batch from starting, duplicate taps cannot launch extra requests, out-of-order responses preserve selection, selected-image export retains the correct PNG bytes, partial and complete failures retain usable results, and cancellation ignores late results even after a new batch starts. It also verifies that only confirmed temporary rate limits retry, with a maximum of two retries. Landscape layout checks cover seven iPad screen shapes with expanded, focused, and minimized composers. `ColoringSheetsUITests` launches with `--mock` and exercises real left/right swipes, arrow navigation, end limits, and prompt editing without losing the selected page. The unit/layout and UI interaction checks passed in the simulator; no paid batch was generated for this change.
 

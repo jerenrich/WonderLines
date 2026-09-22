@@ -12,8 +12,28 @@ struct AnonymousSession: Codable, Equatable {
 }
 
 actor AnonymousIdentityStore {
-    private let service = "com.jordan.family.ColoringSheets.anonymous-account"
+    private let service: String
     private let account = "current"
+    private var registration: Task<AnonymousSession, Error>?
+
+    init(service: String = "com.jordan.family.ColoringSheets.anonymous-account") {
+        self.service = service
+    }
+
+    // A batch starts several requests together. They must share one registration
+    // and one saved account, including while the network call suspends this actor.
+    func session(register: @escaping @Sendable () async throws -> AnonymousSession) async throws -> AnonymousSession {
+        if let saved = session(), saved.isUsable { return saved }
+        if let registration { return try await registration.value }
+        let task = Task {
+            let created = try await register()
+            try save(created)
+            return created
+        }
+        registration = task
+        defer { registration = nil }
+        return try await task.value
+    }
 
     func session() -> AnonymousSession? {
         guard let data = read() else { return nil }
