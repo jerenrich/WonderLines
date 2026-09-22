@@ -24,7 +24,7 @@ class BudgetNamespace {
     return {fetch: (request, init) => this.objects.get(id).fetch(new Request(request, init))};
   }
 }
-const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3'};
+const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3', GLOBAL_DAILY_GENERATION_LIMIT: '10000'};
 env.ACCOUNTS = new Accounts(env); env.BUDGET = new BudgetNamespace(env); env.GENERATIONS = new Images();
 const originalFetch = globalThis.fetch;
 let calls = 0, forwarded;
@@ -46,5 +46,11 @@ try {
   assert.equal((await access.json()).access.freeGenerationsRemaining, 2);
   const invalid = await worker.fetch(new Request('https://example.test/v1/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID()}, body: JSON.stringify({subject: 'x', width: 17, height: 17})}), env);
   assert.equal(invalid.status, 400); assert.equal(calls, 1, 'Validation must run before a reservation or paid call.');
+  const zeroCap = new Budget({storage: new MemoryStorage()}, {GLOBAL_DAILY_GENERATION_LIMIT: '0'});
+  response = await zeroCap.fetch(new Request('https://budget/reserve', {method: 'POST', body: JSON.stringify({claim: 'test-zero'})}));
+  assert.equal(response.status, 429, 'A configured zero cap must stop global reservations.');
+  const malformedCap = new Budget({storage: new MemoryStorage()}, {GLOBAL_DAILY_GENERATION_LIMIT: 'not-a-number'});
+  response = await malformedCap.fetch(new Request('https://budget/reserve', {method: 'POST', body: JSON.stringify({claim: 'test-malformed'})}));
+  assert.equal(response.status, 503, 'A malformed cap must fail closed.');
 } finally { globalThis.fetch = originalFetch; }
-console.log('PASS: anonymous registration, authenticated v1 generation, quota, and idempotency; no network.');
+console.log('PASS: anonymous registration, authenticated v1 generation, quota, idempotency, and fail-closed global budget; no network.');

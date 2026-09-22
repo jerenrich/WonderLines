@@ -9,6 +9,12 @@ function dimensions(input) {
   return Number.isSafeInteger(width) && Number.isSafeInteger(height) && width > 0 && height > 0 && width <= 3840 && height <= 3840 &&
     width % 16 === 0 && height % 16 === 0 && width / height >= 1 / 3 && width / height <= 3 && width * height >= 655360 && width * height <= 3686400 ? {width, height} : null;
 }
+// This is a dashboard-managed Worker variable, not source configuration. Invalid
+// or absent values fail closed instead of risking spend.
+function globalDailyGenerationLimit(value) {
+  if (typeof value !== 'string' || !/^(?:0|[1-9][0-9]{0,5})$/.test(value)) return null;
+  const limit = Number(value); return limit <= 100000 ? limit : null;
+}
 function b64(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
 function unb64(s) { return Uint8Array.from(atob(s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
 async function key(secret) { return crypto.subtle.importKey('raw', encoder.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign', 'verify']); }
@@ -38,7 +44,8 @@ export class Budget {
     if (new URL(request.url).pathname !== '/reserve' || typeof input?.claim !== 'string') return fail('invalid_request', 'Invalid budget reservation.', 400);
     if (await this.state.storage.get('claim:' + input.claim)) return reply({reserved: true});
     const day = new Date().toISOString().slice(0, 10), existing = await this.state.storage.get('usage');
-    const used = existing?.day === day ? existing.used : 0, limit = Math.max(0, Math.min(100000, Number(this.env.GLOBAL_DAILY_GENERATION_LIMIT ?? 100)));
+    const used = existing?.day === day ? existing.used : 0, limit = globalDailyGenerationLimit(this.env.GLOBAL_DAILY_GENERATION_LIMIT);
+    if (limit === null) return fail('service_unavailable', 'The service budget is not configured.', 503);
     if (used >= limit) return fail('global_budget_exhausted', 'The service is unavailable today.', 429);
     await this.state.storage.put('usage', {day, used: used + 1});
     await this.state.storage.put('claim:' + input.claim, true);
