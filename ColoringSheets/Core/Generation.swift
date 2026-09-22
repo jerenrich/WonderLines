@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import UIKit
 
 enum ImageModel: String, CaseIterable, Codable, Identifiable {
@@ -182,6 +183,7 @@ final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sen
 final class WorkerClient: GenerationServing {
     static let defaultServiceURL = URL(string: "https://coloring-sheets-api.jordan-erenrich.workers.dev")!
     static let endpoint = defaultServiceURL.appending(path: "/v1/generations")
+    private static let logger = Logger(subsystem: "com.jordan.family.ColoringSheets", category: "WorkerClient")
     private let serviceURL: URL
     private let endpoint: URL
     // This exists solely for isolated legacy-parser/network tests. The app does not
@@ -232,11 +234,13 @@ final class WorkerClient: GenerationServing {
         let response: URLResponse
         do { (data, response) = try await session.data(for: http) }
         catch {
+            Self.logger.error("Generation transport failed id=\(generationID.uuidString, privacy: .public) urlError=\((error as? URLError)?.errorCode ?? 0)")
             if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw GenerationError.cancelled }
             if legacyCredential != nil { throw GenerationError.uncertain }
             return try await recover(generationID, authorization: authorization, requestedModel: request.model)
         }
         guard let response = response as? HTTPURLResponse else { throw GenerationError.uncertain }
+        Self.logResponse("generation", data: data, response: response, generationID: generationID)
         if response.statusCode == 202 {
             return try await recover(generationID, authorization: authorization, requestedModel: request.model)
         }
@@ -256,10 +260,18 @@ final class WorkerClient: GenerationServing {
             do {
                 let (data, response) = try await session.data(for: request)
                 guard let http = response as? HTTPURLResponse else { continue }
+                Self.logResponse("recovery attempt \(attempt + 1)", data: data, response: http, generationID: generationID)
                 if http.statusCode == 202 { continue }
                 return try Self.parse(data, response: http, requestedModel: requestedModel)
             } catch is CancellationError { throw GenerationError.cancelled }
-            catch { continue }
+            catch {
+                if let urlError = error as? URLError {
+                    Self.logger.error("Recovery transport failed id=\(generationID.uuidString, privacy: .public) attempt=\(attempt + 1) urlError=\(urlError.errorCode)")
+                } else {
+                    Self.logger.error("Recovery response could not be used id=\(generationID.uuidString, privacy: .public) attempt=\(attempt + 1)")
+                }
+                continue
+            }
         }
         throw GenerationError.uncertain
     }
@@ -274,16 +286,50 @@ final class WorkerClient: GenerationServing {
             request.httpBody = Data("{}".utf8)
             let data: Data; let response: URLResponse
             do { (data, response) = try await session.data(for: request) }
-            catch { throw GenerationError.uncertain }
+            catch {
+                Self.logger.error("Installation transport failed urlError=\((error as? URLError)?.errorCode ?? 0)")
+                throw GenerationError.uncertain
+            }
+            if let http = response as? HTTPURLResponse {
+                Self.logResponse("installation", data: data, response: http)
+            } else {
+                Self.logger.error("Installation returned no HTTP response")
+            }
             guard let http = response as? HTTPURLResponse, http.statusCode == 201,
                   let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
                   let accountID = UUID(uuidString: created.accountID), !created.accessToken.isEmpty else {
+                Self.logger.error("Installation response could not be used")
                 throw GenerationError.configuration
             }
             return AnonymousSession(accountID: accountID, accessToken: created.accessToken,
                                     expiresAt: Date(timeIntervalSince1970: created.expiresAt))
         }
         return saved.accessToken
+    }
+
+    // Only log protocol fields. A response can contain a token, prompt, or image,
+    // so never print its body, headers, URL, or localized error text.
+    static func workerErrorCode(_ data: Data, response: HTTPURLResponse) -> String? {
+        let contentType = response.value(forHTTPHeaderField: "Content-Type")?.lowercased()
+            .split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
+        guard response.statusCode >= 400,
+              contentType == "application/json",
+              data.count <= 4096,
+              let body = try? JSONDecoder().decode(WorkerErrorBody.self, from: data) else { return nil }
+        let code = body.error.code
+        guard !code.isEmpty, code.utf8.count <= 64,
+              code.utf8.allSatisfy({ ($0 >= 97 && $0 <= 122) || $0 == 95 }) else { return nil }
+        return code
+    }
+
+    private static func logResponse(_ stage: String, data: Data, response: HTTPURLResponse, generationID: UUID? = nil) {
+        let code = workerErrorCode(data, response: response) ?? "none"
+        let id = generationID?.uuidString ?? "none"
+        if response.statusCode >= 400 {
+            logger.error("Worker \(stage, privacy: .public) response id=\(id, privacy: .public) status=\(response.statusCode) code=\(code, privacy: .public)")
+        } else {
+            logger.notice("Worker \(stage, privacy: .public) response id=\(id, privacy: .public) status=\(response.statusCode)")
+        }
     }
 
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
@@ -334,6 +380,11 @@ final class WorkerClient: GenerationServing {
         }
         return try? decoder.decode(AccessSnapshot.self, from: data)
     }
+}
+
+private struct WorkerErrorBody: Decodable {
+    struct Detail: Decodable { let code: String }
+    let error: Detail
 }
 
 private struct InstallationResponse: Decodable {
