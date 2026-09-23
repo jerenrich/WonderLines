@@ -16,9 +16,9 @@ struct ContentView: View {
     @State private var isSavingPhoto = false
     @State private var showUsage = false
     @State private var showSettings = false
-    @State private var showAbout = false
     @State private var detailMessage: String?
     private let ink = Color(red: 0.12, green: 0.25, blue: 0.29)
+    private let accent = Color(red: 0.12, green: 0.45, blue: 0.49)
     private var sheetCountLabel: String { "\(store.imageCount) \(store.imageCount == 1 ? "sheet" : "sheets")" }
     private var demoCountLabel: String { "\(store.imageCount) demo \(store.imageCount == 1 ? "sheet" : "sheets")" }
 
@@ -58,14 +58,13 @@ struct ContentView: View {
             }
             .foregroundStyle(ink)
         }
-        .background(Color(red: 0.97, green: 0.96, blue: 0.92).ignoresSafeArea())
-        .tint(ink)
+        .background(LinearGradient(
+            colors: [Color(red: 0.98, green: 0.97, blue: 0.94),
+                     Color(red: 0.92, green: 0.96, blue: 0.96)],
+            startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea())
+        .tint(accent)
         .preferredColorScheme(.light)
         .onChange(of: scenePhase) { _, phase in if phase == .background { store.enteredBackground() } }
-        .onChange(of: store.results.first?.id) { _, firstID in
-            // Do not interrupt a new description being typed as a request finishes.
-            if firstID != nil && !descriptionFocused { setComposerMinimized(true) }
-        }
         .sheet(item: $export, onDismiss: cleanExport) { item in
             switch item.kind {
             case .share: ShareSheet(item: item, finish: finishExport)
@@ -77,13 +76,6 @@ struct ContentView: View {
                 .presentationCompactAdaptation(.sheet)
         }
         .sheet(isPresented: $showSettings) { settingsSheet }
-        .alert("About generation", isPresented: $showAbout) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(store.isMock
-                 ? "Demo mode makes \(sheetCountLabel) with illustrative usage. No paid request is sent. Swipe between them to choose a sheet."
-                 : "Each tap generates \(sheetCountLabel) in parallel using paid API credit for each image. Swipe to choose a sheet; Share, Save to Photos, and Print use the visible sheet. Age stays on this device. Keep the app open while generating; stopping or leaving it may still result in charges.")
-        }
         .alert("Generation details", isPresented: Binding(get: { detailMessage != nil }, set: { if !$0 { detailMessage = nil } })) {
             Button("OK", role: .cancel) { detailMessage = nil }
         } message: { Text(detailMessage ?? "") }
@@ -124,7 +116,10 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .disabled(store.result == nil)
             }
-            Button { showSettings = true } label: {
+            Button {
+                descriptionFocused = false
+                showSettings = true
+            } label: {
                 Image(systemName: "gearshape").frame(width: 44, height: 44)
             }
             .accessibilityLabel("Settings")
@@ -176,6 +171,7 @@ struct ContentView: View {
                 HStack(spacing: 12) {
                     Button {
                         setComposerMinimized(false)
+                        descriptionFocused = true
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "square.and.pencil")
@@ -187,7 +183,7 @@ struct ContentView: View {
                             .contentShape(Rectangle())
                     }
                     .accessibilityLabel("Edit description: \(minimizedPrompt)")
-                    .accessibilityHint("Opens the description editor")
+                    .accessibilityHint("Opens the keyboard to edit the description")
                     .accessibilityIdentifier("expandComposer")
                     Button {
                         store.description = ""
@@ -209,7 +205,8 @@ struct ContentView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, composerMinimized ? 6 : 12)
         .background(.white, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(ink.opacity(0.12)))
+        .overlay(RoundedRectangle(cornerRadius: 18)
+            .strokeBorder(accent.opacity(descriptionFocused ? 0.45 : 0.15)))
         .shadow(color: ink.opacity(0.06), radius: 8, y: 3)
     }
 
@@ -225,30 +222,37 @@ struct ContentView: View {
 
     private func controls(narrow: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("What shall we draw?").font(.subheadline.weight(.semibold))
-                Spacer(minLength: 4)
-                if descriptionFocused {
-                    Button("Done") { descriptionFocused = false }
-                        .accessibilityIdentifier("dismissKeyboard")
-                } else if store.result != nil {
-                    Button { setComposerMinimized(true) } label: {
-                        Label("Minimize", systemImage: "chevron.down")
-                    }
-                    .accessibilityIdentifier("minimizeComposer")
-                }
-            }
-            .frame(minHeight: 32)
-
             // Never swap this field's parent when focus or window width changes.
             HStack(alignment: .center, spacing: 12) {
-                TextField("Describe your coloring sheet…", text: $store.description, axis: .vertical)
-                    .lineLimit(1...3)
-                    .focused($descriptionFocused)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: 44)
-                    .accessibilityLabel("Description")
-                    .accessibilityIdentifier("subject")
+                HStack(spacing: 0) {
+                    TextField("Description", text: $store.description,
+                              prompt: Text(descriptionFocused ? "" : "Describe your coloring sheet…")
+                                .foregroundStyle(.secondary), axis: .vertical)
+                        .lineLimit(2, reservesSpace: true)
+                        .focused($descriptionFocused)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .accessibilityLabel("Description")
+                        .accessibilityIdentifier("subject")
+                    Button {
+                        store.description = ""
+                        descriptionFocused = true
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 17))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear description")
+                    .accessibilityIdentifier("clearDescription")
+                    // Reserve the button's space so clearing never resizes the field.
+                    .opacity(store.description.isEmpty ? 0 : 1)
+                    .disabled(store.description.isEmpty)
+                    .accessibilityHidden(store.description.isEmpty)
+                }
+                .background(accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
                 Button {
                     descriptionFocused = false
                     store.generate()
@@ -263,29 +267,44 @@ struct ContentView: View {
                     }
                     .foregroundStyle(store.isGenerating || store.validationMessage != nil ? ink : .white)
                 }
+                .fixedSize(horizontal: true, vertical: false)
                 .buttonStyle(.borderedProminent)
                 .disabled(store.isGenerating || store.validationMessage != nil)
                 .accessibilityLabel(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)")
                 .accessibilityIdentifier("generate")
+                Button {
+                    if descriptionFocused { descriptionFocused = false }
+                    else { setComposerMinimized(true) }
+                } label: {
+                    Image(systemName: descriptionFocused ? "keyboard.chevron.compact.down" : "chevron.down")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(descriptionFocused ? "Done" : "Minimize description")
+                .accessibilityIdentifier(descriptionFocused ? "dismissKeyboard" : "minimizeComposer")
+                .opacity(descriptionFocused || store.result != nil ? 1 : 0)
+                .disabled(!descriptionFocused && store.result == nil)
+                .accessibilityHidden(!descriptionFocused && store.result == nil)
             }
-            Divider()
-            HStack(spacing: 8) {
-                Text("Child’s age").font(.subheadline)
-                Picker("Child’s age", selection: $store.age) {
-                    Text("Choose").tag(0)
-                    ForEach(3...18, id: \.self) { age in Text("\(age) years").tag(age) }
+            Group {
+                if store.age == 0 {
+                    Button {
+                        descriptionFocused = false
+                        showSettings = true
+                    } label: {
+                        Label("Choose an age in Settings", systemImage: "slider.horizontal.3")
+                            .font(.footnote)
+                            .frame(minHeight: 44)
+                    }
+                    .accessibilityIdentifier("validation")
+                } else if !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                          let message = store.validationMessage {
+                    Button { detailMessage = message } label: {
+                        Label("Shorten the description", systemImage: "exclamationmark.circle")
+                            .font(.footnote)
+                            .frame(minHeight: 44)
+                    }
+                    .accessibilityIdentifier("validation")
                 }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("age")
-                Spacer(minLength: 0)
-                if store.isMock && !narrow { Text("DEMO · NO CHARGES").font(.caption) }
-                else if let remaining = store.access.freeGenerationsRemaining, !narrow {
-                    Text("\(remaining) free today").font(.caption).foregroundStyle(.secondary)
-                }
-                Button { showAbout = true } label: {
-                    Image(systemName: "info.circle").frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("About age and generation costs")
             }
         }
     }
@@ -310,18 +329,7 @@ struct ContentView: View {
                 Label("Generation needs attention", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
-        } else if let message = store.validationMessage, !composerMinimized {
-            Button { detailMessage = message } label: {
-                Label(validationSummary, systemImage: "info.circle")
-                    .font(.footnote).lineLimit(1)
-            }.accessibilityIdentifier("validation")
         }
-    }
-
-    private var validationSummary: String {
-        if store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Enter a description to begin" }
-        if store.age == 0 { return "Choose a child’s age" }
-        return "Shorten the description · Details"
     }
 
     private var preview: some View {
@@ -393,6 +401,28 @@ struct ContentView: View {
     private var settingsSheet: some View {
         NavigationStack {
             Form {
+                Section("Age difficulty") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(store.age == 0 ? "Choose an age" : "\(store.age) years")
+                            .font(.headline)
+                            .accessibilityIdentifier("ageSettingValue")
+                        Slider(value: Binding(
+                            get: { Double(max(3, store.age)) },
+                            set: { store.age = Int($0) }), in: 3...18, step: 1) {
+                            Text("Age difficulty")
+                        } minimumValueLabel: {
+                            Text("3")
+                        } maximumValueLabel: {
+                            Text("18")
+                        } onEditingChanged: { editing in
+                            if editing && store.age == 0 { store.age = 3 }
+                        }
+                        .accessibilityValue(store.age == 0 ? "Choose an age" : "\(store.age) years")
+                        .accessibilityIdentifier("ageSetting")
+                    }
+                    Text("Younger ages use simpler shapes and larger coloring areas. Older ages add finer details. Your choice stays on this device and applies to the next batch.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 Section("Generation") {
                     Picker("Model", selection: $store.model) {
                         ForEach(ImageModel.allCases) { model in

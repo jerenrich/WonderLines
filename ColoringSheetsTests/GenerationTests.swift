@@ -791,6 +791,17 @@ final class KeyboardFocusTests: XCTestCase {
         XCTAssertTrue(input === textInput(in: host.view), "Keyboard layout must preserve the same text input")
         XCTAssertTrue(input.isFirstResponder, "The field must retain focus after the layout changes")
         let keyboardInput = try XCTUnwrap(input as? UIKeyInput)
+        let emptyFrame = input.convert(input.bounds, to: host.view)
+        keyboardInput.insertText("S")
+        try await Task.sleep(for: .milliseconds(150))
+        let firstCharacterFrame = input.convert(input.bounds, to: host.view)
+        XCTAssertEqual(firstCharacterFrame.minY, emptyFrame.minY, accuracy: 1,
+                       "Typing the first character must not move the description")
+        XCTAssertEqual(firstCharacterFrame.height, emptyFrame.height, accuracy: 1)
+        keyboardInput.deleteBackward()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(input.convert(input.bounds, to: host.view).minY, emptyFrame.minY, accuracy: 1,
+                       "Clearing the description must not move the composer")
         keyboardInput.insertText("Synthetic scene")
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(store.description, "Synthetic scene")
@@ -808,7 +819,7 @@ final class KeyboardFocusTests: XCTestCase {
         input.resignFirstResponder()
     }
 
-    func testSuccessfulGenerationMinimizesComposerButNeverInterruptsTyping() async throws {
+    func testSuccessfulGenerationPreservesEditorAndNeverInterruptsTyping() async throws {
         let suite = "ComposerTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -846,10 +857,15 @@ final class KeyboardFocusTests: XCTestCase {
         for _ in 0..<100 where service.pendingCount < ColoringViewModel.batchSize { try await Task.sleep(for: .milliseconds(10)) }
         service.succeed()
         try await Task.sleep(for: .milliseconds(500))
-        XCTAssertNil(textInput(in: host.view), "Success should collapse an unfocused composer")
+        XCTAssertTrue(input === textInput(in: host.view), "Success must preserve the same editable field")
+        XCTAssertFalse(input.isFirstResponder, "Success must not open the keyboard automatically")
+        XCTAssertTrue(input.becomeFirstResponder())
+        try await Task.sleep(for: .milliseconds(350))
+        XCTAssertTrue(input.isFirstResponder, "The existing field must accept focus immediately after generation")
         XCTAssertEqual(store.description, "Synthetic flower")
         XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 3)
-        capture("Landscape sheet with minimized composer", view: window)
+        capture("Landscape sheet editing after generation", view: window)
+        input.resignFirstResponder()
     }
 
     func testMinimizedPromptUsesOnlyItsFirstLine() {
@@ -901,7 +917,7 @@ final class KeyboardFocusTests: XCTestCase {
         }
     }
 
-    func testMinimizedComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {
+    func testPostGenerationComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {
         guard UIDevice.current.userInterfaceIdiom == .pad else {
             throw XCTSkip("iPad window fixtures require an iPad scene; phone layouts are covered by GalleryUITests.")
         }
@@ -913,7 +929,7 @@ final class KeyboardFocusTests: XCTestCase {
         defer { window.isHidden = true; previousWindow?.makeKey() }
 
         for (device, size) in recentIPadLandscapeSizes {
-            let suite = "MinimizedComposerLayoutTests-" + UUID().uuidString
+            let suite = "PostGenerationComposerLayoutTests-" + UUID().uuidString
             let defaults = UserDefaults(suiteName: suite)!
             defer { defaults.removePersistentDomain(forName: suite) }
             let service = ControlledService()
@@ -928,9 +944,9 @@ final class KeyboardFocusTests: XCTestCase {
             for _ in 0..<100 where service.pendingCount < ColoringViewModel.batchSize { try await Task.sleep(for: .milliseconds(10)) }
             service.succeed()
             try await Task.sleep(for: .milliseconds(400))
-            XCTAssertNil(textInput(in: host.view), "A successful generation must minimize the composer on \(device)")
+            XCTAssertNotNil(textInput(in: host.view), "A successful generation must leave the editor available on \(device)")
             assertMainPageDoesNotScroll(host)
-            capture("Minimized composer \(device)", view: host.view)
+            capture("Post-generation composer \(device)", view: host.view)
             host.willMove(toParent: nil); host.view.removeFromSuperview(); host.removeFromParent()
         }
     }
