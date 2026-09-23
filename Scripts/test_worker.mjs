@@ -335,10 +335,15 @@ try {
     assert.equal(metrics.provider, 'workers-ai'); assert.equal(metrics.viaGateway, true);
     assert.equal(metrics.requestedSize, width + 'x' + height); assert.equal(metrics.size, '1x1');
     assert.equal(metrics.upstreamModel, '@cf/black-forest-labs/' + model); assert.equal(metrics.totalTokens, null);
-    assert.ok(metrics.estimatedTotalUsd > 0, 'Workers AI estimates do not require token counts.');
-    assert.equal(metrics.estimatedTotalUsd, model === 'flux-2-klein-4b' ? 0.000287 / (512 * 512) : 0.015,
-      'Price the actual synthetic 1x1 PNG, not the larger requested or fitted size.');
-    assert.equal(metrics.estimatedInputUsd, 0);
+    if (model === 'flux-2-dev') {
+      assert.equal(metrics.estimatedTotalUsd, null, 'Unconfigured model rates must not use Klein pricing.');
+      assert.match(metrics.estimateBasis, /No verified pricing/);
+    } else {
+      assert.ok(metrics.estimatedTotalUsd > 0, 'Workers AI estimates do not require token counts.');
+      assert.equal(metrics.estimatedTotalUsd, model === 'flux-2-klein-4b' ? 0.000287 / (512 * 512) : 0.015,
+        'Price the actual synthetic 1x1 PNG, not the larger requested or fitted size.');
+      assert.equal(metrics.estimatedInputUsd, 0);
+    }
     const originalNativeMetrics = metrics;
     assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
     const attempts = nativeCalls;
