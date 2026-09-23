@@ -114,6 +114,45 @@ final class GenerationTests: XCTestCase {
         XCTAssertNil(WorkerClient.workerErrorCode(safe, response: response(200, type: "application/json")))
         XCTAssertNil(WorkerClient.workerErrorCode(safe, response: response(503, type: "text/html")))
     }
+    func testStructuredWorkerErrorsReachTheUser() throws {
+        for (status, code, message) in [
+            (502, "provider_daily_quota_exhausted", "Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst (HTTP 429; Cloudflare code 4006)."),
+            (502, "provider_rate_limited", "OpenAI has reached a request limit (HTTP 429)."),
+            (502, "provider_authentication_failed", "AI Gateway rejected the service credentials (HTTP 401)."),
+            (502, "provider_image_conversion_failed", "Cloudflare Images could not convert the image to PNG."),
+            (502, "upstream_failed", "The image provider could not complete the request (HTTP 418)."),
+            (503, "service_unavailable", "Image provider configuration is incomplete."),
+            (400, "invalid_request", "Model is invalid."),
+            (410, "result_unavailable", "Saved image is unavailable.")
+        ] {
+            let data = try JSONSerialization.data(withJSONObject: ["error": ["code": code, "message": message]])
+            XCTAssertThrowsError(try WorkerClient.parse(data, response: response(status, type: "application/json; charset=utf-8"), requestedModel: .fluxKlein4B)) {
+                XCTAssertEqual($0.localizedDescription, message)
+            }
+            XCTAssertEqual(WorkerClient.workerErrorCode(data, response: response(status, type: "application/json")), code)
+        }
+    }
+    func testUnrecognizedOrMalformedErrorDetailsUseFallback() throws {
+        for (code, message) in [
+            ("unknown_error", "private diagnostics"),
+            ("provider_quota_exhausted", "<html>private diagnostics</html>"),
+            ("provider_quota_exhausted", "private diagnostics\u{0000}"),
+            ("provider_quota_exhausted", String(repeating: "private diagnostics", count: 300)),
+            ("provider_quota_exhausted", " "),
+            ("service_unavailable", "private diagnostics") // wrong HTTP status for this code
+        ] {
+            let data = try JSONSerialization.data(withJSONObject: ["error": ["code": code, "message": message]])
+            XCTAssertThrowsError(try WorkerClient.parse(data, response: response(502, type: "application/json"), requestedModel: .flare)) {
+                XCTAssertFalse($0.localizedDescription.contains("private diagnostics"))
+                XCTAssertFalse($0.localizedDescription.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        for body in [#"{"error":{"code":"upstream_failed"}}"#, #"{"error":{"code":"upstream_failed","message":42}}"#, "not JSON"] {
+            XCTAssertThrowsError(try WorkerClient.parse(Data(body.utf8), response: response(502, type: "application/json"), requestedModel: .flare)) {
+                XCTAssertTrue($0.localizedDescription.contains("could not return a sheet"))
+            }
+        }
+    }
     @MainActor func testPrintFitAndExportPNG() throws {
         for paper in [CGRect(x: 18, y: 18, width: 559, height: 806), CGRect(x: 18, y: 18, width: 756, height: 576)] {
             for size in [CGSize(width: 1024, height: 1536), GenerationSize.a4Default.cgSize] {

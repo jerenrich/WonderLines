@@ -462,6 +462,57 @@ try {
     assert.equal((await get('/v1/generations/' + id)).status, 502);
     assert.equal(attempts, 1, 'Binary/JSON native failures cannot repeat paid inference.');
   }
+  // Specific failures survive POST, recovery, and repeated IDs without another
+  // paid call. Only curated messages and numeric HTTP status reach the client.
+  const quotaMessage = 'AiError: you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare\'s Workers Paid plan';
+  const errorCases = [
+    ['flux-2-klein-4b', 429, {errors: [{code: 4006, message: quotaMessage}]}, 'provider_daily_quota_exhausted', /10,000 neurons.*00:00 UTC.*Flare.*4006/],
+    ['flux-2-klein-9b', 429, {error: quotaMessage}, 'provider_daily_quota_exhausted', /10,000 neurons/],
+    ['gpt-image-2.5-flare', 429, {error: {code: 'insufficient_quota', message: 'private-provider-detail'}}, 'provider_quota_exhausted', /OpenAI.*credits or quota/],
+    ['gpt-image-2.5-flare', 429, {error: {code: 'rate_limit_exceeded'}}, 'provider_rate_limited', /request or usage limit/],
+    ['gpt-image-2.5-flare', 401, {error: {message: 'Incorrect key: sk-private-provider-detail'}}, 'provider_authentication_failed', /credentials.*HTTP 401/],
+    ['flux-2-klein-4b', 403, {errors: [{message: 'private-provider-detail'}]}, 'provider_access_denied', /permissions.*HTTP 403/],
+    ['gpt-image-2.5-flare', 404, {error: {code: 'model_not_found'}}, 'provider_model_unavailable', /selected model/],
+    ['gpt-image-2.5-flare', 400, {error: {code: 'content_policy_violation', message: 'private-provider-detail'}}, 'provider_content_rejected', /content rules/],
+    ['gemini-image', 200, {promptFeedback: {blockReason: 'SAFETY'}}, 'provider_content_rejected', /Google AI Studio.*content rules/],
+    ['flux-2-klein-4b', 200, {success: false, errors: [{code: 4006}]}, 'provider_daily_quota_exhausted', /10,000 neurons/],
+    ['phoenix-1.0', 200, {success: false, errors: [{code: 4006}]}, 'provider_daily_quota_exhausted', /10,000 neurons/],
+    ['lucid-origin', 200, {error: {code: 'PERMISSION_DENIED'}}, 'provider_access_denied', /permissions/],
+    ['gpt-image-2.5-flare', 400, {error: {message: 'private-provider-detail'}}, 'provider_request_rejected', /image size.*HTTP 400/],
+    ['gpt-image-2.5-flare', 503, {error: {message: 'private-provider-detail'}}, 'provider_unavailable', /HTTP 503/],
+    ['gpt-image-2.5-flare', 504, {}, 'provider_timeout', /timed out.*HTTP 504/],
+    ['gpt-image-2.5-flare', 418, {error: {code: 'sk-private-provider-detail'}}, 'upstream_failed', /HTTP 418/],
+    ['gpt-image-2.5-flare', 502, {error: {message: 'private-provider-detail'.repeat(1000)}}, 'provider_unavailable', /HTTP 502/],
+    ['gpt-image-2.5-flare', 503, '<html>private-provider-detail</html>', 'provider_unavailable', /HTTP 503/],
+    ['gpt-image-2.5-flare', 200, new DOMException('private-provider-detail', 'TimeoutError'), 'provider_timeout', /timed out/],
+    ['gpt-image-2.5-flare', 200, new Error('private-provider-detail'), 'provider_connection_failed', /could not be reached/],
+    ['gpt-image-2.5-flare', 200, {}, 'provider_invalid_response', /unreadable or missing image/]
+  ];
+  for (const [model, status, body, code, messagePattern] of errorCases) {
+    let attempts = 0;
+    globalThis.fetch = async () => {
+      attempts++;
+      if (body instanceof Error) throw body;
+      return typeof body === 'string' ? new Response(body, {status}) : Response.json(body, {status});
+    };
+    const id = crypto.randomUUID(), testEnv = modelCatalog({}).routes[model]?.provider === 'workers-ai' ? nativeEnv : gatewayEnv;
+    response = await worker.fetch(generateRequest(model, id), testEnv);
+    assert.equal(response.status, 502);
+    const failure = await response.json();
+    assert.equal(failure.error.code, code);
+    assert.match(failure.error.message, messagePattern);
+    assert.ok(!JSON.stringify(failure).includes('private-provider-detail'));
+    assert.deepEqual(await (await get('/v1/generations/' + id)).json(), failure);
+    assert.deepEqual(await (await worker.fetch(generateRequest(model, id), testEnv)).json(), failure);
+    assert.equal(attempts, 1);
+  }
+  const conversionFailure = await (await get('/v1/generations/' + conversionFailureID)).json();
+  assert.equal(conversionFailure.error.code, 'provider_image_conversion_failed');
+  assert.match(conversionFailure.error.message, /Images service quota/);
+  // Previously stored failures do not have an errorCode.
+  const legacyFailure = await gatewayAccount.state.storage.get('job:' + conversionFailureID);
+  delete legacyFailure.errorCode;
+  assert.equal((await (await get('/v1/generations/' + conversionFailureID)).json()).error.code, 'upstream_failed');
   env.GLOBAL_DAILY_GENERATION_LIMIT = '0';
   env.BUDGET = new BudgetNamespace(env);
   response = await worker.fetch(new Request('https://example.test/v1/generations', {method: 'POST', headers: {

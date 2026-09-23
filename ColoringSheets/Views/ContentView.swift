@@ -326,9 +326,10 @@ struct ContentView: View {
             }
         } else if case .error(let message) = store.phase {
             Button { detailMessage = message } label: {
-                Label("Generation needs attention", systemImage: "exclamationmark.circle")
+                Label("Generation failed · Details", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
+            .accessibilityHint("Show the error and suggested next steps")
         }
     }
 

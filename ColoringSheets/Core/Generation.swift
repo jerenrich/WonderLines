@@ -382,9 +382,38 @@ final class WorkerClient: GenerationServing {
         }
     }
 
+    // The Worker translates provider failures into bounded, user-facing messages.
+    // Accept that contract, not arbitrary HTML/text from a proxy or provider.
+    private static func workerErrorMessage(_ data: Data, response: HTTPURLResponse) -> String? {
+        guard let code = workerErrorCode(data, response: response) else { return nil }
+        let expectedStatus: Int
+        switch code {
+        case "upstream_failed", "result_save_failed", "provider_daily_quota_exhausted",
+             "provider_quota_exhausted", "provider_content_rejected", "provider_authentication_failed",
+             "provider_access_denied", "provider_model_unavailable", "provider_rate_limited",
+             "provider_timeout", "provider_unavailable", "provider_request_rejected",
+             "provider_connection_failed", "provider_invalid_response", "provider_image_conversion_failed":
+            expectedStatus = 502
+        case "service_unavailable": expectedStatus = 503
+        case "invalid_request": expectedStatus = 400
+        case "result_unavailable": expectedStatus = 410
+        default: return nil
+        }
+        guard response.statusCode == expectedStatus,
+              let body = try? JSONDecoder().decode(WorkerErrorBody.self, from: data),
+              let message = body.error.message?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !message.isEmpty, message.count <= 800,
+              !message.contains("<"), !message.contains(">"),
+              !message.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else { return nil }
+        return message
+    }
+
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
         let contentType = response.value(forHTTPHeaderField: "Content-Type")?.lowercased().split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
         guard response.statusCode == 200 else {
+            if let message = workerErrorMessage(data, response: response) {
+                throw response.statusCode == 400 ? GenerationError.validation(message) : GenerationError.upstream(message)
+            }
             switch response.statusCode {
             case 401, 403, 404, 405, 415, 503: throw GenerationError.configuration
             case 429:
@@ -437,7 +466,7 @@ final class WorkerClient: GenerationServing {
 }
 
 private struct WorkerErrorBody: Decodable {
-    struct Detail: Decodable { let code: String }
+    struct Detail: Decodable { let code: String; let message: String? }
     let error: Detail
 }
 
