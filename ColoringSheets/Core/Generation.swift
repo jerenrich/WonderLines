@@ -5,8 +5,17 @@ import UIKit
 enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case flare = "gpt-image-2.5-flare"
     case sunburst = "gpt-image-2.5-sunburst"
+    case fluxKlein4B = "flux-2-klein-4b"
+    case fluxKlein9B = "flux-2-klein-9b"
     var id: String { rawValue }
-    var label: String { self == .flare ? "Flare" : "Sunburst" }
+    var label: String {
+        switch self {
+        case .flare: return "Flare"
+        case .sunburst: return "Sunburst"
+        case .fluxKlein4B: return "FLUX.2 Klein 4B"
+        case .fluxKlein9B: return "FLUX.2 Klein 9B"
+        }
+    }
 }
 
 // App-owned page policy: a future format picker only needs to bind pageFormat.
@@ -119,6 +128,9 @@ struct GenerationMetrics: Decodable {
     let requestedSize: String?
     let size: String?
     let requestedModel: String?
+    let provider: String?
+    let upstreamModel: String?
+    let viaGateway: Bool?
     let inputTokens: Int?
     let textInputTokens: Int?
     let imageInputTokens: Int?
@@ -358,12 +370,12 @@ final class WorkerClient: GenerationServing {
                 // Only display the known sanitized Worker messages, never arbitrary response text.
                 let body = contentType == "text/plain" ? String(data: data.prefix(512), encoding: .utf8) ?? "" : ""
                 if body.contains("insufficient credit or quota") || body.contains("rate or quota limit") {
-                    throw GenerationError.upstream("OpenAI reports a credit or quota limit. Ask the developer to check API billing and limits before trying again.")
+                    throw GenerationError.upstream("The image provider reports a credit or quota limit. Ask the developer to check API billing and limits before trying again.")
                 }
                 if body.contains("rejected the API key") || body.contains("denied model access") {
-                    throw GenerationError.upstream("OpenAI access needs attention. Ask the developer to check the server’s API key and model access.")
+                    throw GenerationError.upstream("Image provider access needs attention. Ask the developer to check the server’s API key and model access.")
                 }
-                throw GenerationError.upstream("OpenAI could not return a sheet. Review the description and service usage before trying again.")
+                throw GenerationError.upstream("The image provider could not return a sheet. Review the description and service usage before trying again.")
             default: throw GenerationError.server(response.statusCode)
             }
         }

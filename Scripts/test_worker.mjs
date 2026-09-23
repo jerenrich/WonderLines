@@ -31,7 +31,7 @@ let calls = 0, forwarded;
 globalThis.fetch = async (url, request) => {
   assert.equal(url, 'https://api.openai.com/v1/images/generations'); calls++;
   forwarded = JSON.parse(request.body);
-  return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}], usage: {input_tokens: 1, output_tokens: 2, total_tokens: 3}}));
+  return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg=='}], usage: {input_tokens: 1, output_tokens: 2, total_tokens: 3}}));
 };
 try {
   const registered = await worker.fetch(new Request('https://example.test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}), env);
@@ -82,7 +82,7 @@ try {
   let concurrentCalls = 0;
   globalThis.fetch = async () => {
     concurrentCalls++; notifyStarted(); await upstreamWaiting;
-    return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgo='}]}));
+    return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg=='}]}));
   };
   const duplicateID = crypto.randomUUID();
   const duplicateRequest = () => new Request('https://example.test/v1/generations', {method: 'POST', headers: {
@@ -127,6 +127,239 @@ try {
                  'Expired credentials still require the current, unrevoked credential ID.');
     await storedAccount.state.storage.put('account', savedAccount);
   } finally { Date.now = originalNow; }
+  // AI Gateway integration: all requests are intercepted, including failures.
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
+  const gatewayEnv = {...env, FREE_DAILY_ALLOWANCE: '1000', AI_GATEWAY_ACCOUNT_ID: 'a'.repeat(32),
+    AI_GATEWAY_ID: 'coloring-sheets', AI_GATEWAY_TOKEN: 'synthetic-gateway-token'};
+  gatewayEnv.ACCOUNTS = new Accounts(gatewayEnv); gatewayEnv.BUDGET = new BudgetNamespace(gatewayEnv);
+  gatewayEnv.GENERATIONS = new Images();
+  const gatewayIdentity = await (await worker.fetch(new Request('https://example.test/v1/installations', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+  }), gatewayEnv)).json();
+  const auth = {'Authorization': 'Bearer ' + gatewayIdentity.accessToken};
+  const generateRequest = (model, id = crypto.randomUUID(), extras = {}) => new Request('https://example.test/v1/generations', {
+    method: 'POST', headers: {...auth, 'Content-Type': 'application/json', 'Idempotency-Key': id},
+    body: JSON.stringify({subject: 'Synthetic flower', model, width: 1456, height: 1024, ...extras})
+  });
+  const get = path => worker.fetch(new Request('https://example.test' + path, {headers: auth}), gatewayEnv);
+  let gatewayCalls = 0, gatewayURL, gatewayHeaders, gatewayPayload;
+  globalThis.fetch = async (url, init) => {
+    gatewayCalls++; gatewayURL = url; gatewayHeaders = new Headers(init.headers); gatewayPayload = JSON.parse(init.body);
+    assert.equal(init.redirect, 'manual');
+    assert.ok(init.signal instanceof AbortSignal);
+    return Response.json({data: [{b64_json: png}], usage: {input_tokens: 1, output_tokens: 2, total_tokens: 3}});
+  };
+  const gatewayID = crypto.randomUUID();
+  response = await worker.fetch(generateRequest('gpt-image-2.5-flare', gatewayID), gatewayEnv);
+  assert.equal(response.status, 200);
+  assert.equal(gatewayURL, 'https://gateway.ai.cloudflare.com/v1/' + 'a'.repeat(32) + '/coloring-sheets/openai/images/generations');
+  assert.equal(gatewayHeaders.get('Authorization'), 'Bearer synthetic', 'Keep billing the existing OpenAI key.');
+  assert.equal(gatewayHeaders.get('cf-aig-authorization'), 'Bearer synthetic-gateway-token');
+  assert.equal(gatewayHeaders.get('cf-aig-skip-cache'), 'true');
+  assert.equal(gatewayHeaders.get('cf-aig-max-attempts'), '1');
+  assert.equal(gatewayPayload.size, '1456x1024');
+  assert.equal(gatewayPayload.quality, 'low');
+  assert.equal(gatewayPayload.output_format, 'png');
+  assert.equal(gatewayPayload.n, 1);
+  assert.match(gatewayPayload.prompt, /child-appropriate/);
+  let metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+  assert.equal(metrics.provider, 'openai'); assert.equal(metrics.viaGateway, true);
+  assert.equal(metrics.upstreamModel, 'gpt-image-2.5-flare'); assert.equal(metrics.totalTokens, 3);
+  assert.equal(metrics.size, '1x1', 'Report dimensions from the actual PNG.');
+  const savedBytes = new Uint8Array(await response.arrayBuffer());
+  gatewayEnv.AI_GATEWAY_KEY_SOURCE = 'gateway';
+  response = await worker.fetch(generateRequest(), gatewayEnv);
+  assert.equal(response.status, 200);
+  assert.equal(gatewayHeaders.has('Authorization'), false, 'Stored BYOK must omit even a retained Worker key.');
+  delete gatewayEnv.OPENAI_API_KEY;
+  assert.equal((await worker.fetch(generateRequest(), gatewayEnv)).status, 200, 'Stored BYOK works without an OpenAI Worker secret.');
+  // A public ID can be remapped to another model without changing the app.
+  gatewayEnv.IMAGE_MODEL_ROUTES = JSON.stringify({
+    'gpt-image-2.5-flare': {provider: 'openai', model: 'another-image-model'},
+    'gemini-image': {provider: 'google-ai-studio', model: 'gemini-2.5-flash-image'}
+  });
+  gatewayEnv.IMAGE_DEFAULT_MODEL = 'gemini-image';
+  const listed = await (await get('/v1/models')).json();
+  assert.equal(listed.defaultModel, 'gemini-image');
+  assert.equal(listed.models.find(m => m.id === 'gemini-image').provider, 'google-ai-studio');
+  assert.equal(JSON.stringify(listed).includes('synthetic'), false);
+  assert.equal((await worker.fetch(new Request('https://example.test/v1/models'), gatewayEnv)).status, 401);
+  assert.equal((await worker.fetch(generateRequest('gpt-image-2.5-flare'), gatewayEnv)).status, 200);
+  assert.equal(gatewayPayload.model, 'another-image-model');
+  const beforeRecovery = gatewayCalls;
+  response = await worker.fetch(generateRequest('gpt-image-2.5-flare', gatewayID), gatewayEnv);
+  assert.equal(response.status, 200);
+  assert.equal(gatewayCalls, beforeRecovery, 'Remapping must not repeat an existing paid generation.');
+  assert.equal(JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics'))).upstreamModel, 'gpt-image-2.5-flare');
+  response = await worker.fetch(generateRequest('gpt-image-2.5-flare', gatewayID, {subject: 'Changed subject'}), gatewayEnv);
+  assert.equal(response.status, 409);
+  const googleResponse = {candidates: [{content: {parts: [
+    {thought: true, inlineData: {mimeType: 'image/png', data: 'invalid-thought-image'}},
+    {text: 'Here is the sheet'}, {inlineData: {mimeType: 'image/png', data: png}}
+  ]}}], usageMetadata: {promptTokenCount: 4, candidatesTokenCount: 5, totalTokenCount: 9}};
+  globalThis.fetch = async (url, init) => {
+    gatewayCalls++; gatewayURL = url; gatewayHeaders = new Headers(init.headers); gatewayPayload = JSON.parse(init.body);
+    return Response.json(googleResponse);
+  };
+  response = await worker.fetch(generateRequest(), gatewayEnv);
+  assert.equal(response.status, 200);
+  assert.equal(gatewayURL, 'https://gateway.ai.cloudflare.com/v1/' + 'a'.repeat(32) + '/coloring-sheets/google-ai-studio/v1/models/gemini-2.5-flash-image:generateContent');
+  assert.equal(gatewayHeaders.has('Authorization'), false); assert.equal(gatewayHeaders.has('x-goog-api-key'), false);
+  assert.equal(gatewayHeaders.get('cf-aig-authorization'), 'Bearer synthetic-gateway-token');
+  assert.equal(gatewayPayload.generationConfig.imageConfig.aspectRatio, '3:2');
+  assert.match(gatewayPayload.contents[0].parts[0].text, /child-appropriate/);
+  assert.equal(gatewayPayload.quality, undefined);
+  metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+  assert.equal(metrics.requestedModel, 'gemini-image'); assert.equal(metrics.provider, 'google-ai-studio');
+  assert.equal(metrics.inputTokens, 4); assert.equal(metrics.outputTokens, 5); assert.equal(metrics.totalTokens, 9);
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
+  gatewayEnv.AI_GATEWAY_KEY_SOURCE = 'worker'; gatewayEnv.GOOGLE_AI_STUDIO_API_KEY = 'synthetic-google-key';
+  response = await worker.fetch(generateRequest('gemini-image', crypto.randomUUID(), {width: 1024, height: 1456}), gatewayEnv);
+  assert.equal(response.status, 200); assert.equal(gatewayHeaders.get('x-goog-api-key'), 'synthetic-google-key');
+  assert.equal(gatewayHeaders.has('Authorization'), false); assert.equal(gatewayPayload.generationConfig.imageConfig.aspectRatio, '2:3');
+  gatewayEnv.AI_GATEWAY_KEY_SOURCE = 'gateway';
+  const gatewayAccount = gatewayEnv.ACCOUNTS.objects.get(gatewayIdentity.accountId);
+  const beforeBadConfig = await gatewayAccount.access(), beforeBadConfigCalls = gatewayCalls;
+  const baseConfig = {...gatewayEnv};
+  const invalidConfigs = [
+    {AI_GATEWAY_ID: undefined}, {AI_GATEWAY_TOKEN: undefined}, {AI_GATEWAY_ACCOUNT_ID: 'not-an-account'},
+    {AI_GATEWAY_TOKEN: 'invalid\nheader'}, {AI_GATEWAY_TOKEN: ' '},
+    {AI_GATEWAY_ID: '../other-gateway'}, {AI_GATEWAY_KEY_SOURCE: 'unknown'},
+    {AI_GATEWAY_KEY_SOURCE: 'worker', GOOGLE_AI_STUDIO_API_KEY: undefined},
+    {IMAGE_MODEL_ROUTES: '{'}, {IMAGE_MODEL_ROUTES: 'null'}, {IMAGE_MODEL_ROUTES: '[]'},
+    {IMAGE_MODEL_ROUTES: JSON.stringify({x: {provider: 'unsupported', model: 'image'}})},
+    {IMAGE_MODEL_ROUTES: JSON.stringify({x: {provider: 'openai', model: '../images'}})},
+    {IMAGE_MODEL_ROUTES: JSON.stringify({x: {provider: 'openai', model: 'image', url: 'https://example.test'}})},
+    {IMAGE_DEFAULT_MODEL: 'not-allowed'}
+  ];
+  for (const overrides of invalidConfigs) {
+    response = await worker.fetch(generateRequest(), {...baseConfig, ...overrides});
+    assert.equal(response.status, 503, JSON.stringify(overrides));
+  }
+  for (const model of ['unknown-model', '__proto__', 'constructor', {}, 'https://example.test']) {
+    assert.equal((await worker.fetch(generateRequest(model), gatewayEnv)).status, 400);
+  }
+  assert.equal(gatewayCalls, beforeBadConfigCalls);
+  assert.deepEqual(await gatewayAccount.access(), beforeBadConfig, 'Invalid configuration/models must not spend allowance.');
+  assert.equal(gatewayEnv.GENERATIONS.values.size, beforeBadConfigCalls);
+  // Account access, renewal, and saved results do not depend on provider configuration.
+  const brokenEnv = {...gatewayEnv, AI_GATEWAY_TOKEN: undefined, IMAGE_MODEL_ROUTES: '{'};
+  assert.equal((await worker.fetch(new Request('https://example.test/v1/access', {headers: auth}), brokenEnv)).status, 200);
+  assert.equal((await worker.fetch(renewRequest(gatewayIdentity.accessToken), brokenEnv)).status, 200);
+  assert.equal((await worker.fetch(generateRequest('gpt-image-2.5-flare', gatewayID), brokenEnv)).status, 200);
+  assert.equal((await get('/v1/generations/' + gatewayID)).status, 200);
+  // HTTP, transport, timeout, malformed JSON, safety/text-only, and non-PNG failures
+  // all become terminal jobs; raw upstream messages never leak to clients.
+  const failures = [
+    () => new Response(null, {status: 302, headers: {Location: 'https://other.example.test/'}}),
+    () => Response.json({error: {message: 'private-provider-detail'}}, {status: 401}),
+    () => Response.json({error: 'private-provider-detail'}, {status: 429}),
+    () => new Response('private-provider-detail', {status: 503}),
+    () => { throw new Error('private-provider-detail'); },
+    () => { throw new DOMException('private-provider-detail', 'TimeoutError'); },
+    () => new Response('not-json'),
+    () => Response.json({candidates: [{content: {parts: [{text: 'private-provider-detail'}]}}]}),
+    () => Response.json({candidates: [{content: {parts: [null]}}]}),
+    () => Response.json({candidates: [{content: {parts: [{inlineData: {mimeType: 'image/jpeg', data: png}}]}}]}),
+    () => Response.json({candidates: [{content: {parts: [{inlineData: {mimeType: 'image/png', data: 'broken-base64!'}}]}}]}),
+    () => Response.json({candidates: [{content: {parts: [{inlineData: {mimeType: 'image/png', data: btoa('not an image')}}]}}]})
+  ];
+  for (const makeResponse of failures) {
+    let failedCalls = 0;
+    globalThis.fetch = async () => { failedCalls++; return makeResponse(); };
+    const id = crypto.randomUUID();
+    response = await worker.fetch(generateRequest('gemini-image', id), gatewayEnv);
+    assert.equal(response.status, 502);
+    assert.equal((await response.text()).includes('private-provider-detail'), false);
+    assert.equal((await get('/v1/generations/' + id)).status, 502);
+    assert.equal((await worker.fetch(generateRequest('gemini-image', id), gatewayEnv)).status, 502);
+    assert.equal(failedCalls, 1, 'Failures never fall back, retry upstream, or stay processing forever.');
+  }
+  // Native Cloudflare inference uses multipart through Gateway, with no OpenAI key.
+  let nativeCalls = 0, conversions = 0, nativeURL, nativeForm, nativeOptions;
+  const jpeg = new Uint8Array([255, 216, 255, 224, 0, 16]);
+  const nativeEnv = {...gatewayEnv, OPENAI_API_KEY: undefined, AI_GATEWAY_KEY_SOURCE: 'gateway',
+    WORKERS_AI_API_TOKEN: 'synthetic-workers-ai-key',
+    IMAGES: {input(stream) { return {async output(options) {
+      conversions++;
+      assert.deepEqual(new Uint8Array(await new Response(stream).arrayBuffer()), jpeg);
+      assert.deepEqual(options, {format: 'image/png'});
+      return {response: () => new Response(Buffer.from(png, 'base64'), {headers: {'Content-Type': 'image/png'}})};
+    }}; }}
+  };
+  const nativeFetch = async (url, options) => {
+    nativeCalls++; nativeURL = url; nativeOptions = options;
+    nativeForm = await new Response(options.body).formData();
+    return Response.json({success: true, result: {image: btoa(String.fromCharCode(...jpeg))}});
+  };
+  globalThis.fetch = nativeFetch;
+  for (const [model, width, height, expectedWidth, expectedHeight] of [
+    ['flux-2-klein-4b', 1456, 1024, '1456', '1024'],
+    ['flux-2-klein-9b', 2304, 1600, '1920', '1328'],
+    ['flux-2-klein-4b', 1600, 2304, '1328', '1920']
+  ]) {
+    const id = crypto.randomUUID(), before = (await gatewayAccount.access()).freeGenerationsRemaining;
+    response = await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv);
+    assert.equal(response.status, 200);
+    assert.equal(nativeURL, 'https://gateway.ai.cloudflare.com/v1/' + 'a'.repeat(32) + '/coloring-sheets/workers-ai/@cf/black-forest-labs/' + model);
+    assert.equal(nativeForm.get('width'), expectedWidth); assert.equal(nativeForm.get('height'), expectedHeight);
+    assert.match(nativeForm.get('prompt'), /child-appropriate.*Synthetic flower/);
+    assert.deepEqual([...nativeForm.keys()].sort(), ['height', 'prompt', 'width']);
+    assert.equal(nativeOptions.headers.Authorization, 'Bearer synthetic-workers-ai-key');
+    assert.equal(nativeOptions.headers['cf-aig-authorization'], 'Bearer synthetic-gateway-token');
+    assert.equal(nativeOptions.headers['cf-aig-max-attempts'], '1');
+    assert.equal(nativeOptions.headers['cf-aig-skip-cache'], 'true');
+    assert.equal(nativeOptions.headers['Content-Type'], undefined, 'fetch must supply the multipart boundary');
+    assert.equal(nativeOptions.redirect, 'manual');
+    assert.ok(nativeOptions.signal instanceof AbortSignal);
+    metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+    assert.equal(metrics.provider, 'workers-ai'); assert.equal(metrics.viaGateway, true);
+    assert.equal(metrics.requestedSize, width + 'x' + height); assert.equal(metrics.size, '1x1');
+    assert.equal(metrics.upstreamModel, '@cf/black-forest-labs/' + model); assert.equal(metrics.totalTokens, null);
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
+    const attempts = nativeCalls;
+    assert.equal((await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv)).status, 200);
+    assert.deepEqual(new Uint8Array(await (await get('/v1/generations/' + id)).arrayBuffer()), savedBytes);
+    assert.equal(nativeCalls, attempts); assert.equal(conversions, attempts, 'Recovery does not convert or generate again.');
+    assert.equal((await gatewayAccount.access()).freeGenerationsRemaining, before - 1);
+  }
+  const nativeBeforeBadConfig = await gatewayAccount.access();
+  for (const changes of [{AI_GATEWAY_TOKEN: undefined}, {WORKERS_AI_API_TOKEN: undefined},
+    {WORKERS_AI_API_TOKEN: nativeEnv.AI_GATEWAY_TOKEN}, {WORKERS_AI_API_TOKEN: 'invalid\nkey'},
+    {AI_GATEWAY_ACCOUNT_ID: undefined}, {IMAGES: undefined}, {AI_GATEWAY_ID: undefined},
+    {IMAGE_MODEL_ROUTES: JSON.stringify({bad: {provider: 'workers-ai', model: '@cf/unsupported'}})}]) {
+    assert.equal((await worker.fetch(generateRequest('flux-2-klein-4b'), {...nativeEnv, ...changes})).status, 503);
+  }
+  assert.deepEqual(await gatewayAccount.access(), nativeBeforeBadConfig);
+  // A separate Workers AI credential stays separate from Gateway authentication.
+  // Providers returning PNG in future must not need another transformation.
+  const conversionsBeforePNG = conversions;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers.Authorization, 'Bearer synthetic-workers-ai-key');
+    assert.equal(options.headers['cf-aig-authorization'], 'Bearer synthetic-gateway-token');
+    return Response.json({result: {image: png}});
+  };
+  response = await worker.fetch(generateRequest('flux-2-klein-4b'), {...nativeEnv, WORKERS_AI_API_TOKEN: 'synthetic-workers-ai-key'});
+  assert.equal(response.status, 200);
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
+  assert.equal(conversions, conversionsBeforePNG);
+  for (const result of [null, {image: '!'}, {image: btoa('not an image')}, new Error('private-provider-detail')]) {
+    let attempts = 0;
+    globalThis.fetch = async () => { attempts++; if (result instanceof Error) throw result; return Response.json(result); };
+    const failingEnv = nativeEnv;
+    const id = crypto.randomUUID();
+    response = await worker.fetch(generateRequest('flux-2-klein-4b', id), failingEnv);
+    assert.equal(response.status, 502); assert.ok(!(await response.text()).includes('private-provider-detail'));
+    assert.equal((await worker.fetch(generateRequest('flux-2-klein-4b', id), failingEnv)).status, 502);
+    assert.equal(attempts, 1);
+  }
+  globalThis.fetch = nativeFetch;
+  const conversionFailureID = crypto.randomUUID(), callsBeforeConversionFailure = nativeCalls;
+  const brokenImages = {...nativeEnv, IMAGES: {input() { throw new Error('private-conversion-detail'); }}};
+  response = await worker.fetch(generateRequest('flux-2-klein-4b', conversionFailureID), brokenImages);
+  assert.equal(response.status, 502); assert.ok(!(await response.text()).includes('private-conversion-detail'));
+  assert.equal((await worker.fetch(generateRequest('flux-2-klein-4b', conversionFailureID), nativeEnv)).status, 502);
+  assert.equal(nativeCalls, callsBeforeConversionFailure + 1, 'Conversion failure cannot repeat paid inference.');
   env.GLOBAL_DAILY_GENERATION_LIMIT = '0';
   env.BUDGET = new BudgetNamespace(env);
   response = await worker.fetch(new Request('https://example.test/v1/generations', {method: 'POST', headers: {
@@ -136,4 +369,4 @@ try {
   assert.equal((await response.json()).error.code, 'service_budget_exhausted', 'Keep service and personal limits distinct.');
   assert.deepEqual(await storedAccount.access(), beforeRenewal, 'A full service budget cannot spend account credits.');
 } finally { globalThis.fetch = originalFetch; }
-console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, and service/personal budgets; no network.');
+console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, FLUX multipart/size fitting/PNG conversion, and terminal provider failures; no network.');

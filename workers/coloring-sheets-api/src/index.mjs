@@ -1,5 +1,5 @@
 // Public v1 API. An account is a random UUID; no sign-in or personal profile exists.
-const MODEL = 'gpt-image-2.5-flare', MODELS = ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'];
+import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError} from './image-provider.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status) => reply({error: {code, message}}, status);
@@ -116,27 +116,50 @@ async function saved(env, job, access) {
 async function generate(request, env, account) {
   const input = await body(request), generationId = request.headers.get('Idempotency-Key');
   if (!input || !/^[0-9a-f-]{36}$/.test(generationId ?? '')) return fail('invalid_request', 'Send JSON and a UUID Idempotency-Key.', 400);
-  const size = dimensions(input), model = input.model ?? MODEL;
-  if (!MODELS.includes(model) || typeof input.subject !== 'string' || !input.subject.trim() || input.subject.length > 500 || !size) return fail('invalid_request', 'Description, model, or dimensions are invalid.', 400);
-  const encoded = JSON.stringify({subject: input.subject, model, ...size}), reservation = await call(env, account.id, '/reserve', {generationId, fingerprint: await digest(encoded)});
+  const size = dimensions(input);
+  if (typeof input.subject !== 'string' || !input.subject.trim() || input.subject.length > 500 || !size) return fail('invalid_request', 'Description or dimensions are invalid.', 400);
+  // A retry identifies the original public request, not today's provider route.
+  // Recover it before validating configuration so rotations cannot strand jobs.
+  const model = input.model ?? env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
+  const fingerprint = await digest(JSON.stringify({subject: input.subject, model, ...size}));
+  const existing = await call(env, account.id, '/job', {generationId});
+  if (existing.status === 200) return existing.value.job.fingerprint === fingerprint
+    ? saved(env, existing.value.job, existing.value.access)
+    : fail('idempotency_conflict', 'Generation ID was already used.', 409);
+  if (existing.status !== 404) return fail('service_unavailable', 'Could not check generation.', 503);
+  let catalog, upstreamRequest;
+  try { catalog = modelCatalog(env); }
+  catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
+  if (typeof model !== 'string' || !Object.hasOwn(catalog.routes, model)) return fail('invalid_request', 'Model is invalid.', 400);
+  try { upstreamRequest = imageRequest(env, catalog.routes[model], input.subject, size); }
+  catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
+  const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint});
   if (reservation.status === 429) return reply(reservation.value, 429);
   if (reservation.status >= 400) return fail('generation_unavailable', 'Could not start generation.', reservation.status);
   if (reservation.status === 200 || reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
   try {
-    const started = Date.now(), result = await fetch('https://api.openai.com/v1/images/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + env.OPENAI_API_KEY, 'Content-Type': 'application/json'}, body: JSON.stringify({model, n: 1, size: size.width + 'x' + size.height, quality: 'low', output_format: 'png', prompt: 'Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: ' + input.subject.trim()}), signal: AbortSignal.timeout(180000)});
-    if (!result.ok) { const message = result.status >= 500 || result.status === 429 ? 'Image generation is temporarily unavailable.' : 'OpenAI could not generate this image. Try a simpler description.'; await call(env, account.id, '/complete', {generationId, result: {state: 'failed', message}}); return fail('upstream_failed', message, 502); }
-    const upstream = await result.json(), encodedImage = upstream.data?.[0]?.b64_json; if (!encodedImage) throw new Error('missing image');
-    const image = Uint8Array.from(atob(encodedImage), c => c.charCodeAt(0)), objectKey = account.id + '/' + generationId + '.png';
-    const metrics = {requestedModel: model, requestedSize: size.width + 'x' + size.height, size: upstream.size ?? size.width + 'x' + size.height, inputTokens: upstream.usage?.input_tokens ?? null, outputTokens: upstream.usage?.output_tokens ?? null, totalTokens: upstream.usage?.total_tokens ?? null, elapsedMs: Date.now() - started, estimateBasis: 'Usage metrics are informational and are not a billing receipt.'};
+    const started = Date.now(), result = await runImageRequest(upstreamRequest);
+    const {image, size: actualSize, inputTokens, outputTokens, totalTokens} = result;
+    const objectKey = account.id + '/' + generationId + '.png';
+    const metrics = {requestedModel: model, provider: upstreamRequest.provider, upstreamModel: upstreamRequest.model,
+      viaGateway: upstreamRequest.viaGateway, requestedSize: size.width + 'x' + size.height, size: actualSize,
+      inputTokens, outputTokens, totalTokens, elapsedMs: Date.now() - started,
+      estimateBasis: 'Usage metrics are informational and are not a billing receipt.'};
     await env.GENERATIONS.put(objectKey, image, {httpMetadata: {contentType: 'image/png'}});
     const completed = await call(env, account.id, '/complete', {generationId, result: {state: 'completed', objectKey, metrics}});
     return new Response(image, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': generationId, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(metrics)), 'X-Access-Snapshot': accessHeader(completed.value.access)}});
-  } catch { return reply({generationId, status: 'processing'}, 202, {'Retry-After': '5', 'X-Access-Snapshot': accessHeader(reservation.value.access)}); }
+  } catch (error) {
+    // A synchronous provider failure has no background work that can finish it.
+    // Persist a terminal result so polling/retries never trigger another paid call.
+    const message = error instanceof ImageProviderError ? error.message : 'The generated image could not be saved.';
+    await call(env, account.id, '/complete', {generationId, result: {state: 'failed', message}});
+    return fail('upstream_failed', message, 502);
+  }
 }
 
 export default { async fetch(request, env) {
   const url = new URL(request.url);
-  if (!env.ACCOUNT_TOKEN_SECRET || !env.OPENAI_API_KEY) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
+  if (!env.ACCOUNT_TOKEN_SECRET) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
   if (url.pathname === '/v1/installations') { if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400); const id = crypto.randomUUID(), made = await call(env, id, '/initialize', {accountId: id}); if (made.status !== 201) return fail('service_unavailable', 'Could not create an anonymous account.', 503); return reply({accountId: id, accessToken: await token(id, made.value.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: made.value.access}, 201); }
   if (url.pathname === '/v1/installations/renew') {
     if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400);
@@ -147,6 +170,12 @@ export default { async fetch(request, env) {
     return reply({accountId: account.id, accessToken: await token(account.id, account.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: account.access});
   }
   const account = await authenticate(request, env); if (!account) return fail('unauthorized', 'Register this app installation again.', 401);
+  if (url.pathname === '/v1/models' && request.method === 'GET') {
+    try {
+      const {defaultModel, routes} = modelCatalog(env);
+      return reply({defaultModel, models: Object.entries(routes).map(([id, route]) => ({id, ...route}))});
+    } catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
+  }
   if (url.pathname === '/v1/access' && request.method === 'GET') return reply({access: account.access});
   if (url.pathname === '/v1/generations' && request.method === 'POST') return generate(request, env, account);
   const match = /^\/v1\/generations\/([0-9a-f-]{36})$/.exec(url.pathname); if (match && request.method === 'GET') { const found = await call(env, account.id, '/job', {generationId: match[1]}); return found.status === 200 ? saved(env, found.value.job, found.value.access) : fail('not_found', 'Generation not found.', 404); }

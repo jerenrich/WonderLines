@@ -431,7 +431,8 @@ struct ContentView: View {
                 if let result = store.result {
                     Section("Selected sheet · \(store.selectedIndex + 1) of \(store.results.count)") {
                         metric("Model", result.requestedModel.label)
-                        metric("Model sent to OpenAI", result.metrics?.requestedModel ?? "Unavailable")
+                        metric("Provider", result.metrics?.provider ?? "Unavailable")
+                        metric("Model used", result.metrics?.upstreamModel ?? result.metrics?.requestedModel ?? "Unavailable")
                         metric("Requested pixels", result.metrics?.requestedSize ?? "Unavailable")
                         metric("Image pixels", "\(result.image.cgImage?.width ?? 0) × \(result.image.cgImage?.height ?? 0)")
                         metric("Input tokens", count(result.metrics?.inputTokens))

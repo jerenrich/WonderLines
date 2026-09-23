@@ -148,7 +148,7 @@ final class MockURLProtocol: URLProtocol {
 }
 
 final class NetworkingTests: XCTestCase {
-    func testOnePOSTAndNoRetryForBothModelsAndTimeout() async throws {
+    func testOnePOSTAndNoRetryForAllModelsAndTimeout() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: configuration)
@@ -168,11 +168,11 @@ final class NetworkingTests: XCTestCase {
             }
             _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: model))
         }
-        XCTAssertEqual(calls, 2)
+        XCTAssertEqual(calls, ImageModel.allCases.count)
         MockURLProtocol.handler = { _ in calls += 1; throw URLError(.timedOut) }
         do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected failure") }
         catch { XCTAssertEqual(error as? GenerationError, .uncertain) }
-        XCTAssertEqual(calls, 3)
+        XCTAssertEqual(calls, ImageModel.allCases.count + 1)
     }
     func testV1AllowanceDoesNotRepeatPaidPOST() async throws {
         let configuration = URLSessionConfiguration.ephemeral
