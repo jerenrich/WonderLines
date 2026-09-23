@@ -55,6 +55,7 @@ final class GalleryUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Enter a description to begin"].exists)
         XCTAssertFalse(app.staticTexts["What shall we draw?"].exists)
         XCTAssertFalse(app.buttons["About generation and costs"].exists)
+        XCTAssertFalse(app.buttons["clearDescription"].exists)
         XCTAssertEqual(subject.placeholderValue, "Describe your coloring sheet…")
         XCTAssertTrue(app.buttons["validation"].exists, "Choose age should be available before typing")
         subject.tap()
@@ -136,6 +137,25 @@ final class GalleryUITests: XCTestCase {
         assertVisibleSheetMatchesSelection()
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["nextSheet"].isHittable)
+        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        assertVisibleSheetMatchesSelection()
+        let beforeClearSize = subject.frame.size
+        app.buttons["clearDescription"].tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(subject.value as? String, "")
+        XCTAssertFalse(app.buttons["clearDescription"].exists)
+        XCTAssertEqual(subject.frame.width, beforeClearSize.width, accuracy: 1)
+        XCTAssertEqual(subject.frame.height, beforeClearSize.height, accuracy: 1)
+        XCTAssertFalse(app.buttons["generate"].isEnabled)
+        subject.typeText("A new idea")
+        let beforeFocusedClear = subject.frame
+        app.buttons["clearDescription"].tap()
+        XCTAssertEqual(subject.value as? String, "")
+        XCTAssertEqual(subject.frame.minY, beforeFocusedClear.minY, accuracy: 1)
+        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        subject.typeText("A moonlit garden")
+        XCTAssertEqual(subject.value as? String, "A moonlit garden")
+        app.buttons["dismissKeyboard"].tap()
         XCTAssertEqual(position.label, "Sheet 2 of 5")
         assertVisibleSheetMatchesSelection()
     }

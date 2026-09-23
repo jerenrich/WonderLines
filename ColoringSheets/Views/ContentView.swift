@@ -224,16 +224,35 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Never swap this field's parent when focus or window width changes.
             HStack(alignment: .center, spacing: 12) {
-                TextField("Description", text: $store.description,
-                          prompt: Text(descriptionFocused ? "" : "Describe your coloring sheet…")
-                            .foregroundStyle(.secondary), axis: .vertical)
-                    .lineLimit(2, reservesSpace: true)
-                    .focused($descriptionFocused)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
-                    .accessibilityLabel("Description")
-                    .accessibilityIdentifier("subject")
+                HStack(spacing: 0) {
+                    TextField("Description", text: $store.description,
+                              prompt: Text(descriptionFocused ? "" : "Describe your coloring sheet…")
+                                .foregroundStyle(.secondary), axis: .vertical)
+                        .lineLimit(2, reservesSpace: true)
+                        .focused($descriptionFocused)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .accessibilityLabel("Description")
+                        .accessibilityIdentifier("subject")
+                    Button {
+                        store.description = ""
+                        descriptionFocused = true
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 17))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear description")
+                    .accessibilityIdentifier("clearDescription")
+                    // Reserve the button's space so clearing never resizes the field.
+                    .opacity(store.description.isEmpty ? 0 : 1)
+                    .disabled(store.description.isEmpty)
+                    .accessibilityHidden(store.description.isEmpty)
+                }
+                .background(accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
                 Button {
                     descriptionFocused = false
                     store.generate()
