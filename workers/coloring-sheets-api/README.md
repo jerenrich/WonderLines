@@ -6,6 +6,7 @@ Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated i
 
 - `src/index.mjs` — dependency-free Worker entry point and Durable Object account ledger.
 - `src/image-provider.mjs` — model allowlist, AI Gateway authentication, provider request adapters, and PNG/usage normalization.
+- `src/image-cost.mjs` — provider/model-specific inference estimates and the date their rates were checked.
 - `wrangler.jsonc` — deployment identity, runtime compatibility date, Durable Object, and R2 bindings.
 
 ## Test locally
@@ -17,6 +18,22 @@ node Scripts/test_worker.mjs
 ```
 
 This replaces upstream requests with synthetic responses and makes no network calls or paid generations. It covers direct OpenAI, both Gateway credential modes, Gemini, all nine Workers AI models, model remapping, validation before spending, PNG output and metrics, provider failures, recovery, idempotency, renewal, and budgets.
+
+## Estimated cost in app stats
+
+New successful generations include `estimatedInputUsd`, `estimatedOutputUsd`, `estimatedTotalUsd`, `estimateBasis`, and `ratesChecked` in the existing metrics header. The app already reads these fields, so deploying this Worker fixes cost display for new sheets without an app rebuild. Saved jobs retain their original metrics; older jobs without estimates are not backfilled or regenerated.
+
+Rates were checked on **23 September 2026**. Pricing follows the actual upstream provider/model, including routes behind AI Gateway:
+
+- **OpenAI Sunburst and Flare:** $5 per million text input tokens, $8 per million image input tokens, and $30 per million image output tokens. The estimator uses returned token usage and preserves the input modality breakdown. Aggregate input is treated as text when the breakdown is missing because this adapter sends text-only generation requests. A reported cached text count receives the $1.25 per million rate. `gpt-image-2` routes use their separate $2.50/$4/$15 rates (cached text $0.625). See [OpenAI pricing](https://developers.openai.com/api/docs/pricing) and [image generation usage](https://developers.openai.com/api/docs/guides/image-generation#cost-and-latency).
+- **Cloudflare FLUX.2 Klein 4B:** returned pixel area divided by 512², multiplied by $0.000287 per output tile.
+- **Cloudflare FLUX.2 Klein 9B:** $0.015 for the first 1024² pixels, plus $0.002 per additional 1024² pixels. Images below one megapixel retain the first-megapixel minimum. See [Cloudflare image pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/#image-model-pricing).
+
+Cloudflare estimates use actual output dimensions after size fitting, with proportional fractional tiles/megapixels. This matches the shape of the Gateway observations below, though published rates are rounded and estimates can differ slightly. Klein pricing already includes its fixed inference steps; no additional step multiplier or text-token fee is applied. Text-only requests have no input-image charge. Missing Cloudflare token counts therefore do not prevent cost estimates.
+
+If OpenAI omits output usage, total minus input tokens is used when both are available. If only input usage is missing, prompt input is approximated at four characters per token and the basis explicitly says so. Without enough output usage, or for unpriced custom routes (including Gemini), the estimate stays unavailable with a specific explanation rather than claiming zero cost or borrowing another model's rates.
+
+These are standard inference estimates before account credits, Cloudflare free allowances, or unreported caching discounts. They exclude Images conversion, Worker execution, storage, and failed/unfinished attempts. The gallery total covers only estimates returned with its images. Tests in `Scripts/test_image_cost.mjs` run as part of `node Scripts/test_worker.mjs` and cover arithmetic, fractional sizes, missing usage, provider remapping, and persistence through saved recovery. No live requests are needed to verify the calculations.
 
 ## Configure and deploy
 

@@ -1,5 +1,6 @@
 // Public v1 API. An account is a random UUID; no sign-in or personal profile exists.
 import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError} from './image-provider.mjs';
+import {imageCost} from './image-cost.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status) => reply({error: {code, message}}, status);
@@ -139,12 +140,12 @@ async function generate(request, env, account) {
   if (reservation.status === 200 || reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
   try {
     const started = Date.now(), result = await runImageRequest(upstreamRequest);
-    const {image, size: actualSize, inputTokens, outputTokens, totalTokens} = result;
+    const {image, size: actualSize, inputTokens, textInputTokens, imageInputTokens, outputTokens, totalTokens} = result;
     const objectKey = account.id + '/' + generationId + '.png';
     const metrics = {requestedModel: model, provider: upstreamRequest.provider, upstreamModel: upstreamRequest.model,
       viaGateway: upstreamRequest.viaGateway, requestedSize: size.width + 'x' + size.height, size: actualSize,
-      inputTokens, outputTokens, totalTokens, elapsedMs: Date.now() - started,
-      estimateBasis: 'Usage metrics are informational and are not a billing receipt.'};
+      inputTokens, textInputTokens: textInputTokens ?? null, imageInputTokens: imageInputTokens ?? null,
+      outputTokens, totalTokens, elapsedMs: Date.now() - started, ...imageCost(upstreamRequest, result)};
     await env.GENERATIONS.put(objectKey, image, {httpMetadata: {contentType: 'image/png'}});
     const completed = await call(env, account.id, '/complete', {generationId, result: {state: 'completed', objectKey, metrics}});
     return new Response(image, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': generationId, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(metrics)), 'X-Access-Snapshot': accessHeader(completed.value.access)}});
