@@ -1,0 +1,87 @@
+name: Worker CI and deployment
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_image_cost.mjs'
+      - '.github/workflows/worker.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_image_cost.mjs'
+      - '.github/workflows/worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never interrupt a production upload. PR checks can replace older PR checks.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('worker-pr-{0}', github.event.pull_request.number) || 'worker-production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  worker:
+    name: Test Worker and deploy main
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # Production runs resolve main after acquiring the concurrency lock.
+          # An old rerun therefore cannot roll production back to an old commit.
+          ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Record tested commit
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Run offline Worker and image cost tests
+        run: node Scripts/test_worker.mjs
+
+      - name: Check deployment credentials
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Deploy Worker
+        if: github.event_name != 'pull_request'
+        uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/coloring-sheets-api
+          wranglerVersion: '4.136.3'
+          command: deploy --keep-vars --message "GitHub main ${{ steps.revision.outputs.sha }}"
+
+      - name: Summarize deployment
+        if: github.event_name != 'pull_request'
+        env:
+          DEPLOYED_SHA: ${{ steps.revision.outputs.sha }}
+        run: |
+          {
+            echo '### Worker deployed'
+            echo "Worker: coloring-sheets-api"
+            echo "Commit: [$DEPLOYED_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$DEPLOYED_SHA)"
+            echo 'Dashboard-managed variables and existing Worker secrets are preserved.'
+          } >> "$GITHUB_STEP_SUMMARY"
