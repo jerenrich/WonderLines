@@ -270,18 +270,11 @@ struct ContentView: View {
             }
             Divider()
             HStack(spacing: 8) {
-                Text("Child’s age").font(.subheadline)
-                Picker("Child’s age", selection: $store.age) {
-                    Text("Choose").tag(0)
-                    ForEach(3...18, id: \.self) { age in Text("\(age) years").tag(age) }
-                }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("age")
-                Spacer(minLength: 0)
                 if store.isMock && !narrow { Text("DEMO · NO CHARGES").font(.caption) }
                 else if let remaining = store.access.freeGenerationsRemaining, !narrow {
                     Text("\(remaining) free today").font(.caption).foregroundStyle(.secondary)
                 }
+                Spacer(minLength: 0)
                 Button { showAbout = true } label: {
                     Image(systemName: "info.circle").frame(width: 44, height: 44)
                 }
@@ -311,7 +304,14 @@ struct ContentView: View {
                     .font(.footnote)
             }
         } else if let message = store.validationMessage, !composerMinimized {
-            Button { detailMessage = message } label: {
+            Button {
+                if store.age == 0 && !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    descriptionFocused = false
+                    showSettings = true
+                } else {
+                    detailMessage = message
+                }
+            } label: {
                 Label(validationSummary, systemImage: "info.circle")
                     .font(.footnote).lineLimit(1)
             }.accessibilityIdentifier("validation")
@@ -320,7 +320,7 @@ struct ContentView: View {
 
     private var validationSummary: String {
         if store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Enter a description to begin" }
-        if store.age == 0 { return "Choose a child’s age" }
+        if store.age == 0 { return "Choose an age in Settings" }
         return "Shorten the description · Details"
     }
 
@@ -393,6 +393,28 @@ struct ContentView: View {
     private var settingsSheet: some View {
         NavigationStack {
             Form {
+                Section("Age difficulty") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(store.age == 0 ? "Choose an age" : "\(store.age) years")
+                            .font(.headline)
+                            .accessibilityIdentifier("ageSettingValue")
+                        Slider(value: Binding(
+                            get: { Double(max(3, store.age)) },
+                            set: { store.age = Int($0) }), in: 3...18, step: 1) {
+                            Text("Age difficulty")
+                        } minimumValueLabel: {
+                            Text("3")
+                        } maximumValueLabel: {
+                            Text("18")
+                        } onEditingChanged: { editing in
+                            if editing && store.age == 0 { store.age = 3 }
+                        }
+                        .accessibilityValue(store.age == 0 ? "Choose an age" : "\(store.age) years")
+                        .accessibilityIdentifier("ageSetting")
+                    }
+                    Text("Younger ages use simpler shapes and larger coloring areas. Older ages add finer details. Your choice stays on this device and applies to the next batch.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 Section("Generation") {
                     Picker("Model", selection: $store.model) {
                         ForEach(ImageModel.allCases) { model in

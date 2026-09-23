@@ -2,20 +2,44 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
-    func testSettingsScreenShowsModelAndImageCount() {
+    private func setAge(in app: XCUIApplication, position: CGFloat) {
+        app.buttons["validation"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        app.sliders["ageSetting"].adjust(toNormalizedSliderPosition: position)
+        app.buttons["Done"].tap()
+    }
+
+    @MainActor
+    func testSettingsScreenShowsAgeSliderModelAndImageCount() {
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "5"]
+        app.launchArguments = ["--mock", "-imageCount", "5", "-childAge", "0"]
         app.launch()
+        XCTAssertFalse(app.sliders["ageSetting"].exists)
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "modelSetting").firstMatch.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "imageCountSetting").firstMatch.exists)
+        let age = app.sliders["ageSetting"]
+        XCTAssertTrue(age.isHittable)
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "Choose an age")
+        age.adjust(toNormalizedSliderPosition: 1)
+        age.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: age.coordinate(withNormalizedOffset: CGVector(dx: 1.1, dy: 0.5)))
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "18 years")
+        age.adjust(toNormalizedSliderPosition: 0)
+        age.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: age.coordinate(withNormalizedOffset: CGVector(dx: -0.1, dy: 0.5)))
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "3 years")
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Settings screen"
         screenshot.lifetime = .keepAlways
         add(screenshot)
         app.buttons["Done"].tap()
         XCTAssertFalse(app.navigationBars["Settings"].exists)
+        XCTAssertFalse(app.sliders["ageSetting"].exists)
+        app.buttons["settings"].tap()
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "3 years")
+        app.buttons["Done"].tap()
     }
 
     @MainActor
@@ -24,7 +48,7 @@ final class GalleryUITests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "5"]
+        app.launchArguments = ["--mock", "-imageCount", "5", "-childAge", "0"]
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 5))
@@ -32,8 +56,7 @@ final class GalleryUITests: XCTestCase {
         subject.typeText("A friendly flower")
         XCTAssertTrue(app.buttons["dismissKeyboard"].isHittable)
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["age"].tap()
-        app.buttons["6 years"].tap()
+        setAge(in: app, position: 0.2)
         app.buttons["generate"].tap()
         let position = app.staticTexts["sheetPosition"]
         func assertVisibleSheetMatchesSelection() {
@@ -136,8 +159,12 @@ final class GalleryUITests: XCTestCase {
         subject.tap()
         subject.typeText("Baby on moon")
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["age"].tap()
-        app.buttons["18 years"].tap()
+        app.buttons["settings"].tap()
+        let age = app.sliders["ageSetting"]
+        age.adjust(toNormalizedSliderPosition: 1)
+        age.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: age.coordinate(withNormalizedOffset: CGVector(dx: 1.1, dy: 0.5)))
+        app.buttons["Done"].tap()
         app.buttons["generate"].tap()
 
         let complete = XCTNSPredicateExpectation(
@@ -156,7 +183,7 @@ final class GalleryUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "5"]
+        app.launchArguments = ["--mock", "-imageCount", "5", "-childAge", "0"]
         app.launch()
 
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
@@ -164,8 +191,7 @@ final class GalleryUITests: XCTestCase {
         subject.tap()
         subject.typeText("Dinosaur riding a bike on the moon")
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["age"].tap()
-        app.buttons["6 years"].tap()
+        setAge(in: app, position: 0.2)
         app.buttons["generate"].tap()
 
         let position = app.staticTexts["sheetPosition"]
