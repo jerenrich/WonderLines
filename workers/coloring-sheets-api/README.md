@@ -37,7 +37,24 @@ These are standard inference estimates before account credits, Cloudflare free a
 
 ## Configure and deploy
 
-Authenticate Wrangler with the intended Cloudflare account, then deploy from this directory:
+The [Worker CI and deployment workflow](../../.github/workflows/worker.yml) runs the offline Worker and image-cost tests for pull requests into `main` that change `workers/**`, either Worker test script, or the workflow itself. Changes to those paths on `main` automatically deploy after the tests pass. App-only changes do not redeploy the Worker.
+
+### One-time GitHub setup
+
+In the repository's **Settings → Secrets and variables → Actions**, add these repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`: a dedicated Cloudflare **Edit Cloudflare Workers** API token scoped to the account containing `coloring-sheets-api`. It must allow deploying this Worker's existing Durable Object, R2, and Images bindings. See [Cloudflare's GitHub Actions setup](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/).
+- `CLOUDFLARE_ACCOUNT_ID`: the ID of that Cloudflare account.
+
+Keep provider keys and `ACCOUNT_TOKEN_SECRET` in Cloudflare; the workflow does not copy or replace them. Do not use a local Wrangler OAuth session as the GitHub deployment token. If either GitHub secret is missing, tests still run and deployment fails with a setup message.
+
+After this workflow is on `main` and both secrets are saved, open **Actions → Worker CI and deployment → Run workflow**, select `main`, and run it to verify the first deployment. A successful run records the exact tested commit in the job summary and Cloudflare version message.
+
+Production runs are serialized and never canceled by a newer push. Each run checks out the current `main` after obtaining its execution slot, then tests and deploys that same checkout. This also makes rerunning an old workflow safe: it deploys current `main`, rather than rolling back to the old triggering commit. The job summary is the authoritative deployed commit when it differs from the triggering commit shown by GitHub. Manual runs on other branches are skipped; PRs only test and never deploy. A failed test or upload fails the workflow; inspect the Cloudflare deployment if an upload was interrupted or returned an ambiguous error.
+
+### Manual recovery
+
+For an exceptional manual deployment, authenticate Wrangler with the intended Cloudflare account, run the offline tests, then deploy from this directory:
 
 ```sh
 npx wrangler deploy --keep-vars
@@ -47,7 +64,7 @@ For a first deployment, create the `coloring-sheets-generations` R2 bucket and a
 
 `GLOBAL_DAILY_GENERATION_LIMIT` is a dashboard-managed Worker variable, rather than a value in `wrangler.jsonc`. Set it to a whole number from `0` through `100000`; `0` pauses all generation. Change it in Cloudflare Dashboard → Workers & Pages → `coloring-sheets-api` → Settings → Variables and Secrets. The Worker fails closed if this setting is missing or malformed, and every dashboard change creates a new Worker version without requiring an app release or source-code edit. Use `--keep-vars` for source deployments so this dashboard value remains intact.
 
-Deployment is intentionally manual. Review source changes and run the offline test before deploying because a Worker change affects both the app and browser clients.
+Keep Worker source changes in Git and merge them into `main`; the next automated deployment replaces any manual source changes with tested `main`. Dashboard-managed variables remain independently adjustable. A Worker change affects both app and browser clients.
 
 `FREE_DAILY_ALLOWANCE` is configured as `1000` images per anonymous account per UTC day. Both access reporting and reservation enforcement accept whole-number allowances up to `100000`. Account reservations are serialized across the global budget call so simultaneous requests cannot reuse the same free allowance. The global daily limit remains an independent ceiling across all accounts.
 
@@ -63,7 +80,7 @@ Deployment is intentionally manual. Review source changes and run the offline te
    | `AI_GATEWAY_ID` | The gateway ID, e.g. `coloring-sheets` |
    | `AI_GATEWAY_KEY_SOURCE` | `worker` |
 
-4. Run the offline tests, then deploy manually with `npx wrangler deploy --keep-vars` from this directory. Keep `GLOBAL_DAILY_GENERATION_LIMIT` configured as described above.
+4. Run **Worker CI and deployment** on `main` (or use the manual recovery command above). Keep `GLOBAL_DAILY_GENERATION_LIMIT` configured as described above.
 
 The existing model choices and OpenAI payload are preserved: one PNG, `quality: low`, and exact requested dimensions. Requests now go to `https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/openai/images/generations`. The Worker sends your OpenAI key in `Authorization` and the Gateway token in `cf-aig-authorization`. OpenAI remains the upstream billing account, so eligible credits on that account can still be used. See Cloudflare's [OpenAI provider integration](https://developers.cloudflare.com/ai-gateway/usage/providers/openai/).
 
