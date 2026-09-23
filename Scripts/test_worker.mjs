@@ -1,6 +1,14 @@
 // Exercises the public Worker API with in-memory Durable Object/R2 bindings only.
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
+import {modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';
+
+// A picker option must have a server route, and every built-in route is selectable.
+const swiftModels = readFileSync(new URL('../ColoringSheets/Core/Generation.swift', import.meta.url), 'utf8')
+  .split('// App-owned page policy:')[0];
+const pickerIDs = [...swiftModels.matchAll(/case \w+ = "([^"]+)"/g)].map(match => match[1]);
+assert.deepEqual(pickerIDs.sort(), Object.keys(modelCatalog({}).routes).sort());
 
 class MemoryStorage { constructor() { this.values = new Map(); } async get(k) { return this.values.get(k); } async put(k, v) { this.values.set(k, v); } }
 class Accounts {
@@ -296,7 +304,8 @@ try {
   for (const [model, width, height, expectedWidth, expectedHeight] of [
     ['flux-2-klein-4b', 1456, 1024, '1456', '1024'],
     ['flux-2-klein-9b', 2304, 1600, '1920', '1328'],
-    ['flux-2-klein-4b', 1600, 2304, '1328', '1920']
+    ['flux-2-klein-4b', 1600, 2304, '1328', '1920'],
+    ['flux-2-dev', 1600, 2304, '1328', '1920']
   ]) {
     const id = crypto.randomUUID(), before = (await gatewayAccount.access()).freeGenerationsRemaining;
     response = await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv);
@@ -304,7 +313,8 @@ try {
     assert.equal(nativeURL, 'https://gateway.ai.cloudflare.com/v1/' + 'a'.repeat(32) + '/coloring-sheets/workers-ai/@cf/black-forest-labs/' + model);
     assert.equal(nativeForm.get('width'), expectedWidth); assert.equal(nativeForm.get('height'), expectedHeight);
     assert.match(nativeForm.get('prompt'), /child-appropriate.*Synthetic flower/);
-    assert.deepEqual([...nativeForm.keys()].sort(), ['height', 'prompt', 'width']);
+    assert.deepEqual([...nativeForm.keys()].sort(), model === 'flux-2-dev' ? ['height', 'prompt', 'steps', 'width'] : ['height', 'prompt', 'width']);
+    if (model === 'flux-2-dev') assert.equal(nativeForm.get('steps'), '25');
     assert.equal(nativeOptions.headers.Authorization, 'Bearer synthetic-workers-ai-key');
     assert.equal(nativeOptions.headers['cf-aig-authorization'], 'Bearer synthetic-gateway-token');
     assert.equal(nativeOptions.headers['cf-aig-max-attempts'], '1');
@@ -360,6 +370,98 @@ try {
   assert.equal(response.status, 502); assert.ok(!(await response.text()).includes('private-conversion-detail'));
   assert.equal((await worker.fetch(generateRequest('flux-2-klein-4b', conversionFailureID), nativeEnv)).status, 502);
   assert.equal(nativeCalls, callsBeforeConversionFailure + 1, 'Conversion failure cannot repeat paid inference.');
+
+  // JSON-input native models: exercise both response protocols, fitting, auth,
+  // actual dimensions, and recovery through the complete public API.
+  const nativeModels = [
+    ['flux-1-schnell', '@cf/black-forest-labs/flux-1-schnell', null, 'steps', 4, false],
+    ['lucid-origin', '@cf/leonardo/lucid-origin', 2496, 'num_steps', 25, false],
+    ['phoenix-1.0', '@cf/leonardo/phoenix-1.0', 2048, 'num_steps', 25, true],
+    ['stable-diffusion-xl-base-1.0', '@cf/stabilityai/stable-diffusion-xl-base-1.0', 2048, 'num_steps', 20, true],
+    ['stable-diffusion-xl-lightning', '@cf/bytedance/stable-diffusion-xl-lightning', 2048, 'num_steps', 4, true],
+    ['dreamshaper-8-lcm', '@cf/lykon/dreamshaper-8-lcm', 2048, 'num_steps', 8, true]
+  ];
+  for (const [model, upstream, maxEdge, stepKey, steps, binary] of nativeModels) {
+    for (const [width, height] of [[1456, 1024], [1024, 3072], [3072, 1024], [1024, 1024]]) {
+      let attempts = 0;
+      const before = (await gatewayAccount.access()).freeGenerationsRemaining, id = crypto.randomUUID();
+      const conversionsBefore = conversions;
+      globalThis.fetch = async (url, options) => {
+        attempts++;
+        assert.equal(url, 'https://gateway.ai.cloudflare.com/v1/' + 'a'.repeat(32) + '/coloring-sheets/workers-ai/' + upstream);
+        assert.equal(options.headers['Content-Type'], 'application/json');
+        assert.equal(options.headers.Authorization, 'Bearer synthetic-workers-ai-key');
+        assert.equal(options.headers['cf-aig-authorization'], 'Bearer synthetic-gateway-token');
+        assert.equal(options.headers['cf-aig-skip-cache'], 'true');
+        assert.equal(options.headers['cf-aig-max-attempts'], '1');
+        assert.equal(options.redirect, 'manual');
+        const payload = JSON.parse(options.body);
+        assert.match(payload.prompt, /black outlines.*child-appropriate.*Synthetic flower/);
+        assert.equal(payload[stepKey], steps);
+        assert.equal(payload.model, undefined);
+        if (maxEdge) {
+          const scale = Math.min(1, maxEdge / Math.max(width, height));
+          assert.equal(payload.width, Math.round(width * scale / 16) * 16);
+          assert.equal(payload.height, Math.round(height * scale / 16) * 16);
+          assert.ok(payload.width <= maxEdge && payload.height <= maxEdge);
+        } else {
+          assert.deepEqual(Object.keys(payload).sort(), ['prompt', 'steps'], 'Schnell must not receive unsupported dimensions.');
+        }
+        if (binary) assert.match(payload.negative_prompt, /shading.*text/);
+        else assert.equal(payload.negative_prompt, undefined);
+        return binary
+          ? new Response(savedBytes, {headers: {'Content-Type': 'image/png'}})
+          : Response.json({success: true, result: {image: btoa(String.fromCharCode(...jpeg))}});
+      };
+      response = await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv);
+      assert.equal(response.status, 200, model);
+      assert.equal(response.headers.get('Content-Type'), 'image/png');
+      assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
+      metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+      assert.equal(metrics.requestedModel, model); assert.equal(metrics.upstreamModel, upstream);
+      assert.equal(metrics.provider, 'workers-ai'); assert.equal(metrics.viaGateway, true);
+      assert.equal(metrics.requestedSize, width + 'x' + height); assert.equal(metrics.size, '1x1');
+      assert.equal(metrics.totalTokens, null); assert.equal(metrics.estimatedTotalUsd ?? null, null);
+      assert.equal((await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv)).status, 200);
+      assert.deepEqual(new Uint8Array(await (await get('/v1/generations/' + id)).arrayBuffer()), savedBytes);
+      assert.equal(attempts, 1); assert.equal(conversions, conversionsBefore + (binary ? 0 : 1));
+      assert.equal((await gatewayAccount.access()).freeGenerationsRemaining, before - 1);
+    }
+    const before = await gatewayAccount.access();
+    globalThis.fetch = async () => { assert.fail('Missing credentials must not invoke the provider.'); };
+    assert.equal((await worker.fetch(generateRequest(model), {...nativeEnv, WORKERS_AI_API_TOKEN: undefined})).status, 503);
+    assert.deepEqual(await gatewayAccount.access(), before);
+  }
+  // Binary JPEG is converted; unwrapped JSON and octet-stream PNG are accepted.
+  for (const upstreamResponse of [
+    () => new Response(jpeg, {headers: {'Content-Type': 'image/jpeg; charset=binary'}}),
+    () => new Response(savedBytes, {headers: {'Content-Type': 'application/octet-stream'}}),
+    () => Response.json({image: png})
+  ]) {
+    globalThis.fetch = async () => upstreamResponse();
+    response = await worker.fetch(generateRequest('phoenix-1.0'), nativeEnv);
+    assert.equal(response.status, 200);
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
+  }
+  // Neither an image MIME label nor a successful HTTP status proves valid output.
+  for (const upstreamResponse of [
+    () => new Response('private-provider-detail', {headers: {'Content-Type': 'image/png'}}),
+    () => new Response('private-provider-detail', {headers: {'Content-Type': 'text/html'}}),
+    () => Response.json({success: false, result: {image: png}}),
+    () => Response.json({result: {image: '!'}}),
+    () => new Response('private-provider-detail', {status: 429}),
+    () => new Response('private-provider-detail', {status: 500})
+  ]) {
+    let attempts = 0;
+    globalThis.fetch = async () => { attempts++; return upstreamResponse(); };
+    const id = crypto.randomUUID();
+    response = await worker.fetch(generateRequest('phoenix-1.0', id), nativeEnv);
+    assert.equal(response.status, 502);
+    assert.ok(!(await response.text()).includes('private-provider-detail'));
+    assert.equal((await worker.fetch(generateRequest('phoenix-1.0', id), nativeEnv)).status, 502);
+    assert.equal((await get('/v1/generations/' + id)).status, 502);
+    assert.equal(attempts, 1, 'Binary/JSON native failures cannot repeat paid inference.');
+  }
   env.GLOBAL_DAILY_GENERATION_LIMIT = '0';
   env.BUDGET = new BudgetNamespace(env);
   response = await worker.fetch(new Request('https://example.test/v1/generations', {method: 'POST', headers: {
@@ -369,4 +471,4 @@ try {
   assert.equal((await response.json()).error.code, 'service_budget_exhausted', 'Keep service and personal limits distinct.');
   assert.deepEqual(await storedAccount.access(), beforeRenewal, 'A full service budget cannot spend account credits.');
 } finally { globalThis.fetch = originalFetch; }
-console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, FLUX multipart/size fitting/PNG conversion, and terminal provider failures; no network.');
+console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, all nine Workers AI routes, multipart/JSON inputs, binary/base64 PNG conversion, size fitting, and terminal provider failures; no network.');

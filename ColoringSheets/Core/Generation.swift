@@ -7,6 +7,13 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case sunburst = "gpt-image-2.5-sunburst"
     case fluxKlein4B = "flux-2-klein-4b"
     case fluxKlein9B = "flux-2-klein-9b"
+    case fluxDev = "flux-2-dev"
+    case fluxSchnell = "flux-1-schnell"
+    case lucidOrigin = "lucid-origin"
+    case phoenix = "phoenix-1.0"
+    case sdxl = "stable-diffusion-xl-base-1.0"
+    case sdxlLightning = "stable-diffusion-xl-lightning"
+    case dreamShaper = "dreamshaper-8-lcm"
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -14,6 +21,27 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
         case .sunburst: return "Sunburst"
         case .fluxKlein4B: return "FLUX.2 Klein 4B"
         case .fluxKlein9B: return "FLUX.2 Klein 9B"
+        case .fluxDev: return "FLUX.2 Dev"
+        case .fluxSchnell: return "FLUX.1 Schnell"
+        case .lucidOrigin: return "Lucid Origin"
+        case .phoenix: return "Phoenix 1.0"
+        case .sdxl: return "Stable Diffusion XL (Beta)"
+        case .sdxlLightning: return "SDXL Lightning (Beta)"
+        case .dreamShaper: return "DreamShaper 8 LCM"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .flare, .sunburst: return "Uses OpenAI image generation."
+        case .fluxKlein4B: return "A quick option for trying out coloring-page ideas."
+        case .fluxKlein9B: return "A larger version of Klein for comparing detail and composition."
+        case .fluxDev: return "Try for detailed scenes. Generation can take longer."
+        case .fluxSchnell: return "A quick alternative that uses a fixed image size. The whole image fits on the printed page."
+        case .lucidOrigin: return "Try for illustrated scenes and specific style instructions."
+        case .phoenix: return "Try for scenes with several objects and detailed instructions."
+        case .sdxl: return "A classic illustration alternative. Available in beta."
+        case .sdxlLightning: return "A faster Stable Diffusion alternative. Available in beta."
+        case .dreamShaper: return "An alternative to compare for imaginative subjects and illustration styles."
         }
     }
 }

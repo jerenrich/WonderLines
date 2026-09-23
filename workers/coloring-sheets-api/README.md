@@ -1,6 +1,6 @@
 # coloring-sheets-api
 
-Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated image generation. The Worker keeps provider credentials server-side and exposes `/v1` endpoints. It supports OpenAI image generation and Google Gemini image generation through Cloudflare AI Gateway, with direct OpenAI retained for existing deployments until Gateway is configured.
+Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated image generation. The Worker keeps provider credentials server-side and exposes `/v1` endpoints. It supports nine Cloudflare-hosted Workers AI image models plus OpenAI and Google Gemini image generation through Cloudflare AI Gateway, with direct OpenAI retained for existing deployments until Gateway is configured.
 
 ## Files
 
@@ -16,7 +16,7 @@ From the repository root:
 node Scripts/test_worker.mjs
 ```
 
-This replaces upstream requests with synthetic responses and makes no network calls or paid generations. It covers direct OpenAI, both Gateway credential modes, Gemini, model remapping, validation before spending, PNG output and metrics, provider failures, recovery, idempotency, renewal, and budgets.
+This replaces upstream requests with synthetic responses and makes no network calls or paid generations. It covers direct OpenAI, both Gateway credential modes, Gemini, all nine Workers AI models, model remapping, validation before spending, PNG output and metrics, provider failures, recovery, idempotency, renewal, and budgets.
 
 ## Configure and deploy
 
@@ -64,7 +64,7 @@ The key-source setting applies to OpenAI and Google routes. Native Workers AI ro
 
 ## Experiment with models
 
-`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the four built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, and `workers-ai`. The Workers AI adapter accepts only the two FLUX.2 Klein models listed below, whose multipart protocol it implements. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
+`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the eleven built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, and `workers-ai`. The Workers AI adapter accepts the nine models listed below, using each model’s documented multipart or JSON input protocol. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
 
 For example, to retain both OpenAI choices and add a Gemini image model, set:
 
@@ -81,7 +81,7 @@ Configure a Google provider key using the chosen key-source mode. Gemini require
 
 `IMAGE_DEFAULT_MODEL` optionally selects the public ID used when a request omits `model`; otherwise it remains `gpt-image-2.5-flare`. `GET /v1/models` requires the existing account bearer token and returns `{defaultModel, models: [{id, provider, model}]}`. This lists configured routes, not a live provider availability check. Unknown IDs return HTTP 400 before allowance is spent; malformed server configuration returns HTTP 503.
 
-The iOS picker offers Flare, Sunburst, FLUX.2 Klein 4B, and FLUX.2 Klein 9B after rebuilding the app. It sends the selected explicit ID; changing the server default does not change those requests. Other custom catalog entries do not automatically appear in the picker. To experiment with another provider without an app release, temporarily override an existing ID:
+The iOS picker offers Flare, Sunburst, and all nine Cloudflare-hosted models listed below after rebuilding the app, with a short description of each selection. It sends the selected explicit ID; changing the server default does not change those requests. Other custom catalog entries do not automatically appear in the picker. To experiment with another provider without an app release, temporarily override an existing ID:
 
 ```json
 {
@@ -96,22 +96,44 @@ The app's existing picker label will remain Sunburst. The response metrics recor
 
 Gemini accepts preset aspect ratios rather than arbitrary pixel dimensions. The adapter chooses the nearest supported ratio and leaves resolution at the model default. PNG bytes are preserved; no resizing or cropping occurs. `requestedSize` records the client request and `size` records the actual PNG dimensions for all providers. Gemini token usage is normalized into the existing metrics fields; absent usage remains null. Non-PNG responses fail explicitly. See Google's [image generation guide](https://ai.google.dev/gemini-api/docs/generate-content/image-generation).
 
-## Cloudflare-hosted FLUX models
+## Cloudflare-hosted image models
 
-The following routes are built in and appear in the updated iOS Settings → Model menu:
+All nine routes below are built in and appear in Settings → Model after rebuilding. The seven additions are FLUX.2 Dev, FLUX.1 Schnell, Lucid Origin, Phoenix 1.0, SDXL, SDXL Lightning, and DreamShaper. Each uses the same Cloudflare credentials; no separate Leonardo, Stability AI, or Black Forest Labs account/key is needed.
 
-| Public model ID | Workers AI model |
-| --- | --- |
-| `flux-2-klein-4b` | `@cf/black-forest-labs/flux-2-klein-4b` |
-| `flux-2-klein-9b` | `@cf/black-forest-labs/flux-2-klein-9b` |
+| Picker / public model ID | Workers AI model | Why try it for coloring sheets? |
+| --- | --- | --- |
+| FLUX.2 Klein 4B / `flux-2-klein-4b` | `@cf/black-forest-labs/flux-2-klein-4b` | Existing quick baseline. |
+| FLUX.2 Klein 9B / `flux-2-klein-9b` | `@cf/black-forest-labs/flux-2-klein-9b` | Existing larger Klein alternative. |
+| FLUX.2 Dev / `flux-2-dev` | `@cf/black-forest-labs/flux-2-dev` | Candidate for detailed scenes; expect longer generation. |
+| FLUX.1 Schnell / `flux-1-schnell` | `@cf/black-forest-labs/flux-1-schnell` | Quick comparison with native, fixed output dimensions. |
+| Lucid Origin / `lucid-origin` | `@cf/leonardo/lucid-origin` | First candidate for illustrations and precise style instructions. |
+| Phoenix 1.0 / `phoenix-1.0` | `@cf/leonardo/phoenix-1.0` | First candidate for scenes needing strong prompt adherence. |
+| Stable Diffusion XL (Beta) / `stable-diffusion-xl-base-1.0` | `@cf/stabilityai/stable-diffusion-xl-base-1.0` | Classic illustration baseline. |
+| SDXL Lightning (Beta) / `stable-diffusion-xl-lightning` | `@cf/bytedance/stable-diffusion-xl-lightning` | Speed-focused SDXL comparison. |
+| DreamShaper 8 LCM / `dreamshaper-8-lcm` | `@cf/lykon/dreamshaper-8-lcm` | Alternative style comparison for imaginative subjects. |
 
-Wrangler declares an `IMAGES` binding for JPEG-to-PNG conversion. Set `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`, and `AI_GATEWAY_TOKEN` as above. For FLUX, create a **separate token** using Cloudflare’s **Workers AI** template (Workers AI Read and Edit), limited to the Worker's account, and save it as the `WORKERS_AI_API_TOKEN` secret. The Worker sends it as provider `Authorization` and the Gateway Run token as `cf-aig-authorization`. It never sends the OpenAI key to Cloudflare's model endpoint. Missing or identical credentials return HTTP 503 before allowance is reserved.
+These are evaluation recommendations inferred from model capabilities, not measured coloring-page quality rankings. Cloudflare lists SDXL and Lightning as beta. Model schemas and availability were checked against Cloudflare’s documentation on 23 September 2026: [catalog](https://developers.cloudflare.com/workers-ai/models/), [FLUX.2 Dev](https://developers.cloudflare.com/workers-ai/models/flux-2-dev/), [Schnell](https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/), [Lucid Origin](https://developers.cloudflare.com/workers-ai/models/lucid-origin/), [Phoenix](https://developers.cloudflare.com/workers-ai/models/phoenix-1.0/), [SDXL](https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-base-1.0/), [Lightning](https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-lightning/), and [DreamShaper](https://developers.cloudflare.com/workers-ai/models/dreamshaper-8-lcm/).
 
-FLUX requests use `https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/workers-ai/{model}` with multipart form data, cache skipping, and one attempt. This is deliberate: the current `AI.run()` binding rejects multipart streams when `gateway` options are supplied. The newer Gateway REST endpoint also rejected multipart input. The provider-native HTTP endpoint supports it. No `AI` binding or saved Wrangler OAuth token is required. During verification, reusing one token in both authentication headers returned HTTP 401, while using distinct credentials reached model validation. That comparison does not establish that Read alone was insufficient; the dedicated credential uses Cloudflare's standard template. See [Workers AI REST setup](https://developers.cloudflare.com/workers-ai/get-started/rest-api/) and [Workers AI through Gateway](https://developers.cloudflare.com/ai-gateway/usage/providers/workersai/).
+### Shared configuration
 
-FLUX uses multipart `prompt`, `width`, and `height`. The adapter fits oversized requests within 1920 pixels per edge while keeping the aspect ratio to the nearest 16 pixels. It leaves smaller valid app sizes unchanged. Both models use fixed four-step inference. They return base64 JPEG, which the Images binding converts to PNG without resizing or cropping. The converted PNG is stored in R2 once; retrieving a saved generation does not repeat inference or conversion. The metrics report requested and actual dimensions, provider, and upstream model; token counts remain null when not supplied. See the [4B model](https://developers.cloudflare.com/workers-ai/models/flux-2-klein-4b/), [9B model](https://developers.cloudflare.com/workers-ai/models/flux-2-klein-9b/), and [multipart parameter documentation](https://developers.cloudflare.com/changelog/post/2026-01-15-flux-2-klein-4b-workers-ai/).
+Wrangler declares an `IMAGES` binding for JPEG-to-PNG conversion. Set `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`, and `AI_GATEWAY_TOKEN` as above. Create a **separate token** using Cloudflare’s **Workers AI** template (Workers AI Read and Edit), limited to the Worker's account, and save it as the `WORKERS_AI_API_TOKEN` secret. An installation already running Klein needs no additional provider credentials. The Worker sends the Workers AI token as `Authorization` and the Gateway Run token as `cf-aig-authorization`. Missing or identical credentials return HTTP 503 before allowance is reserved.
 
-FLUX usage is billed by Cloudflare, so it does not spend OpenAI credits. JPEG conversion counts toward [Images transformations](https://developers.cloudflare.com/images/pricing/), whose Free plan includes 5,000 unique transformations per month; new conversions fail after the free limit unless an Images Paid plan is configured. This setup does not purchase a plan or enable prepaid Gateway billing. Existing account and global generation-count limits apply to these models too. OpenAI stays the server default; the app preserves its saved selection and Sunburst default.
+Requests use `https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/workers-ai/{model}`, with cache skipping and one attempt. Multipart requests use this provider-native endpoint because `AI.run()` previously rejected multipart streams with gateway options. No `AI` binding or saved Wrangler OAuth token is required. See [Workers AI REST setup](https://developers.cloudflare.com/workers-ai/get-started/rest-api/) and [Workers AI through Gateway](https://developers.cloudflare.com/ai-gateway/usage/providers/workersai/).
+
+### Input and output differences
+
+- FLUX.2 Klein and Dev use multipart `prompt`, `width`, and `height`, fitted within 1920 pixels per edge to the nearest 16 pixels. Klein uses fixed four-step inference; Dev explicitly uses 25 steps. See the [FLUX.2 multipart parameters](https://developers.cloudflare.com/changelog/post/2025-11-25-flux-2-dev-workers-ai/).
+- Schnell uses JSON `prompt` and `steps: 4`. Its documented API has no dimensions fields, so the Worker does not send them. Native output is preserved and fits within the app’s page; it may leave more white space on A4.
+- Lucid uses JSON dimensions fitted within 2496 pixels (the largest multiple of 16 under its 2500-pixel limit) and `num_steps: 25`.
+- Phoenix uses JSON dimensions fitted within 2048 pixels and `num_steps: 25`. SDXL, Lightning, and DreamShaper use the same dimension limit with 20, 4, and 8 steps respectively. These four models also receive a negative prompt discouraging color, shading, photographs, text, and watermarks.
+
+Every model receives the existing child-appropriate, black-outline coloring prompt and age guidance. JSON base64 images and binary PNG/JPEG responses are supported. JPEG is converted once through Images; PNG passes through after signature/dimension validation. Nothing is cropped or resized after inference. The resulting PNG is stored in R2 once; recovering it repeats neither inference nor conversion. Metrics retain the requested and actual dimensions and model IDs. Missing token counts remain null and no dollar estimate is invented.
+
+Workers AI inference is billed by Cloudflare and does not spend OpenAI credits. Check [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) for current rates; the existing generation-count limits do not cap dollars. JPEG conversion also counts toward [Images transformations](https://developers.cloudflare.com/images/pricing/). Existing default and saved selections are preserved.
+
+### Rollout and verification
+
+Deploy the Worker with `npx wrangler deploy --keep-vars` before using the new choices in a rebuilt live app. The seven additions have offline protocol/recovery coverage; they have not yet been deployed or tested with paid live generations as part of this change. The earlier Klein live verification below applies only to those two existing routes. Offline tests cover every built-in route, app/server catalog consistency, JSON/multipart formatting, credentials, portrait/landscape/square sizes, binary/base64 images, conversion, saved recovery, and terminal failures without retries.
 
 ## Gateway request and recovery behavior
 

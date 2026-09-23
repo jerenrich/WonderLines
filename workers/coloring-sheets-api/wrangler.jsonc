@@ -22,7 +22,7 @@
   "secrets": {
     // Provider secrets are conditional: OPENAI_API_KEY / GOOGLE_AI_STUDIO_API_KEY
     // for Worker-held keys; AI_GATEWAY_TOKEN when routing through AI Gateway.
-    // FLUX additionally requires a distinct WORKERS_AI_API_TOKEN.
+    // Workers AI models additionally require a distinct WORKERS_AI_API_TOKEN.
     // Gateway and model settings are dashboard-managed; deploy with --keep-vars.
     "required": ["ACCOUNT_TOKEN_SECRET"]
   }

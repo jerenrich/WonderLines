@@ -5,11 +5,31 @@ const DEFAULT_ROUTES = {
   'gpt-image-2.5-flare': {provider: 'openai', model: 'gpt-image-2.5-flare'},
   'gpt-image-2.5-sunburst': {provider: 'openai', model: 'gpt-image-2.5-sunburst'},
   'flux-2-klein-4b': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-2-klein-4b'},
-  'flux-2-klein-9b': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-2-klein-9b'}
+  'flux-2-klein-9b': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-2-klein-9b'},
+  'flux-2-dev': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-2-dev'},
+  'flux-1-schnell': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-1-schnell'},
+  'lucid-origin': {provider: 'workers-ai', model: '@cf/leonardo/lucid-origin'},
+  'phoenix-1.0': {provider: 'workers-ai', model: '@cf/leonardo/phoenix-1.0'},
+  'stable-diffusion-xl-base-1.0': {provider: 'workers-ai', model: '@cf/stabilityai/stable-diffusion-xl-base-1.0'},
+  'stable-diffusion-xl-lightning': {provider: 'workers-ai', model: '@cf/bytedance/stable-diffusion-xl-lightning'},
+  'dreamshaper-8-lcm': {provider: 'workers-ai', model: '@cf/lykon/dreamshaper-8-lcm'}
 };
 const PROVIDERS = ['openai', 'google-ai-studio', 'workers-ai'];
 // Native models have different input protocols; only enable those this adapter supports.
-const WORKERS_AI_MODELS = new Set(['@cf/black-forest-labs/flux-2-klein-4b', '@cf/black-forest-labs/flux-2-klein-9b']);
+const NEGATIVE_PROMPT = 'color, shading, grayscale, gradients, shadows, photographs, text, letters, watermarks';
+// Per-model protocols and limits from Cloudflare's model docs (2026-09-23).
+// Schnell has no documented dimensions input: preserve its native output size.
+const WORKERS_AI_MODELS = new Map([
+  ['@cf/black-forest-labs/flux-2-klein-4b', {multipart: true, maxEdge: 1920}],
+  ['@cf/black-forest-labs/flux-2-klein-9b', {multipart: true, maxEdge: 1920}],
+  ['@cf/black-forest-labs/flux-2-dev', {multipart: true, maxEdge: 1920, parameters: {steps: 25}}],
+  ['@cf/black-forest-labs/flux-1-schnell', {parameters: {steps: 4}}],
+  ['@cf/leonardo/lucid-origin', {maxEdge: 2496, parameters: {num_steps: 25}}],
+  ['@cf/leonardo/phoenix-1.0', {maxEdge: 2048, parameters: {num_steps: 25, negative_prompt: NEGATIVE_PROMPT}}],
+  ['@cf/stabilityai/stable-diffusion-xl-base-1.0', {maxEdge: 2048, parameters: {num_steps: 20, negative_prompt: NEGATIVE_PROMPT}}],
+  ['@cf/bytedance/stable-diffusion-xl-lightning', {maxEdge: 2048, parameters: {num_steps: 4, negative_prompt: NEGATIVE_PROMPT}}],
+  ['@cf/lykon/dreamshaper-8-lcm', {maxEdge: 2048, parameters: {num_steps: 8, negative_prompt: NEGATIVE_PROMPT}}]
+]);
 const identifier = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(value);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const secret = value => typeof value === 'string' && /^[\x21-\x7e]+$/.test(value);
@@ -77,16 +97,23 @@ export function imageRequest(env, route, subject, size) {
         typeof env.IMAGES?.input !== 'function') {
       throw new Error('Missing Workers AI, Images, or gateway configuration');
     }
-    // Fit into FLUX's 256–1920 range, preserving page shape to the nearest 16 pixels.
-    const scale = Math.min(1, 1920 / Math.max(size.width, size.height));
-    const form = new FormData();
-    form.set('prompt', prompt);
-    for (const edge of ['width', 'height']) form.set(edge, String(Math.max(256, Math.round(size[edge] * scale / 16) * 16)));
+    const config = WORKERS_AI_MODELS.get(route.model);
+    const parameters = {prompt, ...config.parameters};
+    if (config.maxEdge) {
+      const scale = Math.min(1, config.maxEdge / Math.max(size.width, size.height));
+      for (const edge of ['width', 'height']) parameters[edge] = Math.max(256, Math.round(size[edge] * scale / 16) * 16);
+    }
+    let payload = parameters;
+    if (config.multipart) {
+      payload = new FormData();
+      for (const [key, value] of Object.entries(parameters)) payload.set(key, String(value));
+    }
     // AI.run() currently rejects multipart streams with gateway options. Use the
     // provider-native Gateway endpoint; fetch supplies the FormData boundary.
-    return {provider: route.provider, model: route.model, viaGateway: true, images: env.IMAGES, payload: form,
+    return {provider: route.provider, model: route.model, viaGateway: true, images: env.IMAGES, payload,
       url: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/workers-ai/${route.model}`,
-      headers: {Authorization: 'Bearer ' + token, 'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN,
+      headers: {...(config.multipart ? {} : {'Content-Type': 'application/json'}),
+        Authorization: 'Bearer ' + token, 'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN,
         'cf-aig-skip-cache': 'true', 'cf-aig-max-attempts': '1'}};
   }
   const {base, headers, viaGateway} = transport(env, route.provider);
@@ -126,15 +153,24 @@ export async function runImageRequest(request) {
     // workerd supports "manual", not "error". Reject redirects via !ok below
     // so provider credentials are never forwarded to a redirect destination.
     response = await fetch(request.url, {method: 'POST', headers: request.headers,
-      body: request.provider === 'workers-ai' ? request.payload : JSON.stringify(request.payload), redirect: 'manual', signal: AbortSignal.timeout(180000)});
+      body: request.payload instanceof FormData ? request.payload : JSON.stringify(request.payload), redirect: 'manual', signal: AbortSignal.timeout(180000)});
   } catch { throw new ImageProviderError(TEMPORARILY_UNAVAILABLE); }
   if (!response.ok) throw new ImageProviderError(response.status >= 500 || response.status === 429
     ? TEMPORARILY_UNAVAILABLE : 'The image provider could not generate this image. Try a simpler description.');
-  let upstream;
-  try { upstream = await response.json(); } catch { throw new ImageProviderError(INVALID_IMAGE); }
   if (request.provider === 'workers-ai') {
-    let image = decodeBase64(upstream?.result?.image ?? upstream?.image);
-    // FLUX returns JPEG. Convert once before storing; recovery reuses the saved PNG.
+    let image;
+    try {
+      const type = response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase();
+      // Phoenix and Stable Diffusion return binary images; FLUX and Lucid use JSON.
+      if (['image/png', 'image/jpeg', 'application/octet-stream'].includes(type)) {
+        image = new Uint8Array(await response.arrayBuffer());
+      } else {
+        const upstream = await response.json();
+        if (upstream?.success === false) throw new Error('Provider rejected generation');
+        image = decodeBase64(upstream?.result?.image ?? upstream?.image);
+      }
+    } catch { throw new ImageProviderError(INVALID_IMAGE); }
+    // Convert JPEG once before storing; recovery reuses the saved PNG.
     if (image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff) {
       try {
         const converted = await request.images.input(new Response(image).body).output({format: 'image/png'});
@@ -145,6 +181,8 @@ export async function runImageRequest(request) {
     }
     return {...decodePNG(image), inputTokens: null, outputTokens: null, totalTokens: null};
   }
+  let upstream;
+  try { upstream = await response.json(); } catch { throw new ImageProviderError(INVALID_IMAGE); }
   let encodedImage, usage;
   if (request.provider === 'openai') {
     encodedImage = upstream?.data?.[0]?.b64_json;

@@ -431,6 +431,8 @@ struct ContentView: View {
                     }
                     .pickerStyle(.menu)
                     .accessibilityIdentifier("modelSetting")
+                    Text(store.model.detail)
+                        .font(.footnote).foregroundStyle(.secondary)
                     Picker("Images per generation", selection: Binding(
                         get: { store.imageCount }, set: { store.setImageCount($0) })) {
                         ForEach(1...ColoringViewModel.batchSize, id: \.self) { count in
