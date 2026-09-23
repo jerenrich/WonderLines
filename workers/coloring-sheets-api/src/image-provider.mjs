@@ -99,9 +99,73 @@ export function imageRequest(env, route, subject, size) {
   return {url: base + path, headers, payload, provider: route.provider, model: route.model, viaGateway};
 }
 
-export class ImageProviderError extends Error {}
-const TEMPORARILY_UNAVAILABLE = 'Image generation is temporarily unavailable.';
-const INVALID_IMAGE = 'The image provider could not return a PNG sheet. Try a simpler description.';
+export class ImageProviderError extends Error {
+  constructor(message, code = 'provider_invalid_response') { super(message); this.code = code; }
+}
+const INVALID_IMAGE = 'The image provider returned an unreadable or missing image. Try another model or check the provider status.';
+const providerName = provider => ({openai: 'OpenAI', 'workers-ai': 'Cloudflare Workers AI', 'google-ai-studio': 'Google AI Studio'})[provider];
+
+// Read only a small error envelope. Provider text may echo prompts, credentials,
+// or internal diagnostics: use it to classify errors, never forward it verbatim.
+async function errorBody(response) {
+  const reader = response.body?.getReader();
+  if (!reader) return {};
+  const chunks = []; let length = 0;
+  try {
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      length += value.length;
+      if (length > 16384) { await reader.cancel(); return {}; }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(length); let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch { return {}; }
+  finally { reader.releaseLock(); }
+}
+
+function providerFailure(request, status, body) {
+  const name = providerName(request.provider);
+  const errors = [body?.error, ...(Array.isArray(body?.errors) ? body.errors : [])].filter(Boolean);
+  const codes = errors.flatMap(error => [error.code, error.type, error.status]).map(String);
+  const messages = errors.map(error => typeof error === 'string' ? error : error.message ?? '').join(' ').toLowerCase();
+  const known = (...values) => values.some(value => codes.includes(value));
+  const detail = status >= 400 ? ` (HTTP ${status})` : '';
+  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code);
+  if (request.provider === 'workers-ai' && (known('4006') || /daily free allocation.*10,?000 neurons/.test(messages))) {
+    return failure('provider_daily_quota_exhausted',
+      'Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst to use OpenAI, or upgrade the Cloudflare Workers plan',
+      status >= 400 ? ` (HTTP ${status}; Cloudflare code 4006)` : ' (Cloudflare code 4006)');
+  }
+  if (known('insufficient_quota', 'billing_hard_limit_reached', 'billing_not_active') || /insufficient.{0,20}(credit|quota)|billing.{0,20}limit/.test(messages)) {
+    return failure('provider_quota_exhausted', `${name} reports exhausted credits or quota. Check that provider’s billing and usage limits, or choose another provider`);
+  }
+  if (known('content_policy_violation', 'safety_violations', 'IMAGE_SAFETY', 'SAFETY') || /content policy|safety filter/.test(messages)) {
+    return failure('provider_content_rejected', `${name} rejected this description under its content rules. Revise the description`);
+  }
+  if (status === 401 || known('invalid_api_key', 'UNAUTHENTICATED')) {
+    return failure('provider_authentication_failed', `${name} or AI Gateway rejected the service credentials. The developer needs to check the server’s API keys`);
+  }
+  if (status === 403 || known('PERMISSION_DENIED')) {
+    return failure('provider_access_denied', `${name} or AI Gateway denied access. The developer needs to check token permissions and model access`);
+  }
+  if (status === 404 || known('model_not_found', 'NOT_FOUND')) {
+    return failure('provider_model_unavailable', `${name} could not find or grant access to the selected model. Choose another model or check model access`);
+  }
+  if (status === 429 || known('rate_limit_exceeded', 'RESOURCE_EXHAUSTED')) {
+    return failure('provider_rate_limited', `${name} or AI Gateway has reached a request or usage limit. Wait before retrying, or check the provider’s limits`);
+  }
+  if (status === 408 || status === 504) {
+    return failure('provider_timeout', `${name} timed out. Generation may have been charged; check usage before starting another request`);
+  }
+  if (status >= 500) return failure('provider_unavailable', `${name} or AI Gateway is temporarily unavailable. Try again later`);
+  if ([400, 413, 422].includes(status)) {
+    return failure('provider_request_rejected', `${name} rejected the description, image size, or model parameters. Revise the description or choose another model`);
+  }
+  return failure('upstream_failed', `${name} could not complete the image request. Check the provider or Gateway logs for this failure`);
+}
 
 function decodeBase64(encoded) {
   if (typeof encoded !== 'string' || !encoded) throw new ImageProviderError(INVALID_IMAGE);
@@ -127,11 +191,15 @@ export async function runImageRequest(request) {
     // so provider credentials are never forwarded to a redirect destination.
     response = await fetch(request.url, {method: 'POST', headers: request.headers,
       body: request.provider === 'workers-ai' ? request.payload : JSON.stringify(request.payload), redirect: 'manual', signal: AbortSignal.timeout(180000)});
-  } catch { throw new ImageProviderError(TEMPORARILY_UNAVAILABLE); }
-  if (!response.ok) throw new ImageProviderError(response.status >= 500 || response.status === 429
-    ? TEMPORARILY_UNAVAILABLE : 'The image provider could not generate this image. Try a simpler description.');
+  } catch (error) {
+    const timeout = error?.name === 'TimeoutError' || error?.name === 'AbortError';
+    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. Generation may have been charged; check usage before starting another request.`,
+      timeout ? 'provider_timeout' : 'provider_connection_failed');
+  }
+  if (!response.ok) throw providerFailure(request, response.status, await errorBody(response));
   let upstream;
   try { upstream = await response.json(); } catch { throw new ImageProviderError(INVALID_IMAGE); }
+  if (upstream?.success === false || upstream?.error) throw providerFailure(request, response.status, upstream);
   if (request.provider === 'workers-ai') {
     let image = decodeBase64(upstream?.result?.image ?? upstream?.image);
     // FLUX returns JPEG. Convert once before storing; recovery reuses the saved PNG.
@@ -141,7 +209,7 @@ export async function runImageRequest(request) {
         const response = converted.response();
         if (!response.ok) throw new Error('Image conversion failed');
         image = new Uint8Array(await response.arrayBuffer());
-      } catch { throw new ImageProviderError(INVALID_IMAGE); }
+      } catch { throw new ImageProviderError('The image was generated, but Cloudflare Images could not convert it to PNG. Check the Images service quota and status before generating again.', 'provider_image_conversion_failed'); }
     }
     return {...decodePNG(image), inputTokens: null, outputTokens: null, totalTokens: null};
   }
@@ -150,6 +218,10 @@ export async function runImageRequest(request) {
     encodedImage = upstream?.data?.[0]?.b64_json;
     usage = upstream?.usage;
   } else {
+    const reason = upstream?.promptFeedback?.blockReason ?? upstream?.candidates?.[0]?.finishReason;
+    if (['SAFETY', 'IMAGE_SAFETY', 'BLOCKLIST', 'PROHIBITED_CONTENT'].includes(reason)) {
+      throw providerFailure(request, response.status, {error: {code: 'SAFETY'}});
+    }
     const parts = upstream?.candidates?.[0]?.content?.parts;
     const part = Array.isArray(parts) ? parts.find(part => !part?.thought && part?.inlineData?.mimeType === 'image/png') : null;
     encodedImage = part?.inlineData?.data;

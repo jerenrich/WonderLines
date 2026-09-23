@@ -110,7 +110,7 @@ export class Account {
 async function authenticate(request, env, allowExpired = false) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, allowExpired); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, credentialId: c.cid, access: checked.value.access} : null; }
 async function saved(env, job, access) {
   if (job.state === 'completed') { const image = await env.GENERATIONS.get(job.objectKey); if (!image) return fail('result_unavailable', 'Saved image is unavailable.', 410); return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}}); }
-  if (job.state === 'failed') return fail('upstream_failed', job.message, 502);
+  if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
   return reply({generationId: job.id, status: 'processing'}, 202, {'Retry-After': '5', 'X-Access-Snapshot': accessHeader(access)});
 }
 async function generate(request, env, account) {
@@ -152,8 +152,9 @@ async function generate(request, env, account) {
     // A synchronous provider failure has no background work that can finish it.
     // Persist a terminal result so polling/retries never trigger another paid call.
     const message = error instanceof ImageProviderError ? error.message : 'The generated image could not be saved.';
-    await call(env, account.id, '/complete', {generationId, result: {state: 'failed', message}});
-    return fail('upstream_failed', message, 502);
+    const errorCode = error instanceof ImageProviderError ? error.code : 'result_save_failed';
+    await call(env, account.id, '/complete', {generationId, result: {state: 'failed', message, errorCode}});
+    return fail(errorCode, message, 502);
   }
 }
 
