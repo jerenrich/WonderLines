@@ -230,5 +230,8 @@ export async function runImageRequest(request) {
   }
   const count = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
   return {...decodePNG(decodeBase64(encodedImage)), inputTokens: count(usage?.input_tokens),
+    textInputTokens: count(usage?.input_tokens_details?.text_tokens),
+    imageInputTokens: count(usage?.input_tokens_details?.image_tokens),
+    cachedInputTokens: count(usage?.input_tokens_details?.cached_tokens),
     outputTokens: count(usage?.output_tokens), totalTokens: count(usage?.total_tokens)};
 }

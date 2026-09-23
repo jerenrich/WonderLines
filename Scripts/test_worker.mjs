@@ -1,5 +1,6 @@
 // Exercises the public Worker API with in-memory Durable Object/R2 bindings only.
 import assert from 'node:assert/strict';
+import './test_image_cost.mjs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
 
 class MemoryStorage { constructor() { this.values = new Map(); } async get(k) { return this.values.get(k); } async put(k, v) { this.values.set(k, v); } }
@@ -40,6 +41,8 @@ try {
   const generationId = crypto.randomUUID();
   const request = () => new Request('https://example.test/v1/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': generationId}, body: JSON.stringify({subject: 'Synthetic flower. Complexity: very simple outlines', model: 'gpt-image-2.5-flare', width: 1456, height: 1024})});
   let response = await worker.fetch(request(), env); assert.equal(response.status, 200); assert.equal(calls, 1);
+  const directMetrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+  assert.ok(Math.abs(directMetrics.estimatedTotalUsd - 0.000065) < 1e-12);
   assert.equal(forwarded.model, 'gpt-image-2.5-flare');
   assert.equal(forwarded.size, '1456x1024'); assert.ok(forwarded.prompt.includes('Synthetic flower'));
   response = await worker.fetch(request(), env); assert.equal(response.status, 200); assert.equal(calls, 1, 'A repeated ID must return the stored image.');
@@ -166,6 +169,8 @@ try {
   assert.equal(metrics.provider, 'openai'); assert.equal(metrics.viaGateway, true);
   assert.equal(metrics.upstreamModel, 'gpt-image-2.5-flare'); assert.equal(metrics.totalTokens, 3);
   assert.equal(metrics.size, '1x1', 'Report dimensions from the actual PNG.');
+  assert.equal(metrics.estimatedTotalUsd, directMetrics.estimatedTotalUsd, 'Gateway transport does not change OpenAI pricing.');
+  const originalMetrics = metrics;
   const savedBytes = new Uint8Array(await response.arrayBuffer());
   gatewayEnv.AI_GATEWAY_KEY_SOURCE = 'gateway';
   response = await worker.fetch(generateRequest(), gatewayEnv);
@@ -184,13 +189,17 @@ try {
   assert.equal(listed.models.find(m => m.id === 'gemini-image').provider, 'google-ai-studio');
   assert.equal(JSON.stringify(listed).includes('synthetic'), false);
   assert.equal((await worker.fetch(new Request('https://example.test/v1/models'), gatewayEnv)).status, 401);
-  assert.equal((await worker.fetch(generateRequest('gpt-image-2.5-flare'), gatewayEnv)).status, 200);
+  response = await worker.fetch(generateRequest('gpt-image-2.5-flare'), gatewayEnv);
+  assert.equal(response.status, 200);
+  assert.equal(JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics'))).estimatedTotalUsd, null);
   assert.equal(gatewayPayload.model, 'another-image-model');
   const beforeRecovery = gatewayCalls;
   response = await worker.fetch(generateRequest('gpt-image-2.5-flare', gatewayID), gatewayEnv);
   assert.equal(response.status, 200);
   assert.equal(gatewayCalls, beforeRecovery, 'Remapping must not repeat an existing paid generation.');
   assert.equal(JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics'))).upstreamModel, 'gpt-image-2.5-flare');
+  assert.deepEqual(JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics'))), originalMetrics,
+    'Recovery preserves the original price, usage and rate date even after model remapping.');
   response = await worker.fetch(generateRequest('gpt-image-2.5-flare', gatewayID, {subject: 'Changed subject'}), gatewayEnv);
   assert.equal(response.status, 409);
   const googleResponse = {candidates: [{content: {parts: [
@@ -316,9 +325,16 @@ try {
     assert.equal(metrics.provider, 'workers-ai'); assert.equal(metrics.viaGateway, true);
     assert.equal(metrics.requestedSize, width + 'x' + height); assert.equal(metrics.size, '1x1');
     assert.equal(metrics.upstreamModel, '@cf/black-forest-labs/' + model); assert.equal(metrics.totalTokens, null);
+    assert.ok(metrics.estimatedTotalUsd > 0, 'Workers AI estimates do not require token counts.');
+    assert.equal(metrics.estimatedTotalUsd, model === 'flux-2-klein-4b' ? 0.000287 / (512 * 512) : 0.015,
+      'Price the actual synthetic 1x1 PNG, not the larger requested or fitted size.');
+    assert.equal(metrics.estimatedInputUsd, 0);
+    const originalNativeMetrics = metrics;
     assert.deepEqual(new Uint8Array(await response.arrayBuffer()), savedBytes);
     const attempts = nativeCalls;
-    assert.equal((await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv)).status, 200);
+    const recovered = await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv);
+    assert.equal(recovered.status, 200);
+    assert.deepEqual(JSON.parse(decodeURIComponent(recovered.headers.get('X-Generation-Metrics'))), originalNativeMetrics);
     assert.deepEqual(new Uint8Array(await (await get('/v1/generations/' + id)).arrayBuffer()), savedBytes);
     assert.equal(nativeCalls, attempts); assert.equal(conversions, attempts, 'Recovery does not convert or generate again.');
     assert.equal((await gatewayAccount.access()).freeGenerationsRemaining, before - 1);
@@ -417,5 +433,23 @@ try {
   assert.equal(response.status, 429);
   assert.equal((await response.json()).error.code, 'service_budget_exhausted', 'Keep service and personal limits distinct.');
   assert.deepEqual(await storedAccount.access(), beforeRenewal, 'A full service budget cannot spend account credits.');
+  // Exercise the real response parser and metric header, not just the calculator.
+  const pricingEnv = {...gatewayEnv, IMAGE_MODEL_ROUTES: undefined, IMAGE_DEFAULT_MODEL: undefined};
+  for (const [usage, expected] of [
+    [{input_tokens: 100, input_tokens_details: {text_tokens: 80, image_tokens: 20}, output_tokens: 200}, 0.00656],
+    [{input_tokens: 100, input_tokens_details: {cached_tokens: 80}, output_tokens: 200}, 0.0062],
+    [{input_tokens: 100, total_tokens: 300}, 0.0065],
+    [undefined, null],
+    [{input_tokens: -1, output_tokens: '200'}, null]
+  ]) {
+    globalThis.fetch = async () => Response.json({data: [{b64_json: png}], usage});
+    response = await worker.fetch(generateRequest('gpt-image-2.5-sunburst'), pricingEnv);
+    assert.equal(response.status, 200, 'An unavailable estimate must not prevent returning the image.');
+    metrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+    if (expected === null) assert.equal(metrics.estimatedTotalUsd, null);
+    else assert.ok(Math.abs(metrics.estimatedTotalUsd - expected) < 1e-12);
+    assert.equal(metrics.textInputTokens, usage?.input_tokens_details?.text_tokens ?? null);
+    assert.equal(metrics.imageInputTokens, usage?.input_tokens_details?.image_tokens ?? null);
+  }
 } finally { globalThis.fetch = originalFetch; }
 console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, FLUX multipart/size fitting/PNG conversion, and terminal provider failures; no network.');
