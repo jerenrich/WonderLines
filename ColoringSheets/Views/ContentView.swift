@@ -90,7 +90,7 @@ struct ContentView: View {
     private func header(narrow: Bool) -> some View {
         HStack(spacing: 12) {
             if !narrow {
-                Label("Coloring Sheets", systemImage: "pencil.and.outline").font(.headline)
+                Label("Wonder Lines", systemImage: "pencil.and.outline").font(.headline)
                 Spacer(minLength: 0)
             }
             if !store.results.isEmpty { galleryNavigation }

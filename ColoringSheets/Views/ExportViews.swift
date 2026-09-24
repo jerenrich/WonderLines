@@ -37,7 +37,7 @@ enum PhotoSaveError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return "Photos access is off. Allow Coloring Sheets to add photos in Settings, then try again."
+            return "Photos access is off. Allow Wonder Lines to add photos in Settings, then try again."
         case .writeFailed:
             return "The coloring sheet could not be saved to Photos. Please try again."
         }
