@@ -64,7 +64,11 @@ struct ContentView: View {
             startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea())
         .tint(accent)
         .preferredColorScheme(.light)
-        .onChange(of: scenePhase) { _, phase in if phase == .background { store.enteredBackground() } }
+        .task { await store.refreshUnfinishedSheets() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { store.enteredBackground() }
+            if phase == .active { Task { await store.refreshUnfinishedSheets() } }
+        }
         .sheet(item: $export, onDismiss: cleanExport) { item in
             switch item.kind {
             case .share: ShareSheet(item: item, finish: finishExport)
@@ -310,6 +314,12 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var generationStatus: some View {
+        if !store.isGenerating && !store.unfinishedSheets.isEmpty {
+            Button("Check unfinished sheets (\(store.unfinishedSheets.count))", action: store.recoverUnfinishedSheets)
+                .font(.footnote)
+                .accessibilityIdentifier("recoverGenerations")
+                .accessibilityHint("Checks existing generations without requesting new sheets")
+        }
         if store.isGenerating {
             HStack {
                 ProgressView()
@@ -457,8 +467,8 @@ struct ContentView: View {
                 Section("Gallery") {
                     metric("Sheets available", "\(store.results.count)")
                     let estimates = store.results.compactMap { $0.metrics?.estimatedTotalUsd }
-                    metric("Returned estimates combined", estimates.isEmpty ? "Unavailable" : String(format: "$%.6f USD", estimates.reduce(0, +)))
-                    Text("Only returned image estimates are included. Failed or unfinished generations may also be charged.")
+                    metric("Returned costs combined", estimates.isEmpty ? "Unavailable" : String(format: "$%.6f USD", estimates.reduce(0, +)))
+                    Text("Includes reported charges and estimates for returned images. Failed or unfinished generations may also be charged.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if let result = store.result {
@@ -473,13 +483,26 @@ struct ContentView: View {
                         metric("Output tokens", count(result.metrics?.outputTokens))
                         metric("Total tokens", count(result.metrics?.totalTokens))
                         metric("Duration", result.metrics?.elapsedMs.map { String(format: "%.1f seconds", $0 / 1000) } ?? "Unavailable")
-                        metric("Estimated cost", result.metrics?.estimatedTotalUsd.map { String(format: "$%.6f USD", $0) } ?? "Unavailable")
+                        metric(result.metrics?.costStatus == "reported" ? "Reported cost" : "Estimated cost",
+                               result.metrics?.estimatedTotalUsd.map { String(format: "$%.6f USD", $0) } ?? "Unavailable")
+                        if result.requestedModel == .redmond {
+                            metric("Inference time", result.metrics?.inferenceMs.map { String(format: "%.3f seconds", $0 / 1000) } ?? "Unavailable")
+                            metric("Billable units", result.metrics?.billableUnits.map { String(format: "%.6f", $0) } ?? "Not yet reported")
+                            metric("Unit price", result.metrics?.unitPriceUsd.map {
+                                String(format: "$%.6f / %@", $0, result.metrics?.billingUnit ?? "billing unit")
+                            } ?? "Unavailable")
+                            if let requestID = result.metrics?.providerRequestID {
+                                metric("fal request ID", requestID)
+                            }
+                        }
                         Text(result.metrics?.estimateBasis ?? "Usage details were not returned. This does not mean the generation was free.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                 }
             }
-            .navigationTitle("Usage & estimated cost")
+            .task(id: store.result?.id) { await store.refreshUsage() }
+            .refreshable { await store.refreshUsage() }
+            .navigationTitle("Usage & cost")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showUsage = false } } }
         }

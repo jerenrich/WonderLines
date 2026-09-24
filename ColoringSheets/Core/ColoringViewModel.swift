@@ -18,6 +18,7 @@ final class ColoringViewModel: ObservableObject {
     @Published private(set) var failedCount = 0
     @Published private(set) var activeBatchSize = 0
     @Published private(set) var batchMessage: String?
+    @Published private(set) var unfinishedSheets: [PendingGeneration] = []
     @Published private(set) var access: AccessSnapshot = .free
     let isMock: Bool
     private let service: any GenerationServing
@@ -127,6 +128,7 @@ final class ColoringViewModel: ObservableObject {
             }
         }
         guard completedCount == activeBatchSize else { return }
+        Task { await refreshUnfinishedSheets() }
         tasks = []
         revealTask?.cancel(); revealTask = nil
         revealPendingResults()
@@ -147,6 +149,7 @@ final class ColoringViewModel: ObservableObject {
         if hasRevealedResults {
             // Append in arrival order without moving the selected page.
             results.append(contentsOf: pendingResults)
+            if selectedResultID == nil { selectedResultID = first.id }
         } else {
             // Keep the old gallery until the new batch is ready to browse.
             results = pendingResults
@@ -160,6 +163,7 @@ final class ColoringViewModel: ObservableObject {
         guard isGenerating else { return }
         attempt = UUID()
         tasks.forEach { $0.cancel() }; tasks = []
+        Task { await refreshUnfinishedSheets() }
         revealTask?.cancel(); revealTask = nil
         revealPendingResults()
         let message = "Stopped waiting. Any sheets already received are still available. The unfinished generations may still complete and be charged."
@@ -170,4 +174,38 @@ final class ColoringViewModel: ObservableObject {
         }
     }
     func enteredBackground() { cancel() }
+
+    func refreshUsage() async {
+        guard let selected = result, selected.requestedModel == .redmond, let generationID = selected.generationID else { return }
+        do {
+            guard let metrics = try await service.generationMetrics(generationID),
+                  let index = results.firstIndex(where: { $0.id == selected.id }) else { return }
+            results[index].metrics = metrics
+        } catch { /* Keep the saved estimate if the read-only billing lookup fails. */ }
+    }
+
+    func refreshUnfinishedSheets() async {
+        unfinishedSheets = await service.pendingGenerations()
+    }
+
+    func recoverUnfinishedSheets() {
+        guard !isGenerating, !unfinishedSheets.isEmpty else { return }
+        let pending = unfinishedSheets
+        phase = .generating
+        activeBatchSize = pending.count
+        completedCount = 0; failedCount = 0; batchMessage = nil
+        receivedFirstResult = false; firstFailure = nil
+        revealTask?.cancel(); revealTask = nil
+        pendingResults = []; hasRevealedResults = true // Recovery appends to the existing gallery.
+        let current = UUID(); attempt = current
+        tasks = pending.map { entry in
+            Task { [weak self, service] in
+                let outcome: Result<ColoringResult, Error>
+                do { outcome = .success(try await service.recoverPending(entry)) }
+                catch { outcome = .failure(error) }
+                guard !Task.isCancelled else { return }
+                self?.receive(outcome, attempt: current)
+            }
+        }
+    }
 }

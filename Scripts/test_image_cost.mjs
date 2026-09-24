@@ -51,3 +51,23 @@ for (const size of [undefined, '', 'auto', '0x1024', '-1x1024', 'Infinityx1024']
   assert.equal(imageCost(request('@cf/black-forest-labs/flux-2-klein-4b', 'workers-ai'), {size}).estimatedTotalUsd, null);
 }
 console.log('PASS: provider-specific inference estimates, fractional image area, token breakdowns, missing usage, and unknown pricing.');
+
+// fal uses provider billing evidence, never elapsed time or a different model's rate.
+const fal = {provider: 'fal', model: 'fal-ai/lora'};
+const falEstimate = imageCost(fal, {billableUnits: 12.5, unitPriceUsd: 0.001, billingUnit: 'compute second', costCheckedAt: '2026-09-24T12:00:00Z'});
+close(falEstimate.estimatedTotalUsd, 0.0125); assert.equal(falEstimate.costStatus, 'estimated');
+assert.equal(falEstimate.ratesChecked, '2026-09-24');
+const falReported = imageCost(fal, {reportedCostUsd: 0.009, billableUnits: 12.5, unitPriceUsd: 0.001});
+close(falReported.estimatedTotalUsd, 0.009); assert.equal(falReported.costStatus, 'reported');
+assert.equal(imageCost(fal, {reportedCostUsd: 0}).estimatedTotalUsd, 0);
+for (const missing of [{inferenceMs: 12000, elapsedMs: 28000}, {billableUnits: null, unitPriceUsd: 0.001},
+  {billableUnits: 12.5, unitPriceUsd: '0.001'}, {billableUnits: -1, unitPriceUsd: 0.001},
+  {billableUnits: 12.5, unitPriceUsd: Infinity}, {billableUnits: 12.5, unitPriceUsd: 0.001}]) {
+  assert.equal(imageCost(fal, missing).estimatedTotalUsd, null);
+}
+
+const proxy = imageCost(fal, {inferenceMs: 11765, unitPriceUsd: 0.00125, billingUnit: 'compute seconds'});
+close(proxy.estimatedTotalUsd, 0.01470625); assert.equal(proxy.costEvidence, 'inference_time_proxy');
+assert.match(proxy.estimateBasis, /overhead may increase/);
+assert.equal(imageCost(fal, {elapsedMs: 28519, unitPriceUsd: 0.00125, billingUnit: 'compute seconds'}).estimatedTotalUsd, null);
+assert.equal(imageCost(fal, {inferenceMs: 11765, unitPriceUsd: 0.025, billingUnit: 'image'}).estimatedTotalUsd, null);

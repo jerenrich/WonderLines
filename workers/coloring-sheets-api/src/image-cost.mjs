@@ -17,6 +17,31 @@ export function imageCost(request, result) {
   const estimate = (input, output, basis) => ({estimatedInputUsd: input, estimatedOutputUsd: output,
     estimatedTotalUsd: input + output, ratesChecked: RATES_CHECKED, estimateBasis: basis + ' ' + EXCLUSIONS});
 
+  if (request.provider === 'fal') {
+    const valid = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    const pricing = {ratesChecked: result.costCheckedAt?.slice(0, 10)};
+    if (valid(result.reportedCostUsd)) {
+      return {...estimate(0, result.reportedCostUsd,
+        'fal per-request billing event: provider-reported charge after discounts, before any account-credit adjustments.'),
+        ...pricing, costStatus: 'reported', costEvidence: 'billing_event'};
+    }
+    if (valid(result.billableUnits) && valid(result.unitPriceUsd) && result.billingUnit &&
+        Number.isFinite(result.billableUnits * result.unitPriceUsd)) {
+      return {...estimate(0, result.billableUnits * result.unitPriceUsd,
+        `fal reported ${result.billableUnits} billable units × $${result.unitPriceUsd} per ${result.billingUnit}. Current endpoint pricing; a per-request billing record is not yet available.`),
+        ...pricing, costStatus: 'estimated', costEvidence: 'billable_units'};
+    }
+    if (valid(result.inferenceMs) && result.inferenceMs > 0 && valid(result.unitPriceUsd) &&
+        ['compute second', 'compute seconds'].includes(result.billingUnit) &&
+        Number.isFinite(result.inferenceMs / 1000 * result.unitPriceUsd)) {
+      return {...estimate(0, result.inferenceMs / 1000 * result.unitPriceUsd,
+        `Inference-time estimate: ${(result.inferenceMs / 1000).toFixed(3)} recorded inference seconds × $${result.unitPriceUsd} per compute second. fal has not supplied billable units or an accessible billing record. Model loading and other billed overhead may increase the actual charge; this is not measured billable time.`),
+        ...pricing, costStatus: 'estimated', costEvidence: 'inference_time_proxy'};
+    }
+    return {...unavailable('fal billing units or verified USD pricing are unavailable. Request ID and inference timing are retained for reconciliation; elapsed time is not billable time.'),
+      ...pricing, costStatus: 'unavailable'};
+  }
+
   if (request.provider === 'openai') {
     const rates = OPENAI_RATES.get(request.model);
     if (!rates) return unavailable('No verified OpenAI pricing is configured for this upstream model.');

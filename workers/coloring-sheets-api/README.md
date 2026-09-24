@@ -1,12 +1,13 @@
 # coloring-sheets-api
 
-Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated image generation. The Worker keeps provider credentials server-side and exposes `/v1` endpoints. It supports nine Cloudflare-hosted Workers AI image models plus OpenAI and Google Gemini image generation through Cloudflare AI Gateway, with direct OpenAI retained for existing deployments until Gateway is configured.
+Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated image generation. The Worker keeps provider credentials server-side and exposes `/v1` endpoints. It supports ColoringBook.Redmond V2 on fal.ai, nine Cloudflare-hosted Workers AI image models plus OpenAI and Google Gemini image generation through Cloudflare AI Gateway, with direct OpenAI retained for existing deployments until Gateway is configured.
 
 ## Files
 
 - `src/index.mjs` — dependency-free Worker entry point and Durable Object account ledger.
 - `src/image-provider.mjs` — model allowlist, AI Gateway authentication, provider request adapters, and PNG/usage normalization.
 - `src/image-cost.mjs` — provider/model-specific inference estimates and the date their rates were checked.
+- `src/fal-cost.mjs` — bounded, read-only fal pricing and per-request billing lookups.
 - `wrangler.jsonc` — deployment identity, runtime compatibility date, Durable Object, and R2 bindings.
 
 ## Test locally
@@ -98,7 +99,7 @@ The key-source setting applies to OpenAI and Google routes. Native Workers AI ro
 
 ## Experiment with models
 
-`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the eleven built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, and `workers-ai`. The Workers AI adapter accepts the nine models listed below, using each model’s documented multipart or JSON input protocol. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
+`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the twelve built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, `workers-ai`, and `fal`. The fal adapter currently accepts only the `coloringbook-redmond-v2` preset. The Workers AI adapter accepts the nine models listed below, using each model’s documented multipart or JSON input protocol. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
 
 For example, to retain both OpenAI choices and add a Gemini image model, set:
 
@@ -207,3 +208,64 @@ Offline Worker checks cover multipart formatting, separate credentials, size fit
 `POST /v1/installations/renew` accepts `{}` with the saved bearer credential and returns a new 30-day access token for the same `accountId`. Only this endpoint accepts expired tokens: it still verifies the signature and checks the account’s current `credentialId`. It never creates a new account, resets allowance, spends credit, or invokes image generation. Credits and existing generation records remain attached to the account. Revoking its credential ID or rotating the signing secret blocks renewal as well as access.
 
 The signed credential stored in the device Keychain provides long-term renewal access until revoked; the 30-day expiry limits direct API use, not the lifetime of the device identity. This supports already-expired credentials from existing app installations without discarding their accounts. The renewal endpoint was deployed on 23 September 2026 as version `742dc241-7c55-4c6c-afa7-b930011c790e`. That version was subsequently superseded by the AI Gateway deployment documented above. Offline tests cover expiry, retained credits/jobs, forged credentials, and revocation. The live renewal route returns its expected HTTP 401 JSON response for an invalid credential. Cloudflare blocks the default `Python-urllib/3.9` User-Agent with error 1010; curl and Python with an explicit `ColoringSheets-DeploymentCheck/1.0` User-Agent reach the Worker. This was isolated by changing only the User-Agent header in both clients. Use an explicit deployment-check identity for Python verification requests. An authenticated live renewal flow has not been exercised; the offline tests cover it.
+
+
+## ColoringBook.Redmond V2 on fal.ai
+
+The twelfth picker choice is `coloringbook-redmond-v2` (Beta). Sunburst remains the app default. Its route is `{"provider":"fal","model":"coloringbook-redmond-v2"}`; the Worker resolves that preset to `fal-ai/lora`, using SDXL 1.0 plus the [Redmond V2 LoRA](https://huggingface.co/artificialguybr/ColoringBookRedmond-V2). Weights are pinned to revision `0e67e0de2b603db085e525e7f6194b24dc60033d`. The base model ID is fixed, but fal controls its runtime and base-model deployment; the adapter revision alone does not promise bit-for-bit reproducibility.
+
+### Activate
+
+1. Add `FAL_KEY` as a **secret** on the existing `coloring-sheets-api` Worker. Never add it to the app or Git. fal uses this Worker-held key independently of `AI_GATEWAY_KEY_SOURCE` for OpenAI/Google.
+2. Retain `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`, and `AI_GATEWAY_TOKEN`. The adapter uses Cloudflare's `/fal` provider proxy and `x-fal-target-url` to reach the fal queue. See [Cloudflare's integration](https://developers.cloudflare.com/ai-gateway/usage/providers/fal/).
+3. Set the dashboard variable `FAL_DAILY_GENERATION_LIMIT` to an explicit trial allowance (current requested value: `1000`). This is a generation-count cap across all accounts, in addition to the existing global and personal allowances. `0` pauses new fal jobs; missing or malformed configuration rejects new fal requests before reserving allowance. It does not stop already submitted jobs. Other providers keep their existing limits. The cap resets at 00:00 UTC.
+4. Run the offline checks, deploy the Worker with `--keep-vars`, then build/install the app. No binding or Durable Object migration is required: the existing Account objects now implement alarms.
+5. Deliberately request **one** Redmond sheet first. Check the fal dashboard's actual charge and the output before running the comparison below. Missing price estimates do not mean free generation.
+
+The preset sends one PNG per request, LoRA strength 1, 30 steps, guidance 7.5, safety checking enabled, and prompt weighting enabled to accommodate SDXL prompts longer than 77 tokens. It preserves the user's subject, age-complexity guidance and composition, adds `ColoringBookAF, Coloring Book`, and supplies a negative prompt for color, shading and text. Images are scaled to approximately one megapixel in 16-pixel increments; a 1456 × 1024 request becomes 1216 × 864. Smaller requests stay unchanged. These are initial evaluation settings, not validated quality recommendations. See the [fal schema](https://fal.ai/models/fal-ai/lora/api).
+
+### Queued jobs and recovery
+
+`POST /v1/generations` reserves one allowance and atomically saves the job and an alarm, returning HTTP 202. Account alarms submit up to five pending jobs per pass and persist each fal request ID. Later alarms poll the same IDs, fetch the result, validate and save the PNG in R2, and complete the existing job. Transient status/download/storage errors retry reads only, for up to 30 minutes. A process interruption during submission without a saved fal ID is terminal and explicitly uncertain; the Worker never resubmits it. Check fal usage before deliberately starting another generation. Gateway retries and cache reuse are disabled.
+
+All queue URLs are constructed by the adapter. Image downloads accept only HTTPS `fal.media` hosts, reject redirects, carry no credentials, and are limited to 20 MiB. Unsafe output is rejected. Job payloads contain the prompt while processing and are removed from the account record when the job becomes terminal. Credentials are never stored in job records. The completed metrics include provider, endpoint, LoRA revision, seed, dimensions and timing. Cost reporting uses fal billing records when available, then reported billable units and live pricing, then a clearly labeled inference-time estimate for compute-second pricing. Wall-clock queue time is never used as billable compute time.
+
+The app retains pending Redmond IDs, model choices and timestamps locally, scoped to the service URL and anonymous account. It retains no prompt or token in this recovery list. Foreground recovery makes up to 40 GET checks with 5–15 second backoff. **Stop waiting** stops app polling; the server can continue. **Check unfinished sheets** works after cancellation, backgrounding or relaunch, appends recovered sheets to the gallery, and never sends a generation POST. Local pending entries expire after 24 hours. Recovery needs the original anonymous account and a result still retained in R2. Older app versions retain their existing shorter polling behavior.
+
+### Quality comparison before promoting the preset
+
+After the first successful smoke test, compare these six subjects at ages 4 and 15 using Redmond, Sunburst, and the existing SDXL option: a friendly dinosaur on a bicycle; a butterfly beside three flowers; a cat in a space helmet; a castle beside a river; two children building a sandcastle; an underwater turtle with fish. That is 36 sheets with one image per request. Keep each subject, age guidance, composition and requested size the same across models. Record actual output size because each adapter has different native sizing.
+
+Score each image for subject accuracy, enclosed coloring areas, unwanted shading, age suitability and print quality. Record latency, actual provider charges, and cost per usable sheet. Reuse fixed seeds for later Redmond-only parameter experiments where supported; the app currently lets fal choose and report the seed. Do not automatically regenerate rejected or failed images. Compare strength 0.8 versus 1.0 only as a separate, budgeted preset experiment. Keep the default unchanged until the results justify a change.
+
+Offline tests cover alarm completion after a fresh Account instance, ambiguous submission, queue delays, download retries, unsafe output, untrusted URLs, redirected downloads, concurrent budget reservations, missing credentials, and saved-image replay. iOS tests cover relaunch recovery with one paid POST, extended polling, account isolation, expiry and gallery preservation.
+
+
+### Live verification — 24 September 2026
+
+Deployed Worker version `400f7307-17bc-4cc4-b68b-dae30c53dba5` with `FAL_DAILY_GENERATION_LIMIT=1000`. Read back the deployed version to confirm that limit, the `FAL_KEY` secret binding, and the existing Gateway configuration. The independent global daily cap remains `10000`.
+
+One explicit Redmond generation succeeded through the public authenticated API: requested 1456 × 1024, returned a valid 1216 × 864 PNG (1,578,797 bytes), 28.519 seconds end-to-end and approximately 11.765 seconds reported inference time. The result showed the requested dinosaur on a bicycle with black outlines, but added flowers and fine details beyond the simple prompt. It remains Beta; the 36-sheet quality comparison has not been run. fal did not supply a usable seed or billing amount in the recovered result, so neither is invented. Local, Git-ignored verification artifacts are under `.build/fal-live/`; the private recovery state includes the temporary anonymous test credential and must not be shared.
+
+Validation also passed the mocked Worker suite, configuration checks, 40 offline iOS/UI tests (two additional paid tests skipped), and a local workerd test using real SQLite Durable Object transactions, alarm delivery and R2 storage with mocked upstream calls. The two final recovery regression tests were rerun successfully after the gallery/configuration cleanup.
+
+
+## fal cost logging and reconciliation
+
+For each fal submission, the Worker logs `fal_submitted` with the generation ID and fal request ID. On completion or failure it saves a `.usage.json` ledger entry beside the image in R2 and emits a structured `fal_usage` log. Worker observability is enabled. Entries include the IDs, state/error code, model/revision, requested/actual dimensions where available, image count, steps, inference and total times, billable units, unit rate, lookup status and cost evidence. Prompts, provider keys, access tokens and raw provider errors are excluded. Reconciliation overwrites the same ledger object; it is not a second billable generation or a second charge to sum.
+
+The Worker checks [fal pricing](https://fal.ai/docs/platform-apis/v1/models/pricing) and [billing events](https://fal.ai/docs/platform-apis/v1/models/billing-events) using read-only, bounded requests:
+
+1. An exact matching billing event supplies the provider-reported cost after discounts (`costEvidence=billing_event`).
+2. Otherwise, `x-fal-billable-units` from the result response multiplied by verified USD unit pricing supplies an estimate (`costEvidence=billable_units`).
+3. If the billable count is absent and the verified unit is specifically compute seconds, inference duration × unit price provides an **inference-time proxy** (`costEvidence=inference_time_proxy`). Model loading and other billed overhead can increase the actual charge. Total elapsed/queue time is never substituted for inference time.
+4. Missing or malformed evidence remains unavailable, never implicitly zero. An unavailable billing API does not prevent image delivery.
+
+`GET /v1/generations/{id}/usage` requires the original account credential and returns that account's saved metrics. It can refresh incomplete costs after 60 seconds, including older saved fal jobs, without sending a generation POST. The app refreshes this endpoint when opening Usage for a Redmond sheet; pull to refresh checks again. A verified reported charge is retained. Saved image recovery returns the enriched metrics too. The existing `estimatedTotalUsd` field remains compatible with older app versions; `costStatus` distinguishes reported costs from estimates.
+
+Live checks on 24 September 2026 confirmed pricing of **$0.00125 per compute second** for `fal-ai/lora`. The current key receives HTTP 403 from the billing-events API, and the earlier test's result had no billable-units header. Its recorded 11.765 inference seconds therefore supports an estimate of **$0.01470625**, excluding unknown billed overhead. That is an estimate, not a billing receipt. A key with billing access would allow later reconciliation to the provider-reported charge; no broader key permissions are needed to keep generating sheets or collecting inference-based estimates.
+
+
+Cost logging was deployed as Worker version `befa6992-3a19-47ae-b700-c8066a0fdcc6`. A read-only live recovery of the original Redmond test returned HTTP 200 with `costStatus=estimated`, `costEvidence=inference_time_proxy`, the verified rate, and `$0.014706249833106994` estimated cost. No additional image was generated to validate billing. The 1,000-sheet fal cap was preserved.
+
+The live Wonder Lines build with cost reporting was signed using the existing development team and installed on the connected iPhone 17 Pro (J17) on 24 September 2026. The install preserved bundle identifier `com.jordan.family.ColoringSheets` and the current Wonder Lines branding. After the phone was unlocked, devicectl confirmed that the app launched successfully. Worker/configuration tests and the iOS unit suite passed before installation.

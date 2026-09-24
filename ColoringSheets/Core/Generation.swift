@@ -14,9 +14,11 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case sdxl = "stable-diffusion-xl-base-1.0"
     case sdxlLightning = "stable-diffusion-xl-lightning"
     case dreamShaper = "dreamshaper-8-lcm"
+    case redmond = "coloringbook-redmond-v2"
     var id: String { rawValue }
     var label: String {
         switch self {
+        case .redmond: return "ColoringBook.Redmond V2 (Beta)"
         case .flare: return "Flare"
         case .sunburst: return "Sunburst"
         case .fluxKlein4B: return "FLUX.2 Klein 4B"
@@ -32,6 +34,7 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
     }
     var detail: String {
         switch self {
+        case .redmond: return "A specialist coloring-page style. Sheets may wait in a queue before drawing starts."
         case .flare, .sunburst: return "Uses OpenAI image generation."
         case .fluxKlein4B: return "A quick option for trying out coloring-page ideas."
         case .fluxKlein9B: return "A larger version of Klein for comparing detail and composition."
@@ -170,6 +173,17 @@ struct GenerationMetrics: Decodable {
     let elapsedMs: Double?
     let estimateBasis: String?
     let ratesChecked: String?
+    let seed: Int?
+    let modelRevision: String?
+    let inferenceMs: Double?
+    let providerRequestID: String?
+    let billableUnits: Double?
+    let unitPriceUsd: Double?
+    let billingUnit: String?
+    let reportedCostUsd: Double?
+    let costStatus: String?
+    let costCheckedAt: String?
+    let inferenceSteps: Int?
 
     static func decode(_ header: String?) -> Self? {
         guard let text = header?.removingPercentEncoding, let data = text.data(using: .utf8) else { return nil }
@@ -182,7 +196,7 @@ struct ColoringResult: Identifiable {
     let data: Data
     let image: UIImage
     let requestedModel: ImageModel
-    let metrics: GenerationMetrics?
+    var metrics: GenerationMetrics?
     let access: AccessSnapshot?
     let generationID: UUID?
 
@@ -209,8 +223,43 @@ enum GenerationError: LocalizedError, Equatable {
     }
 }
 
+struct PendingGeneration: Codable, Identifiable {
+    let id: UUID
+    let model: ImageModel
+    let createdAt: Date
+}
+
+// Only opaque IDs and model selections are retained; no prompts or credentials.
+actor PendingGenerationStore {
+    static let shared = PendingGenerationStore()
+    private let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    func list(scope: String) -> [PendingGeneration] {
+        guard let data = defaults.data(forKey: "pendingGenerations." + scope),
+              let entries = try? JSONDecoder().decode([PendingGeneration].self, from: data) else { return [] }
+        return entries.filter { $0.createdAt > Date().addingTimeInterval(-86400) }
+    }
+    func add(_ entry: PendingGeneration, scope: String) throws {
+        var entries = list(scope: scope).filter { $0.id != entry.id }
+        entries.append(entry)
+        defaults.set(try JSONEncoder().encode(entries), forKey: "pendingGenerations." + scope)
+    }
+    func remove(_ id: UUID, scope: String) {
+        let entries = list(scope: scope).filter { $0.id != id }
+        defaults.set(try? JSONEncoder().encode(entries), forKey: "pendingGenerations." + scope)
+    }
+}
+
 protocol GenerationServing {
     func generate(_ request: GenerationRequest) async throws -> ColoringResult
+    func generationMetrics(_ id: UUID) async throws -> GenerationMetrics?
+    func pendingGenerations() async -> [PendingGeneration]
+    func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult
+}
+extension GenerationServing {
+    func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? { nil }
+    func pendingGenerations() async -> [PendingGeneration] { [] }
+    func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult { throw GenerationError.configuration }
 }
 
 // Deny every redirect, including same-host redirects: never forward this bearer credential.
@@ -232,12 +281,18 @@ final class WorkerClient: GenerationServing {
     private let legacyCredential: String?
     private let identities: AnonymousIdentityStore?
     private let session: URLSession
+    private let pendingStore: PendingGenerationStore
+    private let recoverySleep: @Sendable (Duration) async throws -> Void
 
-    init(serviceURL: URL = defaultServiceURL, session: URLSession? = nil, identities: AnonymousIdentityStore = AnonymousIdentityStore()) {
+    init(serviceURL: URL = defaultServiceURL, session: URLSession? = nil, identities: AnonymousIdentityStore = AnonymousIdentityStore(),
+         pendingStore: PendingGenerationStore = .shared,
+         recoverySleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
         self.serviceURL = serviceURL
         self.endpoint = serviceURL.appending(path: "/v1/generations")
         self.legacyCredential = nil
         self.identities = identities
+        self.pendingStore = pendingStore
+        self.recoverySleep = recoverySleep
         self.session = Self.makeSession(session)
     }
 
@@ -246,6 +301,8 @@ final class WorkerClient: GenerationServing {
         self.endpoint = Self.endpoint
         self.legacyCredential = credential
         self.identities = nil
+        self.pendingStore = .shared
+        self.recoverySleep = { try await Task.sleep(for: $0) }
         self.session = Self.makeSession(session)
     }
 
@@ -273,6 +330,13 @@ final class WorkerClient: GenerationServing {
         http.setValue(generationID.uuidString.lowercased(), forHTTPHeaderField: "Idempotency-Key")
         http.setValue("1", forHTTPHeaderField: "X-Coloring-API-Version")
         http.httpBody = try request.encoded()
+        if request.model == .redmond, let scope = await pendingScope() {
+            try await pendingStore.add(PendingGeneration(id: generationID, model: request.model, createdAt: Date()), scope: scope)
+        }
+        if Task.isCancelled {
+            if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
+            throw GenerationError.cancelled
+        }
         let data: Data
         let response: URLResponse
         do { (data, response) = try await session.data(for: http) }
@@ -287,25 +351,32 @@ final class WorkerClient: GenerationServing {
         if response.statusCode == 202 {
             return try await recover(generationID, authorization: authorization, requestedModel: request.model)
         }
-        return try Self.parse(data, response: response, requestedModel: request.model)
+        // A configuration rejection happens before the server reserves a job.
+        if response.statusCode == 503, Self.workerErrorCode(data, response: response) == "service_unavailable",
+           let scope = await pendingScope() {
+            await pendingStore.remove(generationID, scope: scope)
+        }
+        return try await parseRecovered(data, response: response, generationID: generationID, requestedModel: request.model)
     }
 
     private func recover(_ generationID: UUID, authorization: String, requestedModel: ImageModel) async throws -> ColoringResult {
-        // Polling a recorded job never repeats the paid provider request. Three short
-        // checks cover an interrupted foreground response without trapping the UI.
-        for attempt in 0..<3 {
+        // fal jobs may wait for a runner. Every attempt is a read-only GET.
+        let attempts = requestedModel == .redmond ? 40 : 3
+        for attempt in 0..<attempts {
+            guard !Task.isCancelled else { throw GenerationError.cancelled }
             if attempt > 0 {
-                do { try await Task.sleep(for: .seconds(5)) }
+                do { try await recoverySleep(.seconds(requestedModel == .redmond ? min(15, attempt * 5) : 5)) }
                 catch { throw GenerationError.cancelled }
             }
             var request = URLRequest(url: endpoint.appending(path: generationID.uuidString.lowercased()))
+            request.timeoutInterval = 30
             request.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
             do {
                 let (data, response) = try await session.data(for: request)
                 guard let http = response as? HTTPURLResponse else { continue }
                 Self.logResponse("recovery attempt \(attempt + 1)", data: data, response: http, generationID: generationID)
                 if http.statusCode == 202 { continue }
-                return try Self.parse(data, response: http, requestedModel: requestedModel)
+                return try await parseRecovered(data, response: http, generationID: generationID, requestedModel: requestedModel)
             } catch is CancellationError { throw GenerationError.cancelled }
             catch let error as GenerationError { throw error }
             catch {
@@ -321,6 +392,48 @@ final class WorkerClient: GenerationServing {
             }
         }
         throw GenerationError.uncertain
+    }
+
+    func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? {
+        var request = URLRequest(url: endpoint.appending(path: id.uuidString.lowercased()).appending(path: "usage"))
+        request.setValue("Bearer " + (try await authorization()), forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 20
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200, data.count <= 16384 else { return nil }
+        struct UsageResponse: Decodable { let metrics: GenerationMetrics? }
+        return try JSONDecoder().decode(UsageResponse.self, from: data).metrics
+    }
+
+    private func pendingScope() async -> String? {
+        guard let saved = await identities?.session() else { return nil }
+        return serviceURL.absoluteString + "/" + saved.accountID.uuidString.lowercased()
+    }
+
+    func pendingGenerations() async -> [PendingGeneration] {
+        guard let scope = await pendingScope() else { return [] }
+        return await pendingStore.list(scope: scope)
+    }
+
+    func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult {
+        let credential = try await authorization()
+        guard await pendingGenerations().contains(where: { $0.id == pending.id }) else { throw GenerationError.configuration }
+        return try await recover(pending.id, authorization: credential, requestedModel: pending.model)
+    }
+
+    private func parseRecovered(_ data: Data, response: HTTPURLResponse, generationID: UUID,
+                                requestedModel: ImageModel) async throws -> ColoringResult {
+        guard !Task.isCancelled else { throw GenerationError.cancelled }
+        do {
+            let result = try Self.parse(data, response: response, requestedModel: requestedModel)
+            if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
+            return result
+        } catch {
+            // Keep interrupted, authentication and transient failures recoverable.
+            let terminal = [400, 410, 422, 429].contains(response.statusCode) ||
+                (response.statusCode == 502 && Self.workerErrorCode(data, response: response) != nil)
+            if terminal, let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
+            throw error
+        }
     }
 
     private func authorization() async throws -> String {

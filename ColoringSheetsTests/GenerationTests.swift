@@ -335,6 +335,105 @@ final class NetworkingTests: XCTestCase {
         }
     }
 
+    func testFalQueueSurvivesCancellationAndClientRelaunchWithoutAnotherPOST() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let suite = "FalRecoveryTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let identities = AnonymousIdentityStore(service: suite)
+        let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
+        try await identities.save(account)
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        let store = PendingGenerationStore(defaults: defaults)
+        let firstClient = WorkerClient(session: session, identities: identities, pendingStore: store,
+                                       recoverySleep: { _ in throw CancellationError() })
+        var methods: [String] = []
+        var generationID: String?
+        MockURLProtocol.handler = { request in
+            methods.append(request.httpMethod!)
+            if request.httpMethod == "POST" { generationID = request.value(forHTTPHeaderField: "Idempotency-Key") }
+            return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!, Data())
+        }
+        do {
+            _ = try await firstClient.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .redmond))
+            XCTFail("Expected cancelled waiting")
+        } catch { XCTAssertEqual(error as? GenerationError, .cancelled) }
+        let restoredStore = PendingGenerationStore(defaults: defaults)
+        let nextClient = WorkerClient(session: session, identities: identities, pendingStore: restoredStore, recoverySleep: { _ in })
+        let pending = await nextClient.pendingGenerations()
+        XCTAssertEqual(pending.count, 1)
+        XCTAssertEqual(pending.first?.id.uuidString.lowercased(), generationID)
+        var polls = 0
+        let png = MockGenerator.sampleImage().pngData()!
+        MockURLProtocol.handler = { request in
+            methods.append(request.httpMethod!)
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url!.lastPathComponent, generationID)
+            polls += 1
+            if polls < 5 { return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil, headerFields: nil)!, Data()) }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                    headerFields: ["Content-Type": "image/png", "X-Generation-ID": generationID!])!, png)
+        }
+        let result = try await nextClient.recoverPending(try XCTUnwrap(pending.first))
+        XCTAssertEqual(result.requestedModel, .redmond)
+        XCTAssertEqual(result.generationID?.uuidString.lowercased(), generationID)
+        XCTAssertEqual(methods.filter { $0 == "POST" }.count, 1)
+        XCTAssertEqual(polls, 5, "fal recovery must tolerate more than the previous three short checks")
+        let remaining = await nextClient.pendingGenerations()
+        XCTAssertTrue(remaining.isEmpty)
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            return (HTTPURLResponse(url: request.url!, statusCode: 503, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!,
+                    Data(#"{"error":{"code":"service_unavailable","message":"Configure fal first."}}"#.utf8))
+        }
+        do {
+            _ = try await nextClient.generate(GenerationRequest(description: "Flower", age: 8, model: .redmond))
+            XCTFail("Expected configuration rejection")
+        } catch {}
+        let rejected = await nextClient.pendingGenerations()
+        XCTAssertTrue(rejected.isEmpty, "Configuration rejection must not leave a phantom pending sheet")
+    }
+
+    func testFalUsageRefreshIsReadOnlyAndDecodesBillingEvidence() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        let client = WorkerClient(credential: "synthetic", session: session)
+        let id = UUID()
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url!.path, "/v1/generations/" + id.uuidString.lowercased() + "/usage")
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!,
+                    Data(#"{"metrics":{"provider":"fal","providerRequestID":"fal-job","inferenceMs":12000,"billableUnits":12.5,"unitPriceUsd":0.001,"billingUnit":"compute second","reportedCostUsd":0.01,"estimatedTotalUsd":0.01,"costStatus":"reported"}}"#.utf8))
+        }
+        let metrics = try await client.generationMetrics(id)
+        XCTAssertEqual(metrics?.reportedCostUsd, 0.01)
+        XCTAssertEqual(metrics?.billableUnits, 12.5)
+        XCTAssertEqual(metrics?.costStatus, "reported")
+        XCTAssertEqual(metrics?.providerRequestID, "fal-job")
+    }
+
+    func testPendingGenerationsAreScopedAndExpire() async throws {
+        let suite = "PendingScopeTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = PendingGenerationStore(defaults: defaults)
+        let entry = PendingGeneration(id: UUID(), model: .redmond, createdAt: Date())
+        try await store.add(entry, scope: "server/account-a")
+        try await store.add(PendingGeneration(id: UUID(), model: .redmond, createdAt: .distantPast), scope: "server/account-a")
+        let own = await store.list(scope: "server/account-a")
+        let other = await store.list(scope: "server/account-b")
+        XCTAssertEqual(own.map(\.id), [entry.id]); XCTAssertTrue(other.isEmpty)
+        let persisted = String(data: defaults.data(forKey: "pendingGenerations.server/account-a")!, encoding: .utf8)!
+        XCTAssertFalse(persisted.contains("accessToken")); XCTAssertFalse(persisted.contains("subject"))
+    }
+
     func testExpiredIdentityRenewsOnceAndKeepsItsAccount() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -441,6 +540,15 @@ final class NetworkingTests: XCTestCase {
 @MainActor
 final class ControlledService: GenerationServing {
     var calls = 0
+    var recoveryCalls = 0
+    var recoverable: [PendingGeneration] = []
+    func pendingGenerations() async -> [PendingGeneration] { recoverable }
+    func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult {
+        recoveryCalls += 1
+        recoverable.removeAll { $0.id == pending.id }
+        let image = MockGenerator.sampleImage()
+        return ColoringResult(data: image.pngData()!, image: image, requestedModel: pending.model, metrics: nil, generationID: pending.id)
+    }
     var captured: [GenerationRequest] = []
     var continuations: [Int: CheckedContinuation<ColoringResult, Error>] = [:]
     var pendingCount: Int { continuations.count }
@@ -472,6 +580,36 @@ final class StateTests: XCTestCase {
         }
         XCTFail("State did not settle")
     }
+    func testRecoverUnfinishedSheetsAppendsWithoutGenerating() async {
+        let suite = "RecoverGalleryTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.pendingCount == 1 }
+        service.succeed()
+        await waitFor { store.phase == .result }
+        let selected = store.selectedResultID
+        service.recoverable = [PendingGeneration(id: UUID(), model: .redmond, createdAt: Date())]
+        await store.refreshUnfinishedSheets()
+        store.recoverUnfinishedSheets(); store.recoverUnfinishedSheets()
+        await waitFor { store.phase == .result && store.unfinishedSheets.isEmpty }
+        XCTAssertEqual(service.calls, 1); XCTAssertEqual(service.recoveryCalls, 1)
+        XCTAssertEqual(store.results.count, 2)
+        XCTAssertEqual(store.selectedResultID, selected)
+        XCTAssertEqual(store.results.last?.requestedModel, .redmond)
+        // Relaunch starts with an empty gallery; recovered output must be selected.
+        let relaunched = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        service.recoverable = [PendingGeneration(id: UUID(), model: .redmond, createdAt: Date())]
+        await relaunched.refreshUnfinishedSheets()
+        relaunched.recoverUnfinishedSheets()
+        await waitFor { relaunched.phase == .result }
+        XCTAssertEqual(relaunched.selectedResultID, relaunched.results.first?.id)
+        XCTAssertNotNil(relaunched.selectedResultID)
+    }
+
     func testSettingsPersistAndControlNextBatch() async {
         let name = "SettingsTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
