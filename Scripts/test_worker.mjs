@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import './test_image_cost.mjs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
+import {falCostData} from '../workers/coloring-sheets-api/src/fal-cost.mjs';
 import {modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';
 
 // A picker option must have a server route, and every built-in route is selectable.
@@ -11,7 +12,17 @@ const swiftModels = readFileSync(new URL('../ColoringSheets/Core/Generation.swif
 const pickerIDs = [...swiftModels.matchAll(/case \w+ = "([^"]+)"/g)].map(match => match[1]);
 assert.deepEqual(pickerIDs.sort(), Object.keys(modelCatalog({}).routes).sort());
 
-class MemoryStorage { constructor() { this.values = new Map(); } async get(k) { return this.values.get(k); } async put(k, v) { this.values.set(k, v); } }
+class MemoryStorage {
+  constructor() { this.values = new Map(); }
+  async get(k) { return structuredClone(this.values.get(k)); }
+  async put(k, v) { this.values.set(k, structuredClone(v)); }
+  async delete(k) { this.values.delete(k); }
+  async setAlarm(time) { this.alarm = time; }
+  async transaction(callback) { return callback(this); }
+  async list({prefix, limit = Infinity}) {
+    return new Map([...this.values].filter(([k]) => k.startsWith(prefix)).slice(0, limit).map(([k,v]) => [k, structuredClone(v)]));
+  }
+}
 class Accounts {
   constructor(env) { this.env = env; this.objects = new Map(); }
   idFromName(name) { return name; }
@@ -36,6 +47,8 @@ class BudgetNamespace {
 const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3', GLOBAL_DAILY_GENERATION_LIMIT: '10000'};
 env.ACCOUNTS = new Accounts(env); env.BUDGET = new BudgetNamespace(env); env.GENERATIONS = new Images();
 const originalFetch = globalThis.fetch;
+const originalInfo = console.info, auditLogs = [];
+console.info = value => auditLogs.push(JSON.parse(value));
 let calls = 0, forwarded;
 globalThis.fetch = async (url, request) => {
   assert.equal(url, 'https://api.openai.com/v1/images/generations'); calls++;
@@ -138,6 +151,177 @@ try {
                  'Expired credentials still require the current, unrevoked credential ID.');
     await storedAccount.state.storage.put('account', savedAccount);
   } finally { Date.now = originalNow; }
+  // fal integration: alarm delivery, process restarts and external IO are simulated.
+  const falEnv = {...env, FREE_DAILY_ALLOWANCE: '1000', FAL_KEY: 'synthetic-fal-key', FAL_DAILY_GENERATION_LIMIT: '50',
+    AI_GATEWAY_ACCOUNT_ID: 'a'.repeat(32), AI_GATEWAY_ID: 'coloring-sheets', AI_GATEWAY_TOKEN: 'synthetic-gateway'};
+  falEnv.ACCOUNTS = new Accounts(falEnv); falEnv.BUDGET = new BudgetNamespace(falEnv); falEnv.GENERATIONS = new Images();
+  const falIdentity = await (await worker.fetch(new Request('https://example.test/v1/installations', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+  }), falEnv)).json();
+  const falAuth = {Authorization: 'Bearer ' + falIdentity.accessToken};
+  const falPost = (id, extra = {}) => worker.fetch(new Request('https://example.test/v1/generations', {
+    method: 'POST', headers: {...falAuth, 'Content-Type': 'application/json', 'Idempotency-Key': id},
+    body: JSON.stringify({subject: 'A test flower. Complexity: simple outlines', model: 'coloringbook-redmond-v2', width: 1456, height: 1024, ...extra})
+  }), falEnv);
+  const falGet = id => worker.fetch(new Request('https://example.test/v1/generations/' + id, {headers: falAuth}), falEnv);
+  let falAccount = falEnv.ACCOUNTS.objects.get(falIdentity.accountId);
+  let submitted = 0, reads = 0, downloaded = 0, falState = 'IN_QUEUE', badSubmission = false, nsfw = false;
+  let billingReported = false, billingReads = 0;
+  let imageURL = 'https://fal.media/files/example/test.png', downloadFailure = false, unexpectedRedirect = false;
+  const falPNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
+  globalThis.fetch = async (url, init) => {
+    assert.equal(init.redirect, 'manual');
+    assert.ok(init.signal instanceof AbortSignal);
+    if (url.startsWith('https://api.fal.ai/')) {
+      assert.equal(new Headers(init.headers).get('Authorization'), 'Key synthetic-fal-key');
+      assert.equal(init.method, undefined);
+      if (url.includes('/pricing?')) return Response.json({prices: [{endpoint_id: 'fal-ai/lora', unit_price: 0.001, unit: 'compute second', currency: 'USD'}]});
+      billingReads++;
+      const requestID = new URL(url).searchParams.get('request_id');
+      return Response.json({has_more: false, billing_events: billingReported ? [{request_id: requestID, endpoint_id: 'fal-ai/lora',
+        output_units: 12.5, unit_price: 0.001, cost_subtotal: 0.0125, cost_discount: 0.0025, cost_total: 0.01}] : []});
+    }
+    if (url.startsWith('https://fal.media/')) {
+      downloaded++; assert.equal(init.headers, undefined, 'Never send credentials to the image CDN.');
+      if (downloadFailure) return new Response('', {status: 503});
+      if (unexpectedRedirect) return new Response('', {status: 302, headers: {Location: 'https://example.com'}});
+      return new Response(falPNG, {headers: {'Content-Type': 'image/png'}});
+    }
+    assert.equal(url, 'https://gateway.ai.cloudflare.com/v1/' + 'a'.repeat(32) + '/coloring-sheets/fal');
+    const headers = new Headers(init.headers);
+    assert.equal(headers.get('Authorization'), 'Key synthetic-fal-key');
+    assert.equal(headers.get('cf-aig-max-attempts'), '1');
+    assert.equal(headers.get('cf-aig-skip-cache'), 'true');
+    const target = headers.get('x-fal-target-url');
+    if (init.method === 'POST') {
+      submitted++;
+      assert.equal(target, 'https://queue.fal.run/fal-ai/lora');
+      const payload = JSON.parse(init.body);
+      assert.equal(payload.model_name, 'stabilityai/stable-diffusion-xl-base-1.0');
+      assert.match(payload.loras[0].path, /resolve\/[0-9a-f]{40}\/ColoringBookRedmond/);
+      assert.ok(payload.prompt.startsWith('ColoringBookAF, Coloring Book.'));
+      assert.ok(payload.prompt.includes('Complexity: simple outlines'));
+      assert.equal(payload.prompt_weighting, true);
+      assert.equal(payload.enable_safety_checker, true);
+      assert.equal(payload.num_images, 1);
+      assert.equal(payload.image_format, 'png');
+      assert.deepEqual(payload.image_size, {width: 1216, height: 864});
+      if (badSubmission) throw new TypeError('Synthetic connection loss');
+      return Response.json({request_id: 'fal-job-' + submitted, status_url: 'https://evil.example/ignore'});
+    }
+    reads++;
+    if (target.endsWith('/status')) return Response.json({status: falState, metrics: {inference_time: 2}});
+    assert.match(target, /^https:\/\/queue.fal.run\/fal-ai\/lora\/requests\/fal-job-\d+$/);
+    return Response.json({images: [{url: imageURL}], seed: 123, has_nsfw_concepts: [nsfw]}, {headers: {'x-fal-billable-units': '12.5'}});
+  };
+  const falID = crypto.randomUUID();
+  response = await falPost(falID);
+  assert.equal(response.status, 202); assert.equal(submitted, 0, 'Submission happens durably in the alarm.');
+  assert.ok(falAccount.state.storage.alarm);
+  assert.equal((await falPost(falID)).status, 202);
+  assert.equal((await falPost(falID, {subject: 'Different subject'})).status, 409);
+  await falAccount.alarm();
+  assert.equal(submitted, 1);
+  const recorded = await falAccount.state.storage.get('job:' + falID);
+  assert.equal(recorded.fal.requestID, 'fal-job-1');
+  assert.ok(!JSON.stringify(recorded).includes('synthetic-fal-key'), 'Persist no provider credentials.');
+  // A fresh DO instance can finish the same fal job without another submission.
+  falAccount = new Account(falAccount.state, falEnv);
+  falEnv.ACCOUNTS.objects.set(falIdentity.accountId, falAccount);
+  await falAccount.alarm(); assert.equal((await falGet(falID)).status, 202);
+  falState = 'COMPLETED'; downloadFailure = true;
+  await falAccount.alarm(); assert.equal((await falGet(falID)).status, 202);
+  downloadFailure = false; await falAccount.alarm();
+  response = await falGet(falID); assert.equal(response.status, 200);
+  const falMetrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
+  assert.equal(falMetrics.seed, 123); assert.equal(falMetrics.size, '1x1');
+  assert.equal(falMetrics.estimatedTotalUsd, 0.0125); assert.equal(falMetrics.costStatus, 'estimated'); assert.equal(falMetrics.provider, 'fal');
+  assert.equal(falMetrics.inferenceMs, 2000); assert.match(falMetrics.modelRevision, /^[0-9a-f]{40}$/);
+  const downloadsBeforeReplay = downloaded;
+  await falAccount.alarm(); assert.equal((await falPost(falID)).status, 200);
+  assert.equal(submitted, 1); assert.equal(downloaded, downloadsBeforeReplay);
+  assert.equal((await falAccount.state.storage.list({prefix: 'fal:'})).size, 0);
+  const usageBefore = billingReads;
+  let usageResponse = await falGet(falID + '/usage');
+  assert.equal((await usageResponse.json()).metrics.costStatus, 'estimated');
+  assert.equal(billingReads, usageBefore, 'Repeated usage reads are throttled.');
+  const delayedBilling = await falAccount.state.storage.get('job:' + falID);
+  delayedBilling.metrics.costCheckedAt = new Date(Date.now() - 61000).toISOString();
+  await falAccount.state.storage.put('job:' + falID, delayedBilling);
+  billingReported = true;
+  usageResponse = await falGet(falID + '/usage');
+  const reconciled = (await usageResponse.json()).metrics;
+  assert.equal(reconciled.reportedCostUsd, 0.01); assert.equal(reconciled.estimatedTotalUsd, 0.01);
+  assert.equal(reconciled.costStatus, 'reported'); assert.equal(submitted, 1);
+  const auditKey = falIdentity.accountId + '/' + falID + '.usage.json';
+  const audit = JSON.parse(falEnv.GENERATIONS.values.get(auditKey));
+  assert.equal(audit.providerRequestID, 'fal-job-1'); assert.equal(audit.reportedDiscountUsd, 0.0025);
+  assert.equal(audit.inferenceSteps, 30); assert.equal(audit.billableUnits, 12.5);
+  const serializedLogs = JSON.stringify(auditLogs);
+  assert.ok(!serializedLogs.includes('synthetic-fal-key')); assert.ok(!serializedLogs.includes('A test flower'));
+  assert.ok(auditLogs.some(log => log.event === 'fal_submitted'));
+  assert.ok(auditLogs.some(log => log.event === 'fal_usage' && log.costStatus === 'reported'));
+  assert.equal((await worker.fetch(new Request('https://example.test/v1/generations/' + falID + '/usage'), falEnv)).status, 401);
+  billingReported = false;
+  // A lost submit response never causes another paid POST.
+  badSubmission = true;
+  const uncertainID = crypto.randomUUID(); await falPost(uncertainID); await falAccount.alarm();
+  assert.equal((await falGet(uncertainID)).status, 502);
+  const paidAttempts = submitted; await falAccount.alarm(); await falPost(uncertainID);
+  assert.equal(submitted, paidAttempts);
+  badSubmission = false;
+  // Simulate a process dying between submitting and persisting its response.
+  const crashID = crypto.randomUUID(); await falPost(crashID);
+  const crashed = await falAccount.state.storage.get('job:' + crashID); crashed.fal.stage = 'submitting';
+  await falAccount.state.storage.put('job:' + crashID, crashed); await falAccount.alarm();
+  assert.equal((await falGet(crashID)).status, 502); assert.equal(submitted, paidAttempts);
+  // Unsafe results never reach storage, and arbitrary CDN URLs cannot be fetched.
+  for (const blocked of ['safety', 'host']) {
+    const id = crypto.randomUUID(); await falPost(id); await falAccount.alarm();
+    nsfw = blocked === 'safety'; imageURL = blocked === 'host' ? 'https://evil.example/test.png' : 'https://fal.media/test.png';
+    const before = downloaded; await falAccount.alarm();
+    assert.equal((await falGet(id)).status, 502); assert.equal(downloaded, before);
+  }
+  nsfw = false; imageURL = 'https://fal.media/test.png';
+  const redirectID = crypto.randomUUID(); await falPost(redirectID); await falAccount.alarm();
+  unexpectedRedirect = true; await falAccount.alarm(); assert.equal((await falGet(redirectID)).status, 202);
+  unexpectedRedirect = false; await falAccount.alarm(); assert.equal((await falGet(redirectID)).status, 200);
+  // One batch can queue five independent jobs and complete them in the same alarm pass.
+  const batchIDs = Array.from({length: 5}, () => crypto.randomUUID());
+  assert.deepEqual((await Promise.all(batchIDs.map(id => falPost(id)))).map(r => r.status), [202, 202, 202, 202, 202]);
+  const beforeBatch = submitted;
+  await falAccount.alarm(); assert.equal(submitted, beforeBatch + 5);
+  await falAccount.alarm();
+  assert.deepEqual((await Promise.all(batchIDs.map(falGet))).map(r => r.status), [200, 200, 200, 200, 200]);
+  assert.equal(submitted, beforeBatch + 5);
+  const finishedJob = await falAccount.state.storage.get('job:' + batchIDs[0]);
+  assert.equal(finishedJob.fal.request.payload, undefined, 'Remove queued prompts once the job is terminal.');
+  const expiredID = crypto.randomUUID(); await falPost(expiredID);
+  const expiredJob = await falAccount.state.storage.get('job:' + expiredID);
+  expiredJob.createdAt -= 31 * 60 * 1000;
+  await falAccount.state.storage.put('job:' + expiredID, expiredJob);
+  await falAccount.alarm();
+  assert.equal((await falGet(expiredID)).status, 502); assert.equal(submitted, beforeBatch + 5);
+  // Missing credentials and invalid routes are rejected before allowance is used.
+  const accessBefore = await falAccount.access();
+  delete falEnv.FAL_KEY;
+  assert.equal((await falPost(crypto.randomUUID())).status, 503);
+  assert.deepEqual(await falAccount.access(), accessBefore);
+  falEnv.FAL_KEY = 'synthetic-fal-key';
+  assert.throws(() => modelCatalog({IMAGE_MODEL_ROUTES: JSON.stringify({x: {provider: 'fal', model: 'arbitrary/model'}})}));
+  falEnv.FAL_DAILY_GENERATION_LIMIT = '0';
+  response = await falPost(crypto.randomUUID()); assert.equal(response.status, 429);
+  assert.equal((await response.json()).error.code, 'service_budget_exhausted');
+  assert.deepEqual(await falAccount.access(), accessBefore);
+  // Trial cap remains atomic across distinct accounts sharing the global budget.
+  const capEnv = {GLOBAL_DAILY_GENERATION_LIMIT: '100', FAL_DAILY_GENERATION_LIMIT: '2'};
+  const cap = new Budget({storage: new MemoryStorage()}, capEnv);
+  const capped = await Promise.all(Array.from({length: 5}, (_, i) => cap.fetch(new Request('https://budget/reserve', {
+    method: 'POST', body: JSON.stringify({claim: 'claim-' + i, provider: 'fal'})
+  }))));
+  assert.deepEqual(capped.map(r => r.status), [201, 201, 429, 429, 429]);
+  assert.equal((await cap.fetch(new Request('https://budget/reserve', {method: 'POST', body: JSON.stringify({claim: 'openai'})}))).status, 201);
+
   // AI Gateway integration: all requests are intercepted, including failures.
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
   const gatewayEnv = {...env, FREE_DAILY_ALLOWANCE: '1000', AI_GATEWAY_ACCOUNT_ID: 'a'.repeat(32),
@@ -533,6 +717,7 @@ try {
   // Previously stored failures do not have an errorCode.
   const legacyFailure = await gatewayAccount.state.storage.get('job:' + conversionFailureID);
   delete legacyFailure.errorCode;
+  await gatewayAccount.state.storage.put('job:' + conversionFailureID, legacyFailure);
   assert.equal((await (await get('/v1/generations/' + conversionFailureID)).json()).error.code, 'upstream_failed');
   env.GLOBAL_DAILY_GENERATION_LIMIT = '0';
   env.BUDGET = new BudgetNamespace(env);
@@ -560,5 +745,16 @@ try {
     assert.equal(metrics.textInputTokens, usage?.input_tokens_details?.text_tokens ?? null);
     assert.equal(metrics.imageInputTokens, usage?.input_tokens_details?.image_tokens ?? null);
   }
-} finally { globalThis.fetch = originalFetch; }
-console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, all nine Workers AI routes, multipart/JSON inputs, binary/base64 PNG conversion, size fitting, and terminal provider failures; no network.');
+  // Malformed prices, foreign currencies and mismatched billing records stay unknown.
+  for (const price of [{unit_price: '0.001', currency: 'USD'}, {unit_price: 0.001, currency: 'EUR'}, null]) {
+    globalThis.fetch = async url => url.includes('/pricing?')
+      ? Response.json({prices: price ? [{endpoint_id: 'fal-ai/lora', unit: 'second', ...price}] : {invalid: true}})
+      : Response.json({has_more: false, billing_events: [{request_id: 'another-job', endpoint_id: 'fal-ai/lora', cost_total: 0}]});
+    const data = await falCostData({FAL_KEY: 'synthetic'}, 'test-job', 12.5);
+    assert.equal(data.unitPriceUsd, null); assert.equal(data.reportedCostUsd, null);
+  }
+  globalThis.fetch = async () => new Response('', {status: 403});
+  const restricted = await falCostData({FAL_KEY: 'synthetic'}, 'test-job', 12.5);
+  assert.equal(restricted.billingLookupStatus, 'http_403'); assert.equal(restricted.billableUnits, 12.5);
+} finally { globalThis.fetch = originalFetch; console.info = originalInfo; }
+console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, all nine Workers AI routes, multipart/JSON inputs, binary/base64 PNG conversion, size fitting, terminal provider failures, fal queue alarms, restart recovery, five-sheet batches, uncertain submissions, CDN validation and trial limits; no network.');

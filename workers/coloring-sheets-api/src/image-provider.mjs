@@ -2,6 +2,7 @@
 // never URLs, credentials, or arbitrary upstream request bodies from a client.
 export const DEFAULT_MODEL = 'gpt-image-2.5-flare';
 const DEFAULT_ROUTES = {
+  'coloringbook-redmond-v2': {provider: 'fal', model: 'coloringbook-redmond-v2'},
   'gpt-image-2.5-flare': {provider: 'openai', model: 'gpt-image-2.5-flare'},
   'gpt-image-2.5-sunburst': {provider: 'openai', model: 'gpt-image-2.5-sunburst'},
   'flux-2-klein-4b': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-2-klein-4b'},
@@ -14,7 +15,7 @@ const DEFAULT_ROUTES = {
   'stable-diffusion-xl-lightning': {provider: 'workers-ai', model: '@cf/bytedance/stable-diffusion-xl-lightning'},
   'dreamshaper-8-lcm': {provider: 'workers-ai', model: '@cf/lykon/dreamshaper-8-lcm'}
 };
-const PROVIDERS = ['openai', 'google-ai-studio', 'workers-ai'];
+const PROVIDERS = ['openai', 'google-ai-studio', 'workers-ai', 'fal'];
 // Native models have different input protocols; only enable those this adapter supports.
 const NEGATIVE_PROMPT = 'color, shading, grayscale, gradients, shadows, photographs, text, letters, watermarks';
 // Per-model protocols and limits from Cloudflare's model docs (2026-09-23).
@@ -42,7 +43,8 @@ export function modelCatalog(env) {
   if (Object.keys(routes).length > 32) throw new Error('Too many image model routes');
   for (const [id, route] of Object.entries(routes)) {
     if (!identifier(id) || !object(route) || !PROVIDERS.includes(route.provider) ||
-        !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) : identifier(route.model)) ||
+        !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) :
+          route.provider === 'fal' ? route.model === 'coloringbook-redmond-v2' : identifier(route.model)) ||
         Object.keys(route).some(key => !['provider', 'model'].includes(key))) throw new Error('Invalid image model route');
   }
   const defaultModel = env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
@@ -88,6 +90,7 @@ function closestAspectRatio({width, height}) {
 
 // Build and validate everything that can fail locally before spending allowance.
 export function imageRequest(env, route, subject, size) {
+  if (route.provider === 'fal') return falImageRequest(env, subject, size);
   const prompt = PROMPT + subject.trim();
   if (route.provider === 'workers-ai') {
     const token = env.WORKERS_AI_API_TOKEN;
@@ -130,7 +133,7 @@ export class ImageProviderError extends Error {
   constructor(message, code = 'provider_invalid_response') { super(message); this.code = code; }
 }
 const INVALID_IMAGE = 'The image provider returned an unreadable or missing image. Try another model or check the provider status.';
-const providerName = provider => ({openai: 'OpenAI', 'workers-ai': 'Cloudflare Workers AI', 'google-ai-studio': 'Google AI Studio'})[provider];
+const providerName = provider => ({openai: 'OpenAI', 'workers-ai': 'Cloudflare Workers AI', 'google-ai-studio': 'Google AI Studio', fal: 'fal.ai'})[provider];
 
 // Read only a small error envelope. Provider text may echo prompts, credentials,
 // or internal diagnostics: use it to classify errors, never forward it verbatim.
@@ -166,7 +169,7 @@ function providerFailure(request, status, body) {
       'Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst to use OpenAI, or upgrade the Cloudflare Workers plan',
       status >= 400 ? ` (HTTP ${status}; Cloudflare code 4006)` : ' (Cloudflare code 4006)');
   }
-  if (known('insufficient_quota', 'billing_hard_limit_reached', 'billing_not_active') || /insufficient.{0,20}(credit|quota)|billing.{0,20}limit/.test(messages)) {
+  if ((request.provider === 'fal' && status === 402) || known('insufficient_quota', 'billing_hard_limit_reached', 'billing_not_active') || /insufficient.{0,20}(credit|quota)|billing.{0,20}limit/.test(messages)) {
     return failure('provider_quota_exhausted', `${name} reports exhausted credits or quota. Check that provider’s billing and usage limits, or choose another provider`);
   }
   if (known('content_policy_violation', 'safety_violations', 'IMAGE_SAFETY', 'SAFETY') || /content policy|safety filter/.test(messages)) {
@@ -275,4 +278,109 @@ export async function runImageRequest(request) {
     imageInputTokens: count(usage?.input_tokens_details?.image_tokens),
     cachedInputTokens: count(usage?.input_tokens_details?.cached_tokens),
     outputTokens: count(usage?.output_tokens), totalTokens: count(usage?.total_tokens)};
+}
+
+
+// Redmond V2 is an SDXL adapter, not a standalone checkpoint or a FLUX LoRA.
+// Pin the weights so new uploads cannot silently change an existing preset.
+export const REDMOND_REVISION = '0e67e0de2b603db085e525e7f6194b24dc60033d';
+const FAL_ENDPOINT = 'fal-ai/lora';
+const FAL_QUEUE = 'https://queue.fal.run/' + FAL_ENDPOINT;
+function falTransport(env, target) {
+  if (!/^[a-fA-F0-9]{32}$/.test(env.AI_GATEWAY_ACCOUNT_ID ?? '') ||
+      !identifier(env.AI_GATEWAY_ID) || !secret(env.AI_GATEWAY_TOKEN) || !secret(env.FAL_KEY)) {
+    throw new Error('Missing fal or gateway configuration');
+  }
+  return {url: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/fal`,
+    headers: {'Content-Type': 'application/json', Authorization: 'Key ' + env.FAL_KEY,
+      'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN, 'cf-aig-skip-cache': 'true',
+      'cf-aig-max-attempts': '1', 'x-fal-target-url': target}};
+}
+function falImageRequest(env, subject, size) {
+  falTransport(env, FAL_QUEUE); // Validate before consuming any allowance.
+  if (!/^(0|[1-9][0-9]{0,5})$/.test(env.FAL_DAILY_GENERATION_LIMIT ?? '') ||
+      Number(env.FAL_DAILY_GENERATION_LIMIT) > 100000) throw new Error('Missing fal trial limit');
+  // About one megapixel, retaining the requested aspect ratio and generous margins.
+  const scale = Math.min(1, Math.sqrt(1048576 / (size.width * size.height)));
+  const image_size = Object.fromEntries(['width', 'height'].map(edge => [edge, Math.round(size[edge] * scale / 16) * 16]));
+  return {provider: 'fal', model: FAL_ENDPOINT, viaGateway: true, modelRevision: REDMOND_REVISION,
+    payload: {model_name: 'stabilityai/stable-diffusion-xl-base-1.0',
+      loras: [{path: `https://huggingface.co/artificialguybr/ColoringBookRedmond-V2/resolve/${REDMOND_REVISION}/ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors`, scale: 1}],
+      prompt: 'ColoringBookAF, Coloring Book. ' + subject.trim() +
+        '. Child-friendly black outlines, enclosed coloring areas, white background, generous margins.',
+      negative_prompt: NEGATIVE_PROMPT, prompt_weighting: true, image_size,
+      num_inference_steps: 30, guidance_scale: 7.5, num_images: 1,
+      image_format: 'png', enable_safety_checker: true}};
+}
+async function boundedBytes(response, limit) {
+  if (!response.body) throw new ImageProviderError(INVALID_IMAGE);
+  const reader = response.body.getReader(), chunks = []; let length = 0;
+  try {
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      length += value.length;
+      if (length > limit) { await reader.cancel(); throw new ImageProviderError(INVALID_IMAGE); }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(length); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  return bytes;
+}
+async function falJSON(env, target, payload) {
+  const {url, headers} = falTransport(env, target);
+  let response;
+  try {
+    response = await fetch(url, {method: payload ? 'POST' : 'GET', headers,
+      ...(payload ? {body: JSON.stringify(payload)} : {}), redirect: 'manual', signal: AbortSignal.timeout(20000)});
+    if (!response.ok) throw providerFailure({provider: 'fal'}, response.status, await errorBody(response));
+    const rawUnits = response.headers.get('x-fal-billable-units');
+    const units = rawUnits !== null && /^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(rawUnits) ? Number(rawUnits) : null;
+    return {data: JSON.parse(new TextDecoder().decode(await boundedBytes(response, 262144))),
+      billableUnits: Number.isFinite(units) ? units : null};
+  } catch (error) {
+    if (error instanceof ImageProviderError) throw error;
+    throw new ImageProviderError('fal.ai could not return the job status. Check unfinished sheets before generating again.', 'provider_connection_failed');
+  }
+}
+export async function submitFalRequest(env, request) {
+  const {data: result} = await falJSON(env, FAL_QUEUE, request.payload);
+  if (typeof result.request_id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(result.request_id)) {
+    throw new ImageProviderError('fal.ai did not return a usable job ID. Generation may have been charged.', 'provider_invalid_response');
+  }
+  return result.request_id;
+}
+export async function pollFalRequest(env, requestID) {
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(requestID)) throw new ImageProviderError(INVALID_IMAGE);
+  // Construct trusted queue URLs; never follow provider-supplied status URLs.
+  const target = FAL_QUEUE + '/requests/' + requestID;
+  const {data: status} = await falJSON(env, target + '/status');
+  if (['IN_QUEUE', 'IN_PROGRESS'].includes(status.status)) return null;
+  if (status.status !== 'COMPLETED') throw new ImageProviderError(INVALID_IMAGE);
+  if (status.error) throw new ImageProviderError('fal.ai could not complete this sheet. Review usage before generating again.', 'upstream_failed');
+  const {data: result, billableUnits} = await falJSON(env, target);
+  if (result.has_nsfw_concepts?.some(value => value === true)) {
+    throw new ImageProviderError('fal.ai rejected this image under its content rules. Revise the description.', 'provider_content_rejected');
+  }
+  const url = new URL(result.images?.[0]?.url ?? 'about:blank');
+  if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+      !(url.hostname === 'fal.media' || url.hostname.endsWith('.fal.media'))) throw new ImageProviderError(INVALID_IMAGE);
+  // CDN downloads carry no credentials and may not redirect to another host.
+  const response = await fetch(url.href, {redirect: 'manual', signal: AbortSignal.timeout(20000)});
+  if (!response.ok) throw new ImageProviderError('The generated sheet could not be downloaded. Check unfinished sheets again.', 'provider_connection_failed');
+  const decoded = decodePNG(await boundedBytes(response, 20 * 1024 * 1024));
+  const [width, height] = decoded.size.split('x').map(Number);
+  if (width * height > 3686400) throw new ImageProviderError(INVALID_IMAGE);
+  return {...decoded, billableUnits, seed: Number.isSafeInteger(result.seed) ? result.seed : null,
+    inferenceMs: Number.isFinite(status.metrics?.inference_time) ? status.metrics.inference_time * 1000 : null,
+    inputTokens: null, outputTokens: null, totalTokens: null};
+}
+
+
+// Read billing headers for older saved jobs without downloading or generating an image.
+export async function falBillableUnits(env, requestID) {
+  if (typeof requestID !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(requestID)) return null;
+  try { return (await falJSON(env, FAL_QUEUE + '/requests/' + requestID)).billableUnits; }
+  catch { return null; }
 }
