@@ -15,6 +15,10 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case sdxlLightning = "stable-diffusion-xl-lightning"
     case dreamShaper = "dreamshaper-8-lcm"
     case redmond = "coloringbook-redmond-v2"
+    // Keep older cases decodable so unfinished generations can still be recovered.
+    static let selectable: [ImageModel] = [
+        .flare, .sunburst, .fluxKlein4B, .fluxKlein9B, .phoenix, .redmond
+    ]
     var id: String { rawValue }
     var label: String {
         switch self {

@@ -436,7 +436,7 @@ struct ContentView: View {
                 }
                 Section("Generation") {
                     Picker("Model", selection: $store.model) {
-                        ForEach(ImageModel.allCases) { model in
+                        ForEach(ImageModel.selectable) { model in
                             Text(model.label).tag(model)
                         }
                     }

@@ -35,7 +35,8 @@ final class ColoringViewModel: ObservableObject {
         self.service = service; self.isMock = isMock; self.defaults = defaults
         let stored = defaults.integer(forKey: "childAge")
         age = (3...18).contains(stored) ? stored : 0
-        model = ImageModel(rawValue: defaults.string(forKey: "generationModel") ?? "") ?? .sunburst
+        let storedModel = defaults.string(forKey: "generationModel")
+        model = ImageModel.selectable.first(where: { $0.rawValue == storedModel }) ?? .sunburst
         let storedCount = defaults.object(forKey: "imageCount") as? Int ?? Self.batchSize
         imageCount = min(max(storedCount, 1), Self.batchSize)
     }

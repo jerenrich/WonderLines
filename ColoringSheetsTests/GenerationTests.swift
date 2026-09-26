@@ -3,6 +3,13 @@ import UIKit
 @testable import ColoringSheets
 
 final class GenerationTests: XCTestCase {
+    func testSelectableModelsExcludeRetiredChoices() {
+        XCTAssertEqual(ImageModel.selectable.map(\.rawValue), [
+            "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
+            "flux-2-klein-4b", "flux-2-klein-9b", "phoenix-1.0", "coloringbook-redmond-v2"
+        ])
+    }
+
     func testAgeGuidanceAndWireContract() throws {
         for model in ImageModel.allCases {
             let young = try GenerationRequest(description: "A test flower", age: 3, model: model)
@@ -647,6 +654,12 @@ final class StateTests: XCTestCase {
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 1)
         defaults.set("unsupported", forKey: "generationModel")
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).model, .sunburst)
+        for removed in ["dreamshaper-8-lcm", "stable-diffusion-xl-lightning",
+                        "stable-diffusion-xl-base-1.0", "lucid-origin",
+                        "flux-1-schnell", "flux-2-dev"] {
+            defaults.set(removed, forKey: "generationModel")
+            XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).model, .sunburst)
+        }
     }
     func testSelectionPersistenceDuplicatesFailureAndBackground() async {
         let name = "ColoringTests-" + UUID().uuidString
