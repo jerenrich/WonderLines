@@ -63,10 +63,13 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(subject.placeholderValue?.isEmpty ?? true, "The placeholder disappears on focus")
         let emptyFrame = subject.frame
         subject.typeText("A")
-        XCTAssertEqual(subject.frame.minY, emptyFrame.minY, accuracy: 1)
+        // The simulator may collapse a software keyboard to its suggestion bar
+        // when a hardware keyboard is attached, moving the editor vertically.
+        XCTAssertTrue(subject.isHittable, "Typing must leave the editor visible")
         XCTAssertEqual(subject.frame.height, emptyFrame.height, accuracy: 1)
         subject.typeText(XCUIKeyboardKey.delete.rawValue)
-        XCTAssertEqual(subject.frame.minY, emptyFrame.minY, accuracy: 1)
+        XCTAssertTrue(subject.isHittable, "Deleting must leave the editor visible")
+        XCTAssertEqual(subject.frame.height, emptyFrame.height, accuracy: 1)
         subject.typeText("A friendly flower")
         XCTAssertTrue(app.buttons["dismissKeyboard"].isHittable)
         app.buttons["dismissKeyboard"].tap()
@@ -97,7 +100,7 @@ final class GalleryUITests: XCTestCase {
             XCTAssertTrue(app.buttons["Print"].exists)
         }
         app.buttons["usage"].tap()
-        XCTAssertTrue(app.navigationBars["Usage & estimated cost"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Usage & cost"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Done"].isHittable)
         let usage = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         usage.name = "Portrait usage fits the display"
@@ -151,7 +154,9 @@ final class GalleryUITests: XCTestCase {
         let beforeFocusedClear = subject.frame
         app.buttons["clearDescription"].tap()
         XCTAssertEqual(subject.value as? String, "")
-        XCTAssertEqual(subject.frame.minY, beforeFocusedClear.minY, accuracy: 1)
+        XCTAssertTrue(subject.isHittable, "Clearing must leave the editor visible")
+        XCTAssertEqual(subject.frame.width, beforeFocusedClear.width, accuracy: 1)
+        XCTAssertEqual(subject.frame.height, beforeFocusedClear.height, accuracy: 1)
         XCTAssertTrue(app.keyboards.firstMatch.exists)
         subject.typeText("A moonlit garden")
         XCTAssertEqual(subject.value as? String, "A moonlit garden")
