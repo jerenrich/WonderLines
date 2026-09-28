@@ -284,6 +284,7 @@ final class WorkerClient: GenerationServing {
     // bundle or use shared credentials.
     private let legacyCredential: String?
     private let identities: AnonymousIdentityStore?
+    private let appAttest = AppAttestClient()
     private let session: URLSession
     private let pendingStore: PendingGenerationStore
     private let recoverySleep: @Sendable (Duration) async throws -> Void
@@ -331,9 +332,17 @@ final class WorkerClient: GenerationServing {
         let generationID = UUID()
         http.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        http.setValue(generationID.uuidString.lowercased(), forHTTPHeaderField: "Idempotency-Key")
+        let idempotencyKey = generationID.uuidString.lowercased()
+        http.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
         http.setValue("1", forHTTPHeaderField: "X-Coloring-API-Version")
-        http.httpBody = try request.encoded()
+        let requestBody = try request.encoded()
+        http.httpBody = requestBody
+        if legacyCredential == nil, let accountID = await identities?.session()?.accountID {
+            let headers = try await appAttest.proof(accountID: accountID, token: authorization,
+                                                    serviceURL: serviceURL, session: session,
+                                                    idempotencyKey: idempotencyKey, body: requestBody)
+            for (name, value) in headers ?? [:] { http.setValue(value, forHTTPHeaderField: name) }
+        }
         if request.model == .redmond, let scope = await pendingScope() {
             try await pendingStore.add(PendingGeneration(id: generationID, model: request.model, createdAt: Date()), scope: scope)
         }

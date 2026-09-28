@@ -7,6 +7,8 @@ on:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_image_cost.mjs'
+      - 'Scripts/test_app_attest.mjs'
+      - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   push:
     branches: [main]
@@ -14,6 +16,8 @@ on:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_image_cost.mjs'
+      - 'Scripts/test_app_attest.mjs'
+      - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:
 

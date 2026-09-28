@@ -20,6 +20,26 @@ node Scripts/test_worker.mjs
 
 This replaces upstream requests with synthetic responses and makes no network calls or paid generations. It covers direct OpenAI, both Gateway credential modes, Gemini, all nine Workers AI models, model remapping, validation before spending, PNG output and metrics, provider failures, recovery, idempotency, renewal, and budgets.
 
+## App Attest rollout
+
+The iOS app now creates one App Attest key per anonymous account and saves its key ID and enrollment state in this device's Keychain. The Worker verifies the Apple certificate chain against its bundled [Apple App Attestation root](https://www.apple.com/certificateauthority/private/), the nonce, App ID, environment, credential ID and public key, then stores the public key in that account's Durable Object. The private key never leaves the device. Each image-generation POST signs the exact JSON body hash, method, path, idempotency key and a five-minute Worker challenge. The Worker persists a compact 64-counter replay window in the same account object before any provider reservation. Parallel batches may arrive out of order within that window. Saved images, polling, access reads and token renewal retain bearer authentication and do not require another assertion.
+
+Set these **dashboard-managed Worker text variables** before distributing the updated app:
+
+| Variable | Value |
+| --- | --- |
+| `APP_ATTEST_APP_ID` | The exact App ID prefix plus `.com.jordan.family.ColoringSheets` (usually the 10-character Apple Team ID as prefix) |
+| `APP_ATTEST_ENVIRONMENT` | `production` for the committed app entitlement, including TestFlight and App Store builds |
+| `APP_ATTEST_ENFORCE` | `false` during the app rollout, then `true` when older app builds may be blocked |
+
+Enable App Attest for this App ID in Apple Developer and ensure its provisioning profile contains the capability. The committed app entitlement uses the production environment even in development builds, so a single Worker environment can verify those builds. For isolated sandbox testing, change the app entitlement to `development` and point it at a separate Worker deployment with `APP_ATTEST_ENVIRONMENT=development`; development keys cannot be verified as production keys. Do not change the environment for an existing account's saved key.
+
+During rollout, accounts that have successfully enrolled require assertions even while `APP_ATTEST_ENFORCE=false`. Setting it to `true` additionally rejects older app builds and devices where `DCAppAttestService.isSupported` is false. The app checks support before using DeviceCheck; unsupported devices can still use the legacy API only while enforcement is off. Set the variable deliberately after accounting for that device support policy. Missing or malformed App Attest configuration rejects signed requests before any provider spend.
+
+Each generation adds one short challenge round trip, one signature on the device, and one small Durable Object counter write. Challenges are HMAC-signed and self-contained, so they add no storage write; the HMAC key and Apple root certificate are cached per Worker isolate. Enrollment is performed once per account and its public key persists across Worker restarts. After an interrupted enrollment, the app checks `/v1/app-attest/status` before asking Apple to attest the same key again. There is no Apple server call on each generation. App Attest raises the cost of API abuse but does not replace the existing account and global spend caps.
+
+The offline `node Scripts/test_worker.mjs` suite covers Apple’s published attestation object, assertion signatures, request binding, replay, challenge scope and the existing generation flow. A real signed-device check is needed before turning on enforcement; the simulator cannot exercise App Attest.
+
 ## Estimated cost in app stats
 
 New successful generations include `estimatedInputUsd`, `estimatedOutputUsd`, `estimatedTotalUsd`, `estimateBasis`, and `ratesChecked` in the existing metrics header. The app already reads these fields, so deploying this Worker fixes cost display for new sheets without an app rebuild. Saved jobs retain their original metrics; older jobs without estimates are not backfilled or regenerated.

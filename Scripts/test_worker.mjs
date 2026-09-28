@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import './test_image_cost.mjs';
+import './test_app_attest.mjs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
 import {falCostData} from '../workers/coloring-sheets-api/src/fal-cost.mjs';
 import {modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';

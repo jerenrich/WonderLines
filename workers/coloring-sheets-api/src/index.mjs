@@ -2,6 +2,7 @@
 import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
 import {falCostData} from './fal-cost.mjs';
+import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status) => reply({error: {code, message}}, status);
@@ -23,15 +24,41 @@ function freeDailyAllowance(env) {
 }
 function b64(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
 function unb64(s) { return Uint8Array.from(atob(s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
-async function key(secret) { return crypto.subtle.importKey('raw', encoder.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign', 'verify']); }
+let cachedHMAC;
+async function key(secret) {
+  if (cachedHMAC?.secret !== secret) cachedHMAC = {secret, promise: crypto.subtle.importKey('raw', encoder.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign', 'verify'])};
+  return cachedHMAC.promise;
+}
 async function token(sub, cid, secret) { const body = b64(encoder.encode(JSON.stringify({v: 1, sub, cid, exp: Math.floor(Date.now() / 1000) + TOKEN_SECONDS}))); return body + '.' + b64(new Uint8Array(await crypto.subtle.sign('HMAC', await key(secret), encoder.encode(body)))); }
 async function claims(header, secret, allowExpired = false) {
   if (!header?.startsWith('Bearer ') || !secret) return null;
   const [body, signature, extra] = header.slice(7).split('.'); if (!body || !signature || extra) return null;
   try { const value = JSON.parse(new TextDecoder().decode(unb64(body))); return await crypto.subtle.verify('HMAC', await key(secret), unb64(signature), encoder.encode(body)) && value.v === 1 && /^[0-9a-f-]{36}$/.test(value.sub) && /^[0-9a-f-]{36}$/.test(value.cid) && Number.isSafeInteger(value.exp) && (allowExpired || value.exp > Date.now() / 1000) ? value : null; } catch { return null; }
 }
-async function body(request) { if (!request.headers.get('Content-Type')?.startsWith('application/json')) return null; const text = await request.text(); if (text.length > 4096) return null; try { return JSON.parse(text); } catch { return null; } }
+async function body(request, max = 4096) { if (!request.headers.get('Content-Type')?.startsWith('application/json')) return null; const text = await request.text(); if (text.length > max) return null; try { return JSON.parse(text); } catch { return null; } }
 async function digest(value) { return b64(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))); }
+// The challenge is self-contained and MACed, so issuing one costs no DO write.
+// Assertion counters in the account DO supply the one-time replay guarantee.
+async function challenge(accountID, purpose, secret) {
+  const data = b64(encoder.encode(JSON.stringify({v: 1, accountID, purpose, expires: Date.now() + 300000, nonce: b64(crypto.getRandomValues(new Uint8Array(32)))})));
+  return data + '.' + b64(new Uint8Array(await crypto.subtle.sign('HMAC', await key(secret), encoder.encode('app-attest:' + data))));
+}
+async function challengeValid(value, accountID, purpose, secret) {
+  if (typeof value !== 'string' || value.length > 512) return false;
+  const [data, mac, extra] = value.split('.'); if (!data || !mac || extra) return false;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(unb64(data)));
+    return payload.v === 1 && payload.accountID === accountID && payload.purpose === purpose &&
+      Number.isSafeInteger(payload.expires) && payload.expires > Date.now() && payload.expires <= Date.now() + 300000 &&
+      typeof payload.nonce === 'string' && payload.nonce.length === 43 &&
+      await crypto.subtle.verify('HMAC', await key(secret), unb64(mac), encoder.encode('app-attest:' + data));
+  } catch { return false; }
+}
+function appAttestConfigured(env) {
+  return /^[A-Z0-9]{10}\.com\.jordan\.family\.ColoringSheets$/.test(env.APP_ATTEST_APP_ID ?? '') &&
+    ['development', 'production'].includes(env.APP_ATTEST_ENVIRONMENT);
+}
+
 function stub(env, id) { return env.ACCOUNTS.get(env.ACCOUNTS.idFromName(id)); }
 async function call(env, id, path, input) { const response = await stub(env, id).fetch('https://account' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(input)}); return {status: response.status, value: await response.json()}; }
 async function reserveGlobalBudget(env, claim, provider) {
@@ -74,14 +101,28 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); }
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); }
   async fetch(request) {
     const input = await request.json().catch(() => null), path = new URL(request.url).pathname;
     if (!input || request.method !== 'POST') return fail('invalid_request', 'Send JSON.', 400);
     if (path === '/initialize') return this.initialize(input);
     const account = await this.state.storage.get('account');
     if (!account) return fail('unknown_account', 'Unknown account.', 404);
-    if (path === '/authorize') return account.credentialId === input.credentialId ? reply({access: await this.access()}) : fail('invalid_token', 'Invalid token.', 401);
+    if (path === '/authorize') return account.credentialId === input.credentialId ? reply({access: await this.access(), appAttested: !!account.appAttested}) : fail('invalid_token', 'Invalid token.', 401);
+    if (path === '/attest-status') {
+      const enrolled = await this.state.storage.get('app-attest');
+      return reply({keyID: enrolled?.keyID ?? null});
+    }
+    if (path === '/attest') {
+      const update = this.attestUpdates.then(() => this.registerAttestation(input));
+      this.attestUpdates = update.catch(() => {});
+      return update;
+    }
+    if (path === '/assertion') {
+      const update = this.attestUpdates.then(() => this.assertion(input));
+      this.attestUpdates = update.catch(() => {});
+      return update;
+    }
     if (path === '/reserve') {
       // The global budget call yields to other requests. Keep account reservations
       // in order so a parallel batch cannot read and spend the same allowance.
@@ -94,6 +135,28 @@ export class Account {
     if (path === '/complete') return this.complete(input);
     if (path === '/access') return reply({access: await this.access()});
     return fail('not_found', 'Not found.', 404);
+  }
+  async registerAttestation(input) {
+    if (typeof input.keyID !== 'string' || typeof input.publicKey !== 'string' || input.publicKey.length > 1024) return fail('invalid_request', 'Invalid attestation.', 400);
+    const previous = await this.state.storage.get('app-attest');
+    if (previous && previous.keyID !== input.keyID) return fail('attestation_conflict', 'This installation already has an attested key.', 409);
+    const account = await this.state.storage.get('account');
+    if (!previous || !account.appAttested) {
+      await this.state.storage.transaction(async storage => {
+        if (!previous) await storage.put('app-attest', {keyID: input.keyID, publicKey: input.publicKey, counter: 0, seen: '0'});
+        if (!account.appAttested) await storage.put('account', {...account, appAttested: true});
+      });
+    }
+    return reply({attested: true});
+  }
+  async assertion({assertion, clientData}) {
+    const record = await this.state.storage.get('app-attest');
+    if (!record) return fail('app_attest_required', 'This installation needs App Attest enrollment.', 403);
+    try {
+      const counter = verifyAssertion(assertion, fromB64url(clientData, 2048), record.publicKey, this.env.APP_ATTEST_APP_ID);
+      await this.state.storage.put('app-attest', acceptCounter(record, counter));
+      return reply({verified: true});
+    } catch { return fail('invalid_assertion', 'App Attest assertion could not be verified.', 403); }
   }
   async initialize({accountId}) {
     if (!/^[0-9a-f-]{36}$/.test(accountId) || await this.state.storage.get('account')) return fail('invalid_account', 'Invalid account.', 409);
@@ -237,7 +300,7 @@ export class Account {
   }
 }
 
-async function authenticate(request, env, allowExpired = false) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, allowExpired); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, credentialId: c.cid, access: checked.value.access} : null; }
+async function authenticate(request, env, allowExpired = false) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, allowExpired); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, credentialId: c.cid, access: checked.value.access, appAttested: checked.value.appAttested} : null; }
 async function saved(env, job, access) {
   if (job.state === 'completed') { const image = await env.GENERATIONS.get(job.objectKey); if (!image) return fail('result_unavailable', 'Saved image is unavailable.', 410); return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}}); }
   if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
@@ -304,6 +367,27 @@ export default { async fetch(request, env) {
     return reply({accountId: account.id, accessToken: await token(account.id, account.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: account.access});
   }
   const account = await authenticate(request, env); if (!account) return fail('unauthorized', 'Register this app installation again.', 401);
+  if (url.pathname === '/v1/app-attest/challenge' && request.method === 'POST') {
+    if (!appAttestConfigured(env)) return fail('service_unavailable', 'App Attest is not configured.', 503);
+    const input = await body(request);
+    if (!['attestation', 'assertion'].includes(input?.purpose)) return fail('invalid_request', 'Invalid challenge purpose.', 400);
+    return reply({challenge: await challenge(account.id, input.purpose, env.ACCOUNT_TOKEN_SECRET)});
+  }
+  if (url.pathname === '/v1/app-attest/status' && request.method === 'GET') {
+    const status = await call(env, account.id, '/attest-status', {});
+    return reply(status.value, status.status);
+  }
+  if (url.pathname === '/v1/app-attest/attest' && request.method === 'POST') {
+    if (!appAttestConfigured(env)) return fail('service_unavailable', 'App Attest is not configured.', 503);
+    const input = await body(request, 16384);
+    if (!input || !await challengeValid(input.challenge, account.id, 'attestation', env.ACCOUNT_TOKEN_SECRET)) return fail('invalid_attestation', 'Invalid attestation challenge.', 403);
+    try {
+      const verified = verifyAttestation(input.attestation, input.keyID, input.challenge, env.APP_ATTEST_APP_ID, env.APP_ATTEST_ENVIRONMENT);
+      const stored = await call(env, account.id, '/attest', verified);
+      return reply(stored.value, stored.status);
+    } catch { return fail('invalid_attestation', 'App Attest attestation could not be verified.', 403); }
+  }
+
   if (url.pathname === '/v1/models' && request.method === 'GET') {
     try {
       const {defaultModel, routes} = modelCatalog(env);
@@ -311,7 +395,29 @@ export default { async fetch(request, env) {
     } catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
   }
   if (url.pathname === '/v1/access' && request.method === 'GET') return reply({access: account.access});
-  if (url.pathname === '/v1/generations' && request.method === 'POST') return generate(request, env, account);
+  if (url.pathname === '/v1/generations' && request.method === 'POST') {
+    const signed = request.headers.get('X-App-Attest-Assertion');
+    if (env.APP_ATTEST_ENFORCE && !['true', 'false'].includes(env.APP_ATTEST_ENFORCE)) return fail('service_unavailable', 'App Attest policy is invalid.', 503);
+    if (signed || account.appAttested || env.APP_ATTEST_ENFORCE === 'true') {
+      if (!appAttestConfigured(env)) return fail('service_unavailable', 'App Attest is not configured.', 503);
+      const encoded = request.headers.get('X-App-Attest-Client-Data');
+      let clientData;
+      try {
+        clientData = fromB64url(encoded, 2048);
+        const parsed = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(clientData));
+        const raw = await request.clone().arrayBuffer();
+        if (raw.byteLength > 4096 || parsed.method !== 'POST' || parsed.path !== '/v1/generations' ||
+            parsed.idempotencyKey !== request.headers.get('Idempotency-Key') ||
+            parsed.bodySHA256 !== b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', raw))) ||
+            !await challengeValid(parsed.challenge, account.id, 'assertion', env.ACCOUNT_TOKEN_SECRET)) {
+          return fail('invalid_assertion', 'Invalid App Attest request binding.', 403);
+        }
+      } catch { return fail('invalid_assertion', 'Invalid App Attest request binding.', 403); }
+      const checked = await call(env, account.id, '/assertion', {assertion: signed, clientData: encoded});
+      if (checked.status !== 200) return reply(checked.value, checked.status);
+    }
+    return generate(request, env, account);
+  }
   const usageMatch = /^\/v1\/generations\/([0-9a-f-]{36})\/usage$/.exec(url.pathname);
   if (usageMatch && request.method === 'GET') {
     const result = await call(env, account.id, '/usage', {generationId: usageMatch[1]});
