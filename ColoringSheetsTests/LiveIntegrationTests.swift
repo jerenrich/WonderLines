@@ -3,6 +3,50 @@ import XCTest
 
 /// Opt-in only. Standard test runs skip this test and never send paid requests.
 final class LiveIntegrationTests: XCTestCase {
+    func testExplicitAppAttestCheckWithoutGeneration() async throws {
+        guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_ATTEST_CHECK"] == "verify-only" else {
+            throw XCTSkip("Real-device App Attest check requires explicit opt-in.")
+        }
+        let configuration = AppConfiguration.load()
+        XCTAssertFalse(configuration.mock)
+        guard !configuration.mock else { return }
+        let saved = await AnonymousIdentityStore().session()
+        let identity = try XCTUnwrap(saved, "Use an existing app installation for this check.")
+        XCTAssertTrue(identity.isUsable)
+        guard identity.isUsable else { return }
+        let session = URLSession(configuration: .ephemeral, delegate: NoRedirectDelegate(), delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        // A correctly signed empty body reaches input validation (400) only
+        // after App Attest verification, and cannot reserve or generate an image.
+        let body = Data("{}".utf8), id = UUID()
+        let headers = try await AppAttestClient().proof(accountID: identity.accountID,
+            token: identity.accessToken, serviceURL: configuration.serviceURL, session: session,
+            idempotencyKey: id.uuidString.lowercased(), body: body)
+        let proof = try XCTUnwrap(headers, "App Attest must be supported on this device.")
+        var request = URLRequest(url: configuration.serviceURL.appending(path: "/v1/generations"))
+        request.httpMethod = "POST"
+        request.httpBody = body
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer " + identity.accessToken, forHTTPHeaderField: "Authorization")
+        request.setValue(id.uuidString.lowercased(), forHTTPHeaderField: "Idempotency-Key")
+        for (name, value) in proof { request.setValue(value, forHTTPHeaderField: name) }
+        let (data, response) = try await session.data(for: request)
+        let http = try XCTUnwrap(response as? HTTPURLResponse)
+        let code = WorkerClient.workerErrorCode(data, response: http)
+        await DiagnosticLog.shared.record("App Attest live check", "empty-body response",
+            generationID: id, httpStatus: http.statusCode, workerCode: code)
+        XCTAssertEqual(http.statusCode, 400, "A valid assertion must reach input validation.")
+        XCTAssertEqual(code, "invalid_request")
+        guard http.statusCode == 400, code == "invalid_request" else { return }
+        let (replayedData, replayedResponse) = try await session.data(for: request)
+        let replayed = try XCTUnwrap(replayedResponse as? HTTPURLResponse)
+        XCTAssertEqual(replayed.statusCode, 403)
+        XCTAssertEqual(WorkerClient.workerErrorCode(replayedData, response: replayed), "invalid_assertion")
+        await DiagnosticLog.shared.record("App Attest replay check", "response",
+            generationID: id, httpStatus: replayed.statusCode,
+            workerCode: WorkerClient.workerErrorCode(replayedData, response: replayed))
+    }
+
     func testExplicitTwoGenerationCheck() async throws {
         guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_LIVE_CHECK"] == "two-generations" else {
             throw XCTSkip("Paid integration check requires explicit opt-in.")

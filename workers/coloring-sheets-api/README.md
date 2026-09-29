@@ -44,6 +44,8 @@ Assertion verification uses `SHA256(authenticatorData || SHA256(clientData))` as
 
 Cloudflare logs include `app_attest_rejected` with a fixed verification-failure label (format, signature, App ID or replay). The log excludes assertions, public keys, client data, headers and arbitrary exception text. The app's Settings → Diagnostics records the corresponding request time, generation ID and HTTP/error code.
 
+For a no-generation device check, build the app tests in live mode, set the test host environment variable `COLORING_EXPLICIT_ATTEST_CHECK=verify-only`, and run `LiveIntegrationTests/testExplicitAppAttestCheckWithoutGeneration` on a provisioned physical device with an existing app account. It uses the app's real key to sign an empty-body POST: HTTP 400 `invalid_request` confirms the assertion passed and input validation prevented generation; replaying that exact request must return HTTP 403 `invalid_assertion`. Standard test runs skip this opt-in check. This passed on the connected ninth-generation iPad on 29 September 2026, with Cloudflare logs confirming the expected responses and replay rejection.
+
 ## Estimated cost in app stats
 
 New successful generations include `estimatedInputUsd`, `estimatedOutputUsd`, `estimatedTotalUsd`, `estimateBasis`, and `ratesChecked` in the existing metrics header. The app already reads these fields, so deploying this Worker fixes cost display for new sheets without an app rebuild. Saved jobs retain their original metrics; older jobs without estimates are not backfilled or regenerated.
