@@ -220,8 +220,8 @@ final class GalleryUITests: XCTestCase {
         app.buttons["Done"].tap()
         app.buttons["generate"].tap()
 
-        // A new generation clears the in-memory gallery; do not accept an old
-        // sheet or a transient absence of the progress label as success.
+        // This launch starts with an empty in-memory gallery. Wait for a result
+        // or explicit failure, not a transient absence of the progress label.
         let complete = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in
                 app.staticTexts["sheetPosition"].exists || app.buttons["failureDiagnostics"].exists

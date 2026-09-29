@@ -162,10 +162,12 @@ export function verifyAssertion(assertion, clientData, publicKey, appID) {
   const authData = object instanceof Map && object.get('authenticatorData'), signature = object instanceof Map && object.get('signature');
   if (!bytes(authData) || authData.length < 37 || authData.length > 1024 ||
       !bytes(signature) || !signature.length || signature.length > 128) throw Error('Invalid assertion');
-  // iOS 27 appends signed WebAuthn extensions after the 37-byte core. Older
-  // assertions have no extension flag and must end exactly at byte 37.
-  const hasExtensions = Boolean(authData[32] & 0x80);
-  if (authData[32] & 0x40 || hasExtensions === (authData.length === 37)) throw Error('Invalid assertion extensions');
+  // Apple assertions use a simplified authenticator format. Real assertions
+  // set AT (0x40) even without credential data, so WebAuthn's AT rule does not
+  // apply. As with Apple's attestation fixture, parse any signed trailing CBOR
+  // by its actual presence; the flags do not reliably advertise extensions.
+  const hasExtensions = authData.length > 37;
+  if (!hasExtensions && (authData[32] & 0x80)) throw Error('Invalid assertion extensions');
   if (hasExtensions) {
     const extensions = decodeCBOR(authData.slice(37));
     if (!(extensions instanceof Map)) throw Error('Invalid assertion extensions');
@@ -177,7 +179,10 @@ export function verifyAssertion(assertion, clientData, publicKey, appID) {
   }
   const counter = rp(authData, appID);
   if (!counter) throw Error('Invalid assertion counter');
-  if (!verifySignature('sha256', concat(authData, hash(clientData)), createPublicKey(publicKey), signature)) throw Error('Invalid assertion signature');
+  // App Attest signs the nonce as a message. Node's SHA-256 ECDSA verifier
+  // hashes that nonce itself; passing the composite omits a required hash.
+  const nonce = hash(concat(authData, hash(clientData)));
+  if (!verifySignature('sha256', nonce, createPublicKey(publicKey), signature)) throw Error('Invalid assertion signature');
   return counter;
 }
 export function acceptCounter(record, counter) {

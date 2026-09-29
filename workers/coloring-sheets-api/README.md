@@ -40,6 +40,10 @@ Each generation adds one short challenge round trip, one signature on the device
 
 The offline `node Scripts/test_worker.mjs` suite covers Apple’s published attestation object, assertion signatures, request binding, replay, challenge scope and the existing generation flow. A real signed-device check is needed before turning on enforcement; the simulator cannot exercise App Attest.
 
+Assertion verification uses `SHA256(authenticatorData || SHA256(clientData))` as the nonce message for ECDSA/SHA-256 verification. The verifier hashes that nonce once more as part of ECDSA. Apple's simplified assertion format can set the AT flag without credential data; signed extension bytes are parsed after the 37-byte core. An independently captured Apple assertion in `Scripts/fixtures/apple-assertion.json` guards against duplicating protocol mistakes in both the implementation and synthetic tests; its source and MIT license are retained beside it.
+
+Cloudflare logs include `app_attest_rejected` with a fixed verification-failure label (format, signature, App ID or replay). The log excludes assertions, public keys, client data, headers and arbitrary exception text. The app's Settings → Diagnostics records the corresponding request time, generation ID and HTTP/error code.
+
 ## Estimated cost in app stats
 
 New successful generations include `estimatedInputUsd`, `estimatedOutputUsd`, `estimatedTotalUsd`, `estimateBasis`, and `ratesChecked` in the existing metrics header. The app already reads these fields, so deploying this Worker fixes cost display for new sheets without an app rebuild. Saved jobs retain their original metrics; older jobs without estimates are not backfilled or regenerated.
