@@ -19,6 +19,9 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "modelSetting").firstMatch.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "imageCountSetting").firstMatch.exists)
+        app.buttons["diagnostics"].tap()
+        XCTAssertTrue(app.navigationBars["Diagnostics"].waitForExistence(timeout: 5))
+        app.navigationBars["Diagnostics"].buttons.element(boundBy: 0).tap()
         let age = app.sliders["ageSetting"]
         XCTAssertTrue(age.isHittable)
         XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "Choose an age")

@@ -33,14 +33,29 @@ function cbor(value) {
   if (value instanceof Map) return Buffer.concat([head(5, value.size), ...[...value].flatMap(([k, v]) => [cbor(k), cbor(v)])]);
   throw Error('Unsupported test CBOR');
 }
-function assertion(counter, clientData) {
-  const auth = Buffer.alloc(37); sha(appID).copy(auth); auth[32] = 1; auth.writeUInt32BE(counter, 33);
+const extensionData = cbor(new Map([
+  ['apple_validation_category_01', Buffer.from([1, 0, 0, 0])],
+  ['apple_bundle_version_01', '1']
+]));
+function assertion(counter, clientData, extensions = null, flags = extensions ? 0x81 : 1) {
+  const core = Buffer.alloc(37); sha(appID).copy(core); core[32] = flags; core.writeUInt32BE(counter, 33);
+  const auth = extensions ? Buffer.concat([core, extensions]) : core;
   const signature = sign('sha256', Buffer.concat([auth, sha(clientData)]), privateKey);
   return b64url(cbor(new Map([['authenticatorData', auth], ['signature', signature]])));
 }
 const data = Buffer.from('one use');
 const proof = assertion(1, data);
 assert.equal(verifyAssertion(proof, data, pem, appID), 1);
+assert.equal(verifyAssertion(assertion(2, data, extensionData), data, pem, appID), 2,
+  'iOS 27 assertion extensions follow the signed 37-byte core.');
+assert.throws(() => verifyAssertion(assertion(2, data, extensionData, 1), data, pem, appID),
+  /extensions/, 'Extension bytes require the extension flag.');
+assert.throws(() => verifyAssertion(assertion(2, data, null, 0x81), data, pem, appID),
+  /extensions/, 'The extension flag requires extension data.');
+assert.throws(() => verifyAssertion(assertion(2, data, cbor(new Map([
+  ['apple_validation_category_01', Buffer.from([1, 0, 0, 0])],
+  ['apple_bundle_version_01', '']
+]))), data, pem, appID), /extensions/);
 assert.throws(() => verifyAssertion(proof, Buffer.from('changed'), pem, appID));
 assert.throws(() => verifyAssertion(proof, data, pem, 'ABCDEFGHIJ.other.app'));
 assert.throws(() => decodeCBOR(Buffer.from([0xa2, 0x01, 0x01, 0x01, 0x02])), /Invalid CBOR/);
@@ -78,7 +93,7 @@ const challenge = (await challengeResponse.json()).challenge;
 const id = crypto.randomUUID(), body = JSON.stringify({subject: 'A flower'});
 const clientData = Buffer.from(JSON.stringify({challenge, method: 'POST', path: '/v1/generations',
   idempotencyKey: id, bodySHA256: b64url(sha(body))}));
-const makeRequest = (signedBody = body, signedProof = assertion(1, clientData)) => new Request(base + '/v1/generations', {
+const makeRequest = (signedBody = body, signedProof = assertion(1, clientData, extensionData)) => new Request(base + '/v1/generations', {
   method: 'POST', headers: {...auth, 'Content-Type': 'application/json', 'Idempotency-Key': id,
     'X-App-Attest-Client-Data': b64url(clientData), 'X-App-Attest-Assertion': signedProof}, body: signedBody
 });
