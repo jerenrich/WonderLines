@@ -176,7 +176,8 @@ export function verifyAssertion(assertion, clientData, publicKey, appID) {
         typeof version !== 'string' || !version.length || version.length > 64) throw Error('Invalid assertion extensions');
   }
   const counter = rp(authData, appID);
-  if (!counter || !verifySignature('sha256', concat(authData, hash(clientData)), createPublicKey(publicKey), signature)) throw Error('Invalid assertion');
+  if (!counter) throw Error('Invalid assertion counter');
+  if (!verifySignature('sha256', concat(authData, hash(clientData)), createPublicKey(publicKey), signature)) throw Error('Invalid assertion signature');
   return counter;
 }
 export function acceptCounter(record, counter) {

@@ -156,7 +156,15 @@ export class Account {
       const counter = verifyAssertion(assertion, fromB64url(clientData, 2048), record.publicKey, this.env.APP_ATTEST_APP_ID);
       await this.state.storage.put('app-attest', acceptCounter(record, counter));
       return reply({verified: true});
-    } catch { return fail('invalid_assertion', 'App Attest assertion could not be verified.', 403); }
+    } catch (error) {
+      // Only known verifier labels: never log the assertion, client data, key,
+      // arbitrary exception messages, or request headers.
+      const labels = ['Invalid encoding', 'Invalid CBOR', 'Invalid assertion', 'Invalid assertion extensions',
+        'Invalid RP ID', 'Invalid App ID', 'Invalid assertion counter', 'Invalid assertion signature', 'Replayed assertion'];
+      console.warn(JSON.stringify({event: 'app_attest_rejected',
+        reason: labels.includes(error?.message) ? error.message : 'Verification unavailable'}));
+      return fail('invalid_assertion', 'App Attest assertion could not be verified.', 403);
+    }
   }
   async initialize({accountId}) {
     if (!/^[0-9a-f-]{36}$/.test(accountId) || await this.state.storage.get('account')) return fail('invalid_account', 'Invalid account.', 409);

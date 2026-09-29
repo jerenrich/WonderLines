@@ -205,6 +205,7 @@ final class GalleryUITests: XCTestCase {
         }
         continueAfterFailure = false
         let app = XCUIApplication()
+        app.launchArguments = ["-imageCount", "1", "-childAge", "8"]
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 10))
@@ -219,8 +220,12 @@ final class GalleryUITests: XCTestCase {
         app.buttons["Done"].tap()
         app.buttons["generate"].tap()
 
+        // A new generation clears the in-memory gallery; do not accept an old
+        // sheet or a transient absence of the progress label as success.
         let complete = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == false"), object: app.staticTexts["generationProgress"])
+            predicate: NSPredicate { _, _ in
+                app.staticTexts["sheetPosition"].exists || app.buttons["failureDiagnostics"].exists
+            }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 240), .completed)
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Live iPad generation result"
