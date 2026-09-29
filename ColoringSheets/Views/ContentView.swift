@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var store: ColoringViewModel
+    @ObservedObject private var diagnostics = DiagnosticLog.shared
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.displayScale) private var displayScale
@@ -16,6 +17,7 @@ struct ContentView: View {
     @State private var isSavingPhoto = false
     @State private var showUsage = false
     @State private var showSettings = false
+    @State private var showDiagnostics = false
     @State private var detailMessage: String?
     private let ink = Color(red: 0.12, green: 0.25, blue: 0.29)
     private let accent = Color(red: 0.12, green: 0.45, blue: 0.49)
@@ -80,6 +82,16 @@ struct ContentView: View {
                 .presentationCompactAdaptation(.sheet)
         }
         .sheet(isPresented: $showSettings) { settingsSheet }
+        .sheet(isPresented: $showDiagnostics) {
+            NavigationStack {
+                diagnosticsSheet
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showDiagnostics = false }
+                        }
+                    }
+            }
+        }
         .alert("Generation details", isPresented: Binding(get: { detailMessage != nil }, set: { if !$0 { detailMessage = nil } })) {
             Button("OK", role: .cancel) { detailMessage = nil }
         } message: { Text(detailMessage ?? "") }
@@ -335,11 +347,19 @@ struct ContentView: View {
                     .font(.footnote)
             }
         } else if case .error(let message) = store.phase {
-            Button { detailMessage = message } label: {
-                Label("Generation failed · Details", systemImage: "exclamationmark.circle")
+            HStack(alignment: .top, spacing: 8) {
+                Button { detailMessage = message } label: {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "exclamationmark.circle")
+                        Text(message).lineLimit(2)
+                    }
                     .font(.footnote)
+                }
+                .accessibilityHint("Show the error and suggested next steps")
+                Button("Diagnostics") { showDiagnostics = true }
+                    .font(.footnote).underline()
+                    .accessibilityIdentifier("failureDiagnostics")
             }
-            .accessibilityHint("Show the error and suggested next steps")
         }
     }
 
@@ -455,10 +475,51 @@ struct ContentView: View {
                     Text("Each image uses one generation. Changes apply to the next batch.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+                Section("Help") {
+                    NavigationLink {
+                        diagnosticsSheet
+                    } label: {
+                        Label("Diagnostics", systemImage: "waveform.path.ecg")
+                    }
+                    .accessibilityIdentifier("diagnostics")
+                    Text("Recent connection and service events stay on this iPad. Descriptions, images, and credentials are never included.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
+        }
+    }
+
+    private var diagnosticsSheet: some View {
+        List {
+            Section {
+                Text("These events help identify where a generation stopped. Times use this iPad’s clock. A generation ID can be matched to Cloudflare logs.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            if diagnostics.events.isEmpty {
+                ContentUnavailableView("No events yet", systemImage: "waveform.path.ecg",
+                                       description: Text("The next generation will add diagnostic events here."))
+            } else {
+                Section("Recent events") {
+                    ForEach(diagnostics.events.reversed()) { event in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(event.text).font(.callout).textSelection(.enabled)
+                            Text(event.date, format: .dateTime.year().month().day().hour().minute().second())
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Diagnostics")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink("Share report", item: diagnostics.report)
+                    .disabled(diagnostics.events.isEmpty)
+                    .accessibilityIdentifier("shareDiagnostics")
+            }
         }
     }
     private var usageSheet: some View {

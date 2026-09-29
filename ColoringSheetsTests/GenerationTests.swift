@@ -3,6 +3,27 @@ import UIKit
 @testable import ColoringSheets
 
 final class GenerationTests: XCTestCase {
+    @MainActor
+    func testDiagnosticsPersistOnlySafeMetadataAndStayBounded() throws {
+        let suite = "diagnostics-test-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let log = DiagnosticLog(defaults: defaults)
+        let id = UUID()
+        let error = NSError(domain: NSURLErrorDomain, code: -1001,
+                            userInfo: [NSLocalizedDescriptionKey: "private prompt and token"])
+        for _ in 0..<101 {
+            log.record("Generation POST", "transport failed", generationID: id, model: .flare, error: error)
+        }
+        XCTAssertEqual(log.events.count, 100)
+        let restored = DiagnosticLog(defaults: defaults)
+        XCTAssertEqual(restored.events.count, 100)
+        XCTAssertTrue(restored.report.contains(id.uuidString.lowercased()))
+        XCTAssertTrue(restored.report.contains("NSURLErrorDomain:-1001"))
+        XCTAssertFalse(restored.report.contains("private prompt"))
+        XCTAssertFalse(restored.report.contains("token"))
+    }
+
     func testSelectableModelsExcludeRetiredChoices() {
         XCTAssertEqual(ImageModel.selectable.map(\.rawValue), [
             "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
@@ -104,6 +125,13 @@ final class GenerationTests: XCTestCase {
         let body = Data(#"{"error":{"code":"allowance_exhausted","message":"Today’s free sheet allowance has been used."}}"#.utf8)
         XCTAssertThrowsError(try WorkerClient.parse(body, response: response(429, type: "application/json"), requestedModel: .flare)) {
             XCTAssertEqual($0 as? GenerationError, .allowance)
+        }
+    }
+    func testRejectedDeviceAssertionHasSpecificSafeMessage() {
+        let body = Data(#"{"error":{"code":"invalid_assertion","message":"Internal details must stay hidden."}}"#.utf8)
+        XCTAssertThrowsError(try WorkerClient.parse(body, response: response(403, type: "application/json"), requestedModel: .flare)) {
+            XCTAssertEqual($0 as? GenerationError, .deviceRejected)
+            XCTAssertFalse($0.localizedDescription.contains("Internal details"))
         }
     }
     func testServiceBudgetIsDistinctFromPersonalAllowance() {

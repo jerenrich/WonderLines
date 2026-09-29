@@ -102,6 +102,8 @@ The `subject`, `model`, `width`, and `height` fields are sent. Numeric age stays
 
 ## Install on your iPad
 
+If a live generation fails, the message now appears below the editor. Tap **Diagnostics** beside the failure, or open **Settings → Diagnostics**, to see the last 100 connection and service events with timestamps, generation IDs, request stages, HTTP statuses, and Worker error codes. **Share report** exports the same metadata for debugging. The report omits descriptions, images, credentials, request bodies, and raw server responses. Events stay on the device across app restarts. A secure device verification failure is identified before a generation POST is sent.
+
 1. Connect the iPad to the Mac with a cable, unlock it, and accept the normal Trust prompts.
 2. In Xcode, open this project and select the **ColoringSheets** target → **Signing & Capabilities**. Enable automatic signing and choose your existing Apple team. If needed, add your Apple account through Xcode Settings → Accounts. Adjust the bundle identifier if your team requires a unique one. No account or signing settings were changed by this implementation.
 3. Choose your physical iPad as the run destination. Enable Developer Mode on the iPad if Xcode requests it; follow the device’s restart/confirmation prompts.

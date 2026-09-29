@@ -160,7 +160,21 @@ export function verifyAttestationHash(attestation, keyID, clientDataHash, appID,
 export function verifyAssertion(assertion, clientData, publicKey, appID) {
   const object = decodeCBOR(fromB64url(assertion, 2048));
   const authData = object instanceof Map && object.get('authenticatorData'), signature = object instanceof Map && object.get('signature');
-  if (!bytes(authData) || authData.length !== 37 || !bytes(signature) || signature.length > 128) throw Error('Invalid assertion');
+  if (!bytes(authData) || authData.length < 37 || authData.length > 1024 ||
+      !bytes(signature) || !signature.length || signature.length > 128) throw Error('Invalid assertion');
+  // iOS 27 appends signed WebAuthn extensions after the 37-byte core. Older
+  // assertions have no extension flag and must end exactly at byte 37.
+  const hasExtensions = Boolean(authData[32] & 0x80);
+  if (authData[32] & 0x40 || hasExtensions === (authData.length === 37)) throw Error('Invalid assertion extensions');
+  if (hasExtensions) {
+    const extensions = decodeCBOR(authData.slice(37));
+    if (!(extensions instanceof Map)) throw Error('Invalid assertion extensions');
+    const category = extensions.get('apple_validation_category_01');
+    const version = extensions.get('apple_bundle_version_01');
+    if (!bytes(category) || category.length !== 4 ||
+        ![1, 2, 3, 4, 5, 6, 10].includes(new DataView(category.buffer, category.byteOffset, 4).getUint32(0, true)) ||
+        typeof version !== 'string' || !version.length || version.length > 64) throw Error('Invalid assertion extensions');
+  }
   const counter = rp(authData, appID);
   if (!counter || !verifySignature('sha256', concat(authData, hash(clientData)), createPublicKey(publicKey), signature)) throw Error('Invalid assertion');
   return counter;

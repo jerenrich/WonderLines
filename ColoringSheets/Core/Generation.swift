@@ -212,11 +212,13 @@ struct ColoringResult: Identifiable {
 }
 
 enum GenerationError: LocalizedError, Equatable {
-    case validation(String), configuration, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled
+    case validation(String), configuration, deviceVerification, deviceRejected, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
+        case .deviceVerification: return "Secure device verification failed before the generation request was sent. Check Settings → Diagnostics for the failing step and code."
+        case .deviceRejected: return "The service rejected secure device verification before image generation. Check Diagnostics for the Worker error code."
         case .allowance: return "Today’s free sheet allowance has been used. Please try again after it resets."
         case .serviceBudget: return "The coloring service has reached today’s limit. Please try again after it resets."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
@@ -326,11 +328,17 @@ final class WorkerClient: GenerationServing {
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
         var http = URLRequest(url: endpoint)
         http.httpMethod = "POST"
-        let authorization = try await authorization()
+        let authToken: String
+        do { authToken = try await authorization() }
+        catch {
+            await DiagnosticLog.shared.record("Account", "failed before generation", model: request.model, error: error)
+            throw error
+        }
         // Shared identity registration/renewal can finish after this caller stops waiting.
         guard !Task.isCancelled else { throw GenerationError.cancelled }
         let generationID = UUID()
-        http.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
+        await DiagnosticLog.shared.record("Generation", "started", generationID: generationID, model: request.model)
+        http.setValue("Bearer " + authToken, forHTTPHeaderField: "Authorization")
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let idempotencyKey = generationID.uuidString.lowercased()
         http.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
@@ -338,10 +346,16 @@ final class WorkerClient: GenerationServing {
         let requestBody = try request.encoded()
         http.httpBody = requestBody
         if legacyCredential == nil, let accountID = await identities?.session()?.accountID {
-            let headers = try await appAttest.proof(accountID: accountID, token: authorization,
-                                                    serviceURL: serviceURL, session: session,
-                                                    idempotencyKey: idempotencyKey, body: requestBody)
-            for (name, value) in headers ?? [:] { http.setValue(value, forHTTPHeaderField: name) }
+            do {
+                let headers = try await appAttest.proof(accountID: accountID, token: authToken,
+                                                        serviceURL: serviceURL, session: session,
+                                                        idempotencyKey: idempotencyKey, body: requestBody)
+                for (name, value) in headers ?? [:] { http.setValue(value, forHTTPHeaderField: name) }
+            } catch {
+                await DiagnosticLog.shared.record("Device verification", "failed before generation POST",
+                                                  generationID: generationID, model: request.model, error: error)
+                throw GenerationError.deviceVerification
+            }
         }
         if request.model == .redmond, let scope = await pendingScope() {
             try await pendingStore.add(PendingGeneration(id: generationID, model: request.model, createdAt: Date()), scope: scope)
@@ -352,17 +366,23 @@ final class WorkerClient: GenerationServing {
         }
         let data: Data
         let response: URLResponse
+        await DiagnosticLog.shared.record("Generation POST", "sending", generationID: generationID, model: request.model)
         do { (data, response) = try await session.data(for: http) }
         catch {
             Self.logger.error("Generation transport failed id=\(generationID.uuidString, privacy: .public) urlError=\((error as? URLError)?.errorCode ?? 0)")
+            await DiagnosticLog.shared.record("Generation POST", "transport failed; checking existing job",
+                                              generationID: generationID, model: request.model, error: error)
             if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw GenerationError.cancelled }
             if legacyCredential != nil { throw GenerationError.uncertain }
-            return try await recover(generationID, authorization: authorization, requestedModel: request.model)
+            return try await recover(generationID, authorization: authToken, requestedModel: request.model)
         }
         guard let response = response as? HTTPURLResponse else { throw GenerationError.uncertain }
         Self.logResponse("generation", data: data, response: response, generationID: generationID)
+        await DiagnosticLog.shared.record("Generation POST", "response", generationID: generationID,
+                                          model: request.model, httpStatus: response.statusCode,
+                                          workerCode: Self.workerErrorCode(data, response: response))
         if response.statusCode == 202 {
-            return try await recover(generationID, authorization: authorization, requestedModel: request.model)
+            return try await recover(generationID, authorization: authToken, requestedModel: request.model)
         }
         // A configuration rejection happens before the server reserves a job.
         if response.statusCode == 503, Self.workerErrorCode(data, response: response) == "service_unavailable",
@@ -388,6 +408,10 @@ final class WorkerClient: GenerationServing {
                 let (data, response) = try await session.data(for: request)
                 guard let http = response as? HTTPURLResponse else { continue }
                 Self.logResponse("recovery attempt \(attempt + 1)", data: data, response: http, generationID: generationID)
+                await DiagnosticLog.shared.record("Recovery GET \(attempt + 1)", "response",
+                                                  generationID: generationID, model: requestedModel,
+                                                  httpStatus: http.statusCode,
+                                                  workerCode: Self.workerErrorCode(data, response: http))
                 if http.statusCode == 202 { continue }
                 return try await parseRecovered(data, response: http, generationID: generationID, requestedModel: requestedModel)
             } catch is CancellationError { throw GenerationError.cancelled }
@@ -401,6 +425,8 @@ final class WorkerClient: GenerationServing {
                 } else {
                     Self.logger.error("Recovery response could not be used id=\(generationID.uuidString, privacy: .public) attempt=\(attempt + 1)")
                 }
+                await DiagnosticLog.shared.record("Recovery GET \(attempt + 1)", "transport failed",
+                                                  generationID: generationID, model: requestedModel, error: error)
                 continue
             }
         }
@@ -438,9 +464,12 @@ final class WorkerClient: GenerationServing {
         guard !Task.isCancelled else { throw GenerationError.cancelled }
         do {
             let result = try Self.parse(data, response: response, requestedModel: requestedModel)
+            await DiagnosticLog.shared.record("Generation result", "ready", generationID: generationID, model: requestedModel)
             if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
             return result
         } catch {
+            await DiagnosticLog.shared.record("Generation result", "unusable", generationID: generationID,
+                                              model: requestedModel, error: error)
             // Keep interrupted, authentication and transient failures recoverable.
             let terminal = [400, 410, 422, 429].contains(response.statusCode) ||
                 (response.statusCode == 502 && Self.workerErrorCode(data, response: response) != nil)
@@ -469,10 +498,15 @@ final class WorkerClient: GenerationServing {
         do { (data, response) = try await session.data(for: request) }
         catch {
             Self.logger.error("Installation transport failed urlError=\((error as? URLError)?.errorCode ?? 0)")
+            await DiagnosticLog.shared.record(saved == nil ? "Account registration" : "Account renewal",
+                                              "transport failed", error: error)
             throw GenerationError.uncertain
         }
         if let http = response as? HTTPURLResponse {
             Self.logResponse(saved == nil ? "installation" : "renewal", data: data, response: http)
+            await DiagnosticLog.shared.record(saved == nil ? "Account registration" : "Account renewal",
+                                              "response", httpStatus: http.statusCode,
+                                              workerCode: Self.workerErrorCode(data, response: http))
         }
         guard let http = response as? HTTPURLResponse, http.statusCode == (saved == nil ? 201 : 200),
               let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
@@ -537,6 +571,10 @@ final class WorkerClient: GenerationServing {
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
         let contentType = response.value(forHTTPHeaderField: "Content-Type")?.lowercased().split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
         guard response.statusCode == 200 else {
+            if response.statusCode == 403,
+               ["invalid_assertion", "app_attest_required"].contains(workerErrorCode(data, response: response) ?? "") {
+                throw GenerationError.deviceRejected
+            }
             if let message = workerErrorMessage(data, response: response) {
                 throw response.statusCode == 400 ? GenerationError.validation(message) : GenerationError.upstream(message)
             }
