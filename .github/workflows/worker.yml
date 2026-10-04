@@ -8,6 +8,7 @@ on:
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
+      - 'Scripts/test_moderation.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   push:
@@ -17,6 +18,7 @@ on:
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
+      - 'Scripts/test_moderation.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:

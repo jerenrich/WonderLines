@@ -5,8 +5,10 @@
   "workers_dev": true,
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "images": { "binding": "IMAGES" },
+  "ai": { "binding": "AI" },
   "vars": {
-    "FREE_DAILY_ALLOWANCE": "100"
+    "FREE_DAILY_ALLOWANCE": "100",
+    "MODERATION_GATEWAY_ID": "default"
   },
   "durable_objects": {
     "bindings": [

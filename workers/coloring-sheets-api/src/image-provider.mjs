@@ -307,7 +307,7 @@ function falImageRequest(env, subject, size) {
     payload: {model_name: 'stabilityai/stable-diffusion-xl-base-1.0',
       loras: [{path: `https://huggingface.co/artificialguybr/ColoringBookRedmond-V2/resolve/${REDMOND_REVISION}/ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors`, scale: 1}],
       prompt: 'ColoringBookAF, Coloring Book. ' + subject.trim() +
-        '. Child-friendly black outlines, enclosed coloring areas, white background, generous margins.',
+        '. Gentle imagery suitable for all ages. Child-friendly black outlines, enclosed coloring areas, white background, generous margins.',
       negative_prompt: NEGATIVE_PROMPT, prompt_weighting: true, image_size,
       num_inference_steps: 30, guidance_scale: 7.5, num_images: 1,
       image_format: 'png', enable_safety_checker: true}};

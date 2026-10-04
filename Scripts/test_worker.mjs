@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import './test_image_cost.mjs';
 import './test_app_attest.mjs';
+import {safeModerationResult} from './test_moderation.mjs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
 import {falCostData} from '../workers/coloring-sheets-api/src/fal-cost.mjs';
 import {modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';
@@ -45,7 +46,9 @@ class BudgetNamespace {
     return {fetch: (request, init) => this.objects.get(id).fetch(new Request(request, init))};
   }
 }
-const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3', GLOBAL_DAILY_GENERATION_LIMIT: '10000'};
+let moderationCalls = 0;
+const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3', GLOBAL_DAILY_GENERATION_LIMIT: '10000',
+  MODERATION_GATEWAY_ID: 'synthetic-gateway', AI: {async run() { moderationCalls++; return safeModerationResult(); }}};
 env.ACCOUNTS = new Accounts(env); env.BUDGET = new BudgetNamespace(env); env.GENERATIONS = new Images();
 const originalFetch = globalThis.fetch;
 const originalInfo = console.info, auditLogs = [];
@@ -68,6 +71,28 @@ try {
   assert.equal(forwarded.model, 'gpt-image-2.5-flare');
   assert.equal(forwarded.size, '1456x1024'); assert.ok(forwarded.prompt.includes('Synthetic flower'));
   response = await worker.fetch(request(), env); assert.equal(response.status, 200); assert.equal(calls, 1, 'A repeated ID must return the stored image.');
+  assert.equal(moderationCalls, 1, 'Recovery must not repeat moderation.');
+  const originalAI = env.AI;
+  env.AI = undefined;
+  assert.equal((await worker.fetch(request(), env)).status, 200, 'Saved results recover during a moderation outage.');
+  const rejectedID = crypto.randomUUID();
+  const rejectedRequest = (model = 'gpt-image-2.5-flare') => new Request('https://example.test/v1/generations', {
+    method: 'POST', headers: {'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': rejectedID},
+    body: JSON.stringify({subject: 'Unsuitable synthetic request', model})});
+  const accountBeforeModeration = env.ACCOUNTS.objects.get(identity.accountId);
+  const accessBeforeModeration = await accountBeforeModeration.access();
+  response = await worker.fetch(rejectedRequest(), env);
+  assert.equal(response.status, 503); assert.equal((await response.json()).error.code, 'moderation_unavailable');
+  const unsafe = safeModerationResult(); unsafe.answers.sexual.noul = 0.99;
+  env.AI = {run: async () => unsafe};
+  response = await worker.fetch(rejectedRequest(), env);
+  assert.equal(response.status, 400); assert.equal((await response.json()).error.code, 'description_not_suitable');
+  assert.deepEqual(await accountBeforeModeration.access(), accessBeforeModeration, 'Moderation must not consume allowance or credits.');
+  assert.equal(await accountBeforeModeration.state.storage.get('job:' + rejectedID), undefined);
+  const budgetObject = env.BUDGET.objects.get('daily-generation-budget');
+  assert.equal(await budgetObject.state.storage.get('claim:' + identity.accountId + ':' + rejectedID), undefined);
+  assert.equal(calls, 1, 'Rejected descriptions must not call the image provider.');
+  env.AI = originalAI;
   const sunburst = new Request('https://example.test/v1/generations', {method: 'POST', headers: {'Authorization': 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID()}, body: JSON.stringify({subject: 'Synthetic flower', model: 'gpt-image-2.5-sunburst', width: 1456, height: 1024})});
   response = await worker.fetch(sunburst, env); assert.equal(response.status, 200); assert.equal(calls, 2);
   assert.equal(forwarded.model, 'gpt-image-2.5-sunburst', 'The selected model must reach OpenAI.');
@@ -520,6 +545,26 @@ try {
     return Response.json({success: true, result: {image: btoa(String.fromCharCode(...jpeg))}});
   };
   globalThis.fetch = nativeFetch;
+  // Every provider route must pass the same gate, including queued fal work.
+  const rejectionEnvs = [
+    [falEnv, id => falPost(id), falAccount],
+    [gatewayEnv, id => worker.fetch(generateRequest('gpt-image-2.5-flare', id), gatewayEnv), gatewayAccount],
+    [gatewayEnv, id => worker.fetch(generateRequest('gemini-image', id), gatewayEnv), gatewayAccount],
+    [nativeEnv, id => worker.fetch(generateRequest('flux-2-klein-4b', id), nativeEnv), gatewayAccount],
+  ];
+  // Earlier credential-failure checks remove fal's key; restore it for this check.
+  falEnv.FAL_KEY = 'synthetic-fal-key';
+  for (const [testEnv, post, testAccount] of rejectionEnvs) {
+    const ai = testEnv.AI, before = await testAccount.access(), id = crypto.randomUUID();
+    testEnv.AI = {run: async () => unsafe};
+    response = await post(id);
+    assert.equal(response.status, 400, 'All providers must reject unsuitable descriptions.');
+    assert.equal((await response.json()).error.code, 'description_not_suitable');
+    assert.deepEqual(await testAccount.access(), before);
+    assert.equal(await testAccount.state.storage.get('job:' + id), undefined, 'No image job or fal alarm may be queued.');
+    testEnv.AI = ai;
+  }
+  assert.equal(nativeCalls, 0, 'Rejection cannot call a native image model.');
   for (const [model, width, height, expectedWidth, expectedHeight] of [
     ['flux-2-klein-4b', 1456, 1024, '1456', '1024'],
     ['flux-2-klein-9b', 2304, 1600, '1920', '1328'],
