@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {moderateSubject, moderationDecision, moderationInput, MODERATION_MODEL} from '../workers/coloring-sheets-api/src/moderation.mjs';
+import {moderateSubject, moderationAssessment, moderationDecision, moderationInput, MODERATION_MODEL} from '../workers/coloring-sheets-api/src/moderation.mjs';
 
 const names = Object.keys(moderationInput('').questions);
 export const safeModerationResult = () => ({answers: Object.fromEntries(names.map(name =>
@@ -61,6 +61,30 @@ await assert.rejects(moderateSubject({...env, AI: {run: async () => blocked}}, '
 const originalTimeout = globalThis.setTimeout;
 try {
   globalThis.setTimeout = (callback, delay) => { assert.equal(delay, 8000); return originalTimeout(callback, 0); };
-  await assert.rejects(moderateSubject({...env, AI: {run: () => new Promise(() => {})}}, 'flower'), {code: 'moderation_unavailable', status: 503});
+  await assert.rejects(moderateSubject({...env, AI: {run: () => new Promise(() => {})}}, 'flower'), error => error.code === 'moderation_unavailable' && error.diagnostics.failure === 'timeout');
 } finally { globalThis.setTimeout = originalTimeout; }
+
+const multiHazard = safeModerationResult(); multiHazard.answers.sexual.noul = 0.8; multiHazard.answers.violence.noul = 0.7;
+assert.deepEqual(moderationAssessment(multiHazard), {allowed: false, reasonCodes: ['sexual', 'violence']});
+const uncertainOverall = safeModerationResult(); uncertainOverall.answers.all_ages.noul = 0.7;
+assert.deepEqual(moderationAssessment(uncertainOverall), {allowed: false, reasonCodes: ['uncertain']});
+await assert.rejects(moderateSubject({...env, AI: {run: async () => multiHazard}}, 'private input'), error => {
+  assert.deepEqual(error.reasonCodes, ['sexual', 'violence']);
+  assert.match(error.message, /possible sexual content or nudity, violence or weapons/);
+  assert.match(error.message, /No sheet allowance was used/);
+  assert.equal(error.diagnostics.gateway, 'existing-gateway');
+  assert.ok(error.diagnostics.elapsedMs >= 0);
+  assert.ok(!JSON.stringify(error).includes('private input'));
+  return true;
+});
+for (const [ai, failure, upstreamCode] of [[undefined, 'configuration'], [{run: async () => ({answers:{}})}, 'invalid_response'],
+  [{run: async () => { throw Error('2049: private upstream text'); }}, 'upstream', 2049]]) {
+  await assert.rejects(moderateSubject({...env, AI: ai}, 'private input'), error => {
+    assert.equal(error.diagnostics.failure, failure);
+    assert.equal(error.diagnostics.upstreamCode, upstreamCode);
+    assert.ok(!JSON.stringify(error).includes('private'));
+    return true;
+  });
+}
+
 console.log('Moderation protocol tests passed (synthetic responses; no model calls).');

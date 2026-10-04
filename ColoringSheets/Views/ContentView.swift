@@ -351,7 +351,7 @@ struct ContentView: View {
                 Button { detailMessage = message } label: {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "exclamationmark.circle")
-                        Text(message).lineLimit(2)
+                        Text(message).fixedSize(horizontal: false, vertical: true)
                     }
                     .font(.footnote)
                 }
@@ -495,7 +495,7 @@ struct ContentView: View {
     private var diagnosticsSheet: some View {
         List {
             Section {
-                Text("These events help identify where a generation stopped. Times use this iPad’s clock. A generation ID can be matched to Cloudflare logs.")
+                Text("These events help identify where a generation stopped. Times use this device’s clock. Batch and generation IDs can be matched to service logs. Content moderation events show whether the description was rejected or the safety check was unavailable.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             if diagnostics.events.isEmpty {
