@@ -2,6 +2,7 @@
 import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
 import {falCostData} from './fal-cost.mjs';
+import {moderateSubject, ModerationError, MODERATION_MODEL, MODERATION_POLICY} from './moderation.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
@@ -339,6 +340,13 @@ async function generate(request, env, account) {
   if (typeof model !== 'string' || !Object.hasOwn(catalog.routes, model)) return fail('invalid_request', 'Model is invalid.', 400);
   try { upstreamRequest = imageRequest(env, catalog.routes[model], input.subject, size); }
   catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
+  try { await moderateSubject(env, input.subject); }
+  catch (error) {
+    if (!(error instanceof ModerationError)) throw error;
+    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
+      model: MODERATION_MODEL, policy: MODERATION_POLICY, outcome: error.code}));
+    return fail(error.code, error.message, error.status);
+  }
   const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint,
     ...(upstreamRequest.provider === 'fal' ? {falTask: {request: upstreamRequest, publicModel: model,
       requestedSize: size.width + 'x' + size.height}} : {})});

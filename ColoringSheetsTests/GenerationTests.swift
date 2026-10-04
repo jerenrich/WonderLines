@@ -153,6 +153,22 @@ final class GenerationTests: XCTestCase {
         }
     }
 
+    func testDescriptionModerationErrors() {
+        let cases: [(String, Int, GenerationError)] = [
+            ("description_not_suitable", 400, .validation("Please describe a gentle scene. No sheet allowance was used.")),
+            ("moderation_unavailable", 503, .upstream("Please describe a gentle scene. No sheet allowance was used."))
+        ]
+        for (code, status, expected) in cases {
+            let body = Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"Please describe a gentle scene. No sheet allowance was used.\"}}".utf8)
+            XCTAssertThrowsError(try WorkerClient.parse(body, response: response(status, type: "application/json; charset=utf-8"), requestedModel: .flare)) {
+                XCTAssertEqual($0 as? GenerationError, expected)
+            }
+            XCTAssertThrowsError(try WorkerClient.parse(body, response: response(502, type: "application/json"), requestedModel: .flare)) {
+                XCTAssertNotEqual($0 as? GenerationError, expected, "Messages require the matching status code.")
+            }
+        }
+    }
+
     func testV1AllowanceResponse() {
         let body = Data(#"{"error":{"code":"allowance_exhausted","message":"Today’s free sheet allowance has been used."}}"#.utf8)
         XCTAssertThrowsError(try WorkerClient.parse(body, response: response(429, type: "application/json"), requestedModel: .flare)) {

@@ -582,8 +582,8 @@ final class WorkerClient: GenerationServing {
              "provider_timeout", "provider_unavailable", "provider_request_rejected",
              "provider_connection_failed", "provider_invalid_response", "provider_image_conversion_failed":
             expectedStatus = 502
-        case "service_unavailable": expectedStatus = 503
-        case "invalid_request": expectedStatus = 400
+        case "service_unavailable", "moderation_unavailable": expectedStatus = 503
+        case "invalid_request", "description_not_suitable": expectedStatus = 400
         case "result_unavailable": expectedStatus = 410
         default: return nil
         }
