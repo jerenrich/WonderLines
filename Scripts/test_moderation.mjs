@@ -44,6 +44,12 @@ for (const broken of [{}, {...env, AI: undefined}, {...env, AI_GATEWAY_ID: ''}, 
   await assert.rejects(moderateSubject(broken, 'flower'), {code: 'moderation_unavailable', status: 503});
 }
 assert.equal(calls, 1, 'Invalid local configuration must not call Jev');
+await moderateSubject({...env, MODERATION_GATEWAY_ID: 'default'}, 'A friendly dragon. Complexity: intricate outlines.');
+assert.equal(calls, 2, 'The shared gateway must override a stale moderation-only gateway.');
+await moderateSubject({MODERATION_GATEWAY_ID: 'coloring-sheets', AI: {async run(model, input, options) {
+  assert.equal(options.gateway.id, 'coloring-sheets');
+  return safeModerationResult();
+}}}, 'flower');
 for (const result of [null, {answers: {}}, {success: false, errors: [{message: 'private'}]}]) {
   await assert.rejects(moderateSubject({...env, AI: {run: async () => result}}, 'flower'), {code: 'moderation_unavailable', status: 503});
 }
