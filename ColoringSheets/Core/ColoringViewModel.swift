@@ -16,6 +16,8 @@ final class ColoringViewModel: ObservableObject {
     @Published var selectedResultID: UUID?
     @Published private(set) var completedCount = 0
     @Published private(set) var failedCount = 0
+    @Published private(set) var descriptionRejectedCount = 0
+    @Published private(set) var imageRejectedCount = 0
     @Published private(set) var activeBatchSize = 0
     @Published private(set) var batchMessage: String?
     @Published private(set) var unfinishedSheets: [PendingGeneration] = []
@@ -46,9 +48,24 @@ final class ColoringViewModel: ObservableObject {
     var result: ColoringResult? { results.first(where: { $0.id == selectedResultID }) ?? results.first }
     var selectedIndex: Int { results.firstIndex(where: { $0.id == selectedResultID }) ?? 0 }
     var readyCount: Int { completedCount - failedCount }
+    var moderationRejectedCount: Int { descriptionRejectedCount + imageRejectedCount }
+    var moderationStatus: String? {
+        guard moderationRejectedCount > 0 else { return nil }
+        return "\(moderationRejectedCount) \(moderationRejectedCount == 1 ? "sheet" : "sheets") rejected by content moderation"
+    }
+    private var failureDetails: String {
+        var parts: [String] = []
+        if let moderationStatus { parts.append(moderationStatus + ".") }
+        if descriptionRejectedCount > 0 { parts.append(GenerationError.descriptionRejected.localizedDescription) }
+        if imageRejectedCount > 0 { parts.append(GenerationError.imageRejected.localizedDescription) }
+        if let firstFailure { parts.append(firstFailure) }
+        return parts.joined(separator: " ")
+    }
     private var activeSheetLabel: String { "\(activeBatchSize) \(activeBatchSize == 1 ? "sheet" : "sheets")" }
     var progressText: String {
-        "Drawing \(activeSheetLabel) · \(readyCount) ready" + (failedCount > 0 ? " · \(failedCount) unavailable" : "")
+        "Drawing \(activeSheetLabel) · \(readyCount) ready" +
+            (moderationStatus.map { " · " + $0 } ?? "") +
+            (failedCount > moderationRejectedCount ? " · \(failedCount - moderationRejectedCount) unavailable" : "")
     }
 
     func setImageCount(_ count: Int) {
@@ -83,6 +100,7 @@ final class ColoringViewModel: ObservableObject {
         phase = .generating
         activeBatchSize = requests.count
         completedCount = 0; failedCount = 0; batchMessage = nil
+        descriptionRejectedCount = 0; imageRejectedCount = 0
         receivedFirstResult = false; firstFailure = nil
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = false
@@ -127,7 +145,11 @@ final class ColoringViewModel: ObservableObject {
             }
         case .failure(let error):
             failedCount += 1
-            if firstFailure == nil {
+            if (error as? GenerationError) == .descriptionRejected {
+                descriptionRejectedCount += 1
+            } else if (error as? GenerationError) == .imageRejected {
+                imageRejectedCount += 1
+            } else if firstFailure == nil {
                 firstFailure = (error as? GenerationError)?.localizedDescription ?? GenerationError.uncertain.localizedDescription
             }
         }
@@ -139,13 +161,13 @@ final class ColoringViewModel: ObservableObject {
         revealPendingResults()
         if receivedFirstResult {
             if failedCount > 0 {
-                batchMessage = "\(readyCount) of \(activeSheetLabel) are ready. \(failedCount) could not finish. " + (firstFailure ?? "")
+                batchMessage = "\(readyCount) of \(activeSheetLabel) are ready. \(failedCount) could not finish. " + failureDetails
             }
             phase = .result
         } else {
             phase = .error(activeBatchSize == 1
-                           ? "The sheet could not finish. " + (firstFailure ?? "")
-                           : "None of the \(activeSheetLabel) could finish. " + (firstFailure ?? ""))
+                           ? failureDetails
+                           : "None of the \(activeSheetLabel) could finish. " + failureDetails)
         }
     }
 
@@ -167,7 +189,7 @@ final class ColoringViewModel: ObservableObject {
     private func logBatchSummary(_ reason: String) {
         let duration = batchStarted.duration(to: .now).components
         let elapsed = duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000
-        DiagnosticLog.shared.record("Batch summary", "\(reason); requested=\(activeBatchSize); succeeded=\(readyCount); failed=\(failedCount); unfinished=\(activeBatchSize - completedCount); elapsedMs=\(elapsed)", batchID: attempt)
+        DiagnosticLog.shared.record("Batch summary", "\(reason); requested=\(activeBatchSize); succeeded=\(readyCount); failed=\(failedCount); descriptionRejected=\(descriptionRejectedCount); imageRejected=\(imageRejectedCount); unfinished=\(activeBatchSize - completedCount); elapsedMs=\(elapsed)", batchID: attempt)
     }
 
     func cancel() { cancel(reason: "user stopped waiting") }
@@ -180,7 +202,7 @@ final class ColoringViewModel: ObservableObject {
         Task { await refreshUnfinishedSheets() }
         revealTask?.cancel(); revealTask = nil
         revealPendingResults()
-        let message = "Stopped waiting. Any sheets already received are still available. The unfinished generations may still complete and be charged."
+        let message = "Stopped waiting. Any sheets already received are still available. The unfinished generations may still complete and be charged. " + failureDetails
         if receivedFirstResult {
             batchMessage = message; phase = .result
         } else {
@@ -211,6 +233,7 @@ final class ColoringViewModel: ObservableObject {
         phase = .generating
         activeBatchSize = pending.count
         completedCount = 0; failedCount = 0; batchMessage = nil
+        descriptionRejectedCount = 0; imageRejectedCount = 0
         receivedFirstResult = false; firstFailure = nil
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = true // Recovery appends to the existing gallery.

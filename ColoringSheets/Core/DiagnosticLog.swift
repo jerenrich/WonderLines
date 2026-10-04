@@ -18,7 +18,20 @@ struct DiagnosticEvent: Codable, Identifiable {
     let workerCode: String?
     let errorCode: String?
 
+    var moderationSummary: String? {
+        switch (workerCode, httpStatus) {
+        case ("description_not_suitable", 400): return "Description rejected by content moderation · no sheet allowance used"
+        case ("provider_content_rejected", 502): return "Image rejected by provider content moderation · generation may have been charged"
+        case ("moderation_unavailable", 503): return "Safety check unavailable · no content decision · no sheet allowance used"
+        default: return nil
+        }
+    }
+
     var text: String {
+        [moderationSummary, metadataText].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    var metadataText: String {
         var parts = [stage, outcome]
         if let batchID { parts.append("batch=\(batchID.uuidString.lowercased())") }
         if let model { parts.append("model=\(model)") }

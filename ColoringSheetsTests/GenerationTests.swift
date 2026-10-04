@@ -155,18 +155,39 @@ final class GenerationTests: XCTestCase {
 
     func testDescriptionModerationErrors() {
         let cases: [(String, Int, GenerationError)] = [
-            ("description_not_suitable", 400, .validation("Please describe a gentle scene. No sheet allowance was used.")),
-            ("moderation_unavailable", 503, .upstream("Please describe a gentle scene. No sheet allowance was used."))
+            ("description_not_suitable", 400, .descriptionRejected),
+            ("moderation_unavailable", 503, .moderationUnavailable),
+            ("provider_content_rejected", 502, .imageRejected)
         ]
         for (code, status, expected) in cases {
-            let body = Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"Please describe a gentle scene. No sheet allowance was used.\"}}".utf8)
+            let body = Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"private echoed content\"}}".utf8)
             XCTAssertThrowsError(try WorkerClient.parse(body, response: response(status, type: "application/json; charset=utf-8"), requestedModel: .flare)) {
                 XCTAssertEqual($0 as? GenerationError, expected)
+                XCTAssertFalse($0.localizedDescription.contains("private echoed"))
             }
-            XCTAssertThrowsError(try WorkerClient.parse(body, response: response(502, type: "application/json"), requestedModel: .flare)) {
+            XCTAssertThrowsError(try WorkerClient.parse(body, response: response(500, type: "application/json"), requestedModel: .flare)) {
                 XCTAssertNotEqual($0 as? GenerationError, expected, "Messages require the matching status code.")
             }
         }
+    }
+
+    @MainActor
+    func testModerationDiagnosticsPersistReadableOutcomes() throws {
+        let suite = "moderation-diagnostics-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let log = DiagnosticLog(defaults: defaults)
+        let id = UUID()
+        log.record("Generation POST", "response", generationID: id, httpStatus: 400, workerCode: "description_not_suitable")
+        log.record("Generation GET", "response", generationID: id, httpStatus: 502, workerCode: "provider_content_rejected")
+        log.record("Generation POST", "response", httpStatus: 503, workerCode: "moderation_unavailable")
+        let restored = DiagnosticLog(defaults: defaults)
+        XCTAssertTrue(restored.report.contains("Description rejected by content moderation"))
+        XCTAssertTrue(restored.report.contains("Image rejected by provider content moderation"))
+        XCTAssertTrue(restored.report.contains("no content decision"))
+        XCTAssertTrue(restored.report.contains(id.uuidString.lowercased()))
+        log.record("Generation POST", "response", httpStatus: 500, workerCode: "description_not_suitable")
+        XCTAssertNil(log.events.last?.moderationSummary, "Only matching protocol status/code pairs are moderation outcomes.")
     }
 
     func testV1AllowanceResponse() {
@@ -270,6 +291,46 @@ final class MockURLProtocol: URLProtocol {
 }
 
 final class NetworkingTests: XCTestCase {
+    func testModerationFailuresKeepSafeDiagnosticsAndClearQueuedRequests() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let suite = "ModerationNetworking-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let identities = AnonymousIdentityStore(service: suite)
+        try await identities.save(AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600)))
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        let client = WorkerClient(session: session, identities: identities,
+                                  pendingStore: PendingGenerationStore(defaults: defaults), recoverySleep: { _ in })
+        for (code, status, expected, queued) in [
+            ("description_not_suitable", 400, GenerationError.descriptionRejected, false),
+            ("moderation_unavailable", 503, .moderationUnavailable, false),
+            ("provider_content_rejected", 502, .imageRejected, true)
+        ] {
+            var methods: [String] = []
+            var id: String?
+            MockURLProtocol.handler = { request in
+                methods.append(request.httpMethod!)
+                if request.httpMethod == "POST" {
+                    id = request.value(forHTTPHeaderField: "Idempotency-Key")
+                    if queued { return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil, headerFields: nil)!, Data()) }
+                }
+                return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                        headerFields: ["Content-Type": "application/json"])!,
+                        Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"private echoed subject\"}}".utf8))
+            }
+            do { _ = try await client.generate(GenerationRequest(description: "private test description", age: 6, model: .redmond)); XCTFail("Expected moderation outcome") }
+            catch { XCTAssertEqual(error as? GenerationError, expected) }
+            XCTAssertEqual(methods, queued ? ["POST", "GET"] : ["POST"], "No automatic regeneration on rejection.")
+            let pending = await client.pendingGenerations()
+            XCTAssertTrue(pending.isEmpty, "These requests have no unfinished image to recover.")
+            let recordedID = id
+            let events = await MainActor.run { DiagnosticLog.shared.events.filter { $0.generationID?.uuidString.lowercased() == recordedID } }
+            XCTAssertTrue(events.contains { $0.workerCode == code && $0.moderationSummary != nil })
+            XCTAssertFalse(events.map(\.text).joined().contains("private"))
+        }
+    }
     func testOnePOSTAndNoRetryForAllModelsAndTimeout() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -656,11 +717,47 @@ final class ControlledService: GenerationServing {
     func fail() {
         for index in continuations.keys.sorted() { fail(at: index) }
     }
-    func fail(at index: Int) { continuations.removeValue(forKey: index)?.resume(throwing: GenerationError.uncertain) }
+    func fail(at index: Int, error: GenerationError = .uncertain) { continuations.removeValue(forKey: index)?.resume(throwing: error) }
 }
 
 @MainActor
 final class StateTests: XCTestCase {
+    func testModerationRejectionsRemainVisibleAfterOtherFailureAndReset() async throws {
+        let name = "moderation-state-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 6; store.description = "A flower"
+        store.generate()
+        await waitFor { service.pendingCount == 3 }
+        service.fail(at: 0)
+        await waitFor { store.failedCount == 1 }
+        service.fail(at: 1, error: .descriptionRejected)
+        await waitFor { store.failedCount == 2 }
+        XCTAssertTrue(store.progressText.contains("1 sheet rejected by content moderation"))
+        service.succeed(at: 2)
+        await waitFor { !store.isGenerating }
+        XCTAssertEqual(store.phase, .result)
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertTrue(store.batchMessage?.contains("rejected by content moderation") == true)
+        XCTAssertTrue(store.batchMessage?.contains("No sheet allowance was used") == true)
+        XCTAssertTrue(store.batchMessage?.contains("connection was interrupted") == true)
+
+        store.generate()
+        await waitFor { service.pendingCount == 3 }
+        XCTAssertNil(store.moderationStatus)
+        service.fail(at: 3, error: .imageRejected)
+        service.fail(at: 4, error: .descriptionRejected)
+        service.fail(at: 5, error: .moderationUnavailable)
+        await waitFor { !store.isGenerating }
+        guard case .error(let message) = store.phase else { return XCTFail("Expected failed batch") }
+        XCTAssertEqual(store.moderationRejectedCount, 2, "An unavailable check is not a rejection.")
+        XCTAssertTrue(message.contains("image provider rejected"))
+        XCTAssertTrue(message.contains("This is not a content rejection"))
+        XCTAssertTrue(message.contains("2 sheets rejected by content moderation"))
+        XCTAssertEqual(store.results.count, 1, "Keep the previous safe sheet available.")
+    }
     func waitFor(timeout: TimeInterval = 1, _ condition: @escaping () -> Bool) async {
         let deadline = ContinuousClock.now + .seconds(timeout)
         while ContinuousClock.now < deadline {
@@ -867,7 +964,9 @@ final class StateTests: XCTestCase {
         store.cancel()
         let stopped = DiagnosticLog.shared.events.last { $0.stage == "Batch summary" }
         XCTAssertTrue(stopped?.outcome.contains("user stopped waiting") == true)
-        XCTAssertTrue(stopped?.outcome.contains("succeeded=1; failed=0; unfinished=2") == true)
+        XCTAssertTrue(stopped?.outcome.contains("succeeded=1; failed=0") == true)
+        XCTAssertTrue(stopped?.outcome.contains("unfinished=2") == true)
+        XCTAssertTrue(stopped?.outcome.contains("descriptionRejected=0; imageRejected=0") == true)
         XCTAssertNotNil(stopped?.batchID)
         let retainedID = try XCTUnwrap(store.result?.id)
         XCTAssertFalse(store.isGenerating)

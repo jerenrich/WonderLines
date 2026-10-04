@@ -38,23 +38,39 @@ const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, opt
   assert.deepEqual(options.gateway, {id: 'existing-gateway', skipCache: true, collectLog: false});
   return safeModerationResult();
 }}};
-await moderateSubject(env, 'A friendly dragon. Complexity: intricate outlines.');
+const allowedDiagnostic = await moderateSubject(env, 'A friendly dragon. Complexity: intricate outlines.');
+assert.equal(allowedDiagnostic.outcome, 'allowed');
+assert.deepEqual(allowedDiagnostic.reasons, []);
+assert.ok(Number.isFinite(allowedDiagnostic.elapsedMs));
 assert.equal(calls, 1);
 for (const broken of [{}, {...env, AI: undefined}, {...env, AI_GATEWAY_ID: ''}, {...env, AI_GATEWAY_ID: 'https://untrusted.test'}]) {
-  await assert.rejects(moderateSubject(broken, 'flower'), {code: 'moderation_unavailable', status: 503});
+  await assert.rejects(moderateSubject(broken, 'flower'), error => {
+    assert.equal(error.code, 'moderation_unavailable'); assert.equal(error.status, 503);
+    assert.equal(error.diagnostics.failureReason, 'configuration'); return true;
+  });
 }
 assert.equal(calls, 1, 'Invalid local configuration must not call Jev');
 for (const result of [null, {answers: {}}, {success: false, errors: [{message: 'private'}]}]) {
-  await assert.rejects(moderateSubject({...env, AI: {run: async () => result}}, 'flower'), {code: 'moderation_unavailable', status: 503});
+  await assert.rejects(moderateSubject({...env, AI: {run: async () => result}}, 'flower'), error => {
+    assert.equal(error.code, 'moderation_unavailable');
+    assert.equal(error.diagnostics.failureReason, 'invalid_response'); return true;
+  });
 }
 await assert.rejects(moderateSubject({...env, AI: {run: async () => { throw new Error('private upstream content'); }}}, 'flower'),
-  error => error.code === 'moderation_unavailable' && !error.message.includes('private'));
+  error => error.code === 'moderation_unavailable' && !error.message.includes('private') && error.diagnostics.failureReason === 'upstream');
 const blocked = safeModerationResult(); blocked.answers.violence.noul = 0.99;
-await assert.rejects(moderateSubject({...env, AI: {run: async () => blocked}}, 'violent content'), {code: 'description_not_suitable', status: 400});
+await assert.rejects(moderateSubject({...env, AI: {run: async () => blocked}}, 'violent content'), error => {
+  assert.equal(error.code, 'description_not_suitable'); assert.equal(error.status, 400);
+  assert.deepEqual(error.diagnostics.reasons, ['violence']);
+  assert.ok(!JSON.stringify(error.diagnostics).includes('violent content')); return true;
+});
 // Exercise a hung inference without waiting eight seconds in the offline suite.
 const originalTimeout = globalThis.setTimeout;
 try {
   globalThis.setTimeout = (callback, delay) => { assert.equal(delay, 8000); return originalTimeout(callback, 0); };
-  await assert.rejects(moderateSubject({...env, AI: {run: () => new Promise(() => {})}}, 'flower'), {code: 'moderation_unavailable', status: 503});
+  await assert.rejects(moderateSubject({...env, AI: {run: () => new Promise(() => {})}}, 'flower'), error => {
+    assert.equal(error.code, 'moderation_unavailable');
+    assert.equal(error.diagnostics.failureReason, 'timeout'); return true;
+  });
 } finally { globalThis.setTimeout = originalTimeout; }
 console.log('Moderation protocol tests passed (synthetic responses; no model calls).');

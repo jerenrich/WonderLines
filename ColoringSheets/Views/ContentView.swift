@@ -343,9 +343,10 @@ struct ContentView: View {
             .accessibilityHint("Keep the app open. Generation may take a few minutes.")
         } else if let message = store.batchMessage {
             Button { detailMessage = message } label: {
-                Label("\(store.results.count) \(store.results.count == 1 ? "sheet" : "sheets") available · Details", systemImage: "exclamationmark.circle")
+                Label((store.moderationStatus ?? "\(store.results.count) \(store.results.count == 1 ? "sheet" : "sheets") available") + " · Details", systemImage: "exclamationmark.circle")
                     .font(.footnote)
             }
+            .accessibilityIdentifier("batchDetails")
         } else if case .error(let message) = store.phase {
             HStack(alignment: .top, spacing: 8) {
                 Button { detailMessage = message } label: {
@@ -505,7 +506,10 @@ struct ContentView: View {
                 Section("Recent events") {
                     ForEach(diagnostics.events.reversed()) { event in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(event.text).font(.callout).textSelection(.enabled)
+                            if let summary = event.moderationSummary {
+                                Label(summary, systemImage: "shield.lefthalf.filled").font(.callout.weight(.semibold))
+                            }
+                            Text(event.metadataText).font(.callout).textSelection(.enabled)
                             Text(event.date, format: .dateTime.year().month().day().hour().minute().second())
                                 .font(.caption).foregroundStyle(.secondary)
                         }

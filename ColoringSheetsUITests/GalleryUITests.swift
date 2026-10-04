@@ -2,6 +2,41 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
+    func testMixedModerationRejectionsAreVisibleAndExplained() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-imageCount", "3", "-childAge", "6"]
+        app.launchEnvironment["COLORING_MOCK_MODERATION"] = "mixed"
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap(); subject.typeText("A friendly flower")
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["generate"].tap()
+        let details = app.buttons["batchDetails"]
+        XCTAssertTrue(details.waitForExistence(timeout: 10))
+        XCTAssertTrue(details.label.contains("2 sheets rejected by content moderation"))
+        XCTAssertTrue(app.staticTexts["sheetPosition"].exists, "The accepted sheet remains available.")
+        details.tap()
+        let alert = app.alerts["Generation details"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        let message = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " ")
+        XCTAssertTrue(message.contains("description was rejected"))
+        XCTAssertTrue(message.contains("image provider rejected"))
+        XCTAssertTrue(message.contains("No sheet allowance was used"))
+        XCTAssertTrue(message.contains("may have been charged"))
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Moderation rejection details"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        alert.buttons["OK"].tap()
+        app.buttons["settings"].tap()
+        app.buttons["diagnostics"].tap()
+        XCTAssertTrue(app.navigationBars["Diagnostics"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Description rejected by content moderation")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["shareDiagnostics"].exists)
+    }
+    @MainActor
     private func setAge(in app: XCUIApplication, position: CGFloat) {
         app.buttons["validation"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))

@@ -8,6 +8,20 @@ final class MockGenerator: GenerationServing {
         nextVariation += 1
         try await Task.sleep(for: .milliseconds(700 + variation * 180))
         try Task.checkCancellation()
+        #if DEBUG
+        // Deterministic UI fixtures, reachable only through the mock service.
+        let scenario = ProcessInfo.processInfo.environment["COLORING_MOCK_MODERATION"]
+        if scenario == "description" || (scenario == "mixed" && variation == 1) {
+            DiagnosticLog.shared.record("Mock generation", "response", generationID: UUID(), model: request.model,
+                                        httpStatus: 400, workerCode: "description_not_suitable")
+            throw GenerationError.descriptionRejected
+        }
+        if scenario == "image" || (scenario == "mixed" && variation == 2) {
+            DiagnosticLog.shared.record("Mock generation", "response", generationID: UUID(), model: request.model,
+                                        httpStatus: 502, workerCode: "provider_content_rejected")
+            throw GenerationError.imageRejected
+        }
+        #endif
         let image = Self.sampleImage(size: GenerationSize(width: request.width, height: request.height), variation: variation)
         let metrics = GenerationMetrics.decode("{\"requestedModel\":\"\(request.model.rawValue)\",\"inputTokens\":100,\"imageInputTokens\":0,\"outputTokens\":200,\"totalTokens\":300,\"estimatedTotalUsd\":0.0065,\"elapsedMs\":12000,\"estimateBasis\":\"Illustrative mock metrics only. No paid request was sent.\"}")
         return ColoringResult(data: image.pngData()!, image: image, requestedModel: request.model, metrics: metrics,

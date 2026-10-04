@@ -310,6 +310,12 @@ export class Account {
       delete job.fal.request.payload;
     }
     await this.state.storage.put(k, job);
+    // One terminal audit event covers synchronous providers and queued fal jobs.
+    // No prompt, provider response, image, or free-text failure message is logged.
+    if (result.state === 'failed' && result.errorCode === 'provider_content_rejected') {
+      console.info(JSON.stringify({event: 'image_moderation', generationID: generationId,
+        outcome: 'provider_content_rejected', httpStatus: 502}));
+    }
     return reply({access: await this.access()});
   }
 }
@@ -340,11 +346,13 @@ async function generate(request, env, account) {
   if (typeof model !== 'string' || !Object.hasOwn(catalog.routes, model)) return fail('invalid_request', 'Model is invalid.', 400);
   try { upstreamRequest = imageRequest(env, catalog.routes[model], input.subject, size); }
   catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
-  try { await moderateSubject(env, input.subject); }
+  const logModeration = diagnostics => console.info(JSON.stringify({event: 'description_moderation',
+    generationID: generationId, model: MODERATION_MODEL, imageModel: model,
+    policy: MODERATION_POLICY, ...diagnostics}));
+  try { logModeration(await moderateSubject(env, input.subject)); }
   catch (error) {
     if (!(error instanceof ModerationError)) throw error;
-    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
-      model: MODERATION_MODEL, policy: MODERATION_POLICY, outcome: error.code}));
+    logModeration(error.diagnostics);
     return fail(error.code, error.message, error.status);
   }
   const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint,

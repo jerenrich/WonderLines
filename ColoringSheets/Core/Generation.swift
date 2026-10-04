@@ -212,9 +212,13 @@ struct ColoringResult: Identifiable {
 }
 
 enum GenerationError: LocalizedError, Equatable {
+    case descriptionRejected, imageRejected, moderationUnavailable
     case validation(String), configuration, deviceVerification, deviceRejected, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled
     var errorDescription: String? {
         switch self {
+        case .descriptionRejected: return "The description was rejected by content moderation because it may be unsuitable for all ages. Try a gentle, family-friendly scene. No sheet allowance was used for this rejected description."
+        case .imageRejected: return "The image provider rejected this sheet under its content moderation rules. No image is available. Revise the description before trying again. Generation may have been charged and used sheet allowance."
+        case .moderationUnavailable: return "The description safety check is unavailable. This is not a content rejection. No sheet allowance was used. Please try again later."
         case .validation(let message), .upstream(let message): return message
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
         case .deviceVerification: return "Secure device verification failed before the generation request was sent. Check Settings → Diagnostics for the failing step and code."
@@ -500,6 +504,7 @@ final class WorkerClient: GenerationServing {
                                               model: requestedModel, error: error)
             // Keep interrupted, authentication and transient failures recoverable.
             let terminal = [400, 410, 422, 429].contains(response.statusCode) ||
+                (error as? GenerationError) == .moderationUnavailable ||
                 (response.statusCode == 502 && Self.workerErrorCode(data, response: response) != nil)
             if terminal, let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
             throw error
@@ -599,6 +604,13 @@ final class WorkerClient: GenerationServing {
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
         let contentType = response.value(forHTTPHeaderField: "Content-Type")?.lowercased().split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
         guard response.statusCode == 200 else {
+            // Use fixed copy for safety outcomes; never display echoed provider content.
+            switch (workerErrorCode(data, response: response), response.statusCode) {
+            case ("description_not_suitable", 400): throw GenerationError.descriptionRejected
+            case ("provider_content_rejected", 502): throw GenerationError.imageRejected
+            case ("moderation_unavailable", 503): throw GenerationError.moderationUnavailable
+            default: break
+            }
             if response.statusCode == 403,
                ["invalid_assertion", "app_attest_required"].contains(workerErrorCode(data, response: response) ?? "") {
                 throw GenerationError.deviceRejected

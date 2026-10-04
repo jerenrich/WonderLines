@@ -50,6 +50,10 @@ export function moderationResult(value) {
 }
 
 export function moderationDecision(value) {
+  return moderationAssessment(value).allowed;
+}
+
+function moderationAssessment(value) {
   const result = moderationResult(value);
   const scores = {};
   for (const name of ['all_ages', ...Object.keys(hazards)]) {
@@ -60,36 +64,54 @@ export function moderationDecision(value) {
     }
     scores[name] = answer.noul;
   }
-  return scores.all_ages >= SAFE_PROBABILITY &&
-    Object.keys(hazards).every(name => scores[name] <= (name === 'violence' ? VIOLENCE_PROBABILITY_LIMIT : 0.05));
+  const reasons = [];
+  if (scores.all_ages < SAFE_PROBABILITY) reasons.push('all_ages');
+  for (const name of Object.keys(hazards)) {
+    if (scores[name] > (name === 'violence' ? VIOLENCE_PROBABILITY_LIMIT : 0.05)) reasons.push(name);
+  }
+  return {allowed: reasons.length === 0, reasons};
 }
 
 export class ModerationError extends Error {
-  constructor(code, message, status) { super(message); this.code = code; this.status = status; }
+  constructor(code, message, status, diagnostics) {
+    super(message); this.code = code; this.status = status; this.diagnostics = diagnostics;
+  }
 }
 
 export async function moderateSubject(env, subject) {
+  const started = Date.now();
+  let failureReason = 'configuration';
+  const diagnostics = (outcome, reasons = []) => ({outcome, reasons,
+    ...(outcome === 'moderation_unavailable' ? {failureReason} : {}),
+    elapsedMs: Math.max(0, Date.now() - started)});
+  const unavailable = () => new ModerationError('moderation_unavailable',
+    'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503,
+    diagnostics('moderation_unavailable'));
   const gatewayID = env.MODERATION_GATEWAY_ID ?? env.AI_GATEWAY_ID;
   if (typeof env.AI?.run !== 'function' || typeof gatewayID !== 'string' ||
       !/^[A-Za-z0-9_-]{1,64}$/.test(gatewayID)) {
-    throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
+    throw unavailable();
   }
   const controller = new AbortController();
-  let timer, allowed;
+  let timer, assessment;
   try {
+    failureReason = 'upstream';
     const result = await Promise.race([
       env.AI.run(MODERATION_MODEL, moderationInput(subject), {
         gateway: {id: gatewayID, skipCache: true, collectLog: false},
         signal: controller.signal,
       }),
       new Promise((_, reject) => { timer = setTimeout(() => {
-        controller.abort(); reject(new Error('Moderation timeout'));
+        failureReason = 'timeout'; controller.abort(); reject(new Error('Moderation timeout'));
       }, TIMEOUT_MS); }),
     ]);
-    allowed = moderationDecision(result);
+    failureReason = 'invalid_response';
+    assessment = moderationAssessment(result);
   } catch {
     // Never expose upstream text: it could echo descriptions or credentials.
-    throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
+    throw unavailable();
   } finally { clearTimeout(timer); }
-  if (!allowed) throw new ModerationError('description_not_suitable', 'Please describe a gentle, family-friendly scene suitable for all ages. No sheet allowance was used.', 400);
+  if (!assessment.allowed) throw new ModerationError('description_not_suitable', 'Please describe a gentle, family-friendly scene suitable for all ages. No sheet allowance was used.', 400,
+    diagnostics('description_not_suitable', assessment.reasons));
+  return diagnostics('allowed');
 }

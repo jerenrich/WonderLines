@@ -72,6 +72,8 @@ try {
   assert.equal(forwarded.size, '1456x1024'); assert.ok(forwarded.prompt.includes('Synthetic flower'));
   response = await worker.fetch(request(), env); assert.equal(response.status, 200); assert.equal(calls, 1, 'A repeated ID must return the stored image.');
   assert.equal(moderationCalls, 1, 'Recovery must not repeat moderation.');
+  assert.equal(auditLogs.filter(log => log.event === 'description_moderation' && log.generationID === generationId).length, 1);
+  assert.equal(auditLogs.find(log => log.generationID === generationId)?.outcome, 'allowed');
   const originalAI = env.AI;
   env.AI = undefined;
   assert.equal((await worker.fetch(request(), env)).status, 200, 'Saved results recover during a moderation outage.');
@@ -83,10 +85,15 @@ try {
   const accessBeforeModeration = await accountBeforeModeration.access();
   response = await worker.fetch(rejectedRequest(), env);
   assert.equal(response.status, 503); assert.equal((await response.json()).error.code, 'moderation_unavailable');
+  assert.equal(auditLogs.at(-1).failureReason, 'configuration');
   const unsafe = safeModerationResult(); unsafe.answers.sexual.noul = 0.99;
   env.AI = {run: async () => unsafe};
   response = await worker.fetch(rejectedRequest(), env);
   assert.equal(response.status, 400); assert.equal((await response.json()).error.code, 'description_not_suitable');
+  assert.deepEqual(auditLogs.at(-1).reasons, ['sexual']);
+  assert.equal(auditLogs.at(-1).policy, 'all-ages-v1');
+  assert.ok(Number.isFinite(auditLogs.at(-1).elapsedMs));
+  assert.ok(!JSON.stringify(auditLogs).includes('Unsuitable synthetic request'));
   assert.deepEqual(await accountBeforeModeration.access(), accessBeforeModeration, 'Moderation must not consume allowance or credits.');
   assert.equal(await accountBeforeModeration.state.storage.get('job:' + rejectedID), undefined);
   const budgetObject = env.BUDGET.objects.get('daily-generation-budget');
@@ -332,6 +339,10 @@ try {
     nsfw = blocked === 'safety'; imageURL = blocked === 'host' ? 'https://evil.example/test.png' : 'https://fal.media/test.png';
     const before = downloaded; await falAccount.alarm();
     assert.equal((await falGet(id)).status, 502); assert.equal(downloaded, before);
+    if (blocked === 'safety') {
+      assert.equal(auditLogs.filter(log => log.event === 'image_moderation' && log.generationID === id).length, 1);
+      assert.equal(falEnv.GENERATIONS.values.has(falIdentity.accountId + '/' + id + '.png'), false);
+    }
   }
   nsfw = false; imageURL = 'https://fal.media/test.png';
   const redirectID = crypto.randomUUID(); await falPost(redirectID); await falAccount.alarm();
@@ -781,7 +792,12 @@ try {
     assert.deepEqual(await (await get('/v1/generations/' + id)).json(), failure);
     assert.deepEqual(await (await worker.fetch(generateRequest(model, id), testEnv)).json(), failure);
     assert.equal(attempts, 1);
+    if (code === 'provider_content_rejected') {
+      assert.equal(auditLogs.filter(log => log.event === 'image_moderation' && log.generationID === id).length, 1,
+        'Only the terminal transition logs image rejection; recovery never duplicates it.');
+    }
   }
+  assert.ok(!JSON.stringify(auditLogs).includes('private-provider-detail'));
   const conversionFailure = await (await get('/v1/generations/' + conversionFailureID)).json();
   assert.equal(conversionFailure.error.code, 'provider_image_conversion_failed');
   assert.match(conversionFailure.error.message, /Images service quota/);
