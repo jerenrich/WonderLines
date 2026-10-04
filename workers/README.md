@@ -13,3 +13,7 @@ workers/
 Keep Worker-specific source, configuration, tests, and documentation together. Shared code can be introduced under `workers/shared/` when a second Worker actually needs it; avoid creating abstractions before there is a concrete shared use case.
 
 Secrets must never be committed. Declare required secret names in each Worker's Wrangler config, store deployed values with Wrangler or in the Cloudflare dashboard, and use an ignored `.dev.vars` file only for local development.
+
+## Prompt comparison app
+
+[`moderation-lab/`](moderation-lab/README.md) is a lightweight, standalone web app for comparing prompts across Jev, Clef and Clef-flash using the API's shared all-ages policy. It is deployed at [Coloring Sheets Prompt Lab](https://coloring-sheets-moderation-lab.jordan-erenrich.workers.dev). Live comparisons require the private lab access key stored locally in the ignored `.secrets/moderation-lab-access-key` file.

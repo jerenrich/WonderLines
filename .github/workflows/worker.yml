@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   worker:
-    name: Test Worker and deploy main
+    name: Test and deploy API and moderation lab
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -62,6 +62,9 @@ jobs:
         run: |
           node Scripts/test_worker.mjs
           node Scripts/test_batch_moderation.mjs
+          node Scripts/test_moderation.mjs
+          node workers/moderation-lab/tests/worker.mjs
+          node --check workers/moderation-lab/public/app.js
 
       - name: Check deployment credentials
         if: github.event_name != 'pull_request'
@@ -84,14 +87,24 @@ jobs:
           wranglerVersion: '4.136.3'
           command: deploy --keep-vars --var AI_GATEWAY_ID:coloring-sheets --var MODERATION_GATEWAY_ID:coloring-sheets --var MODERATION_MODEL:clef --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
+      - name: Deploy moderation lab with the same policy revision
+        if: github.event_name != 'pull_request'
+        uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/moderation-lab
+          wranglerVersion: '4.136.3'
+          command: deploy --keep-vars --message "GitHub main ${{ steps.revision.outputs.sha }}"
+
       - name: Summarize deployment
         if: github.event_name != 'pull_request'
         env:
           DEPLOYED_SHA: ${{ steps.revision.outputs.sha }}
         run: |
           {
-            echo '### Worker deployed'
-            echo "Worker: coloring-sheets-api"
+            echo '### API and moderation lab deployed'
+            echo "Workers: coloring-sheets-api, coloring-sheets-moderation-lab"
             echo "Commit: [$DEPLOYED_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$DEPLOYED_SHA)"
             echo 'Dashboard-managed variables and existing Worker secrets are preserved.'
           } >> "$GITHUB_STEP_SUMMARY"

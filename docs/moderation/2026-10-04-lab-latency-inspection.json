@@ -1,0 +1,381 @@
+{
+  "date": "2026-10-04",
+  "policy": "all-ages-v5",
+  "prompt": "A friendly dragon making pasta in a sunny kitchen",
+  "deployedLab": {
+    "method": "Five sequential comparisons; three model checks run concurrently per comparison; timings recorded inside deployed Worker, excluding browser network",
+    "summary": {
+      "jev": {
+        "medianMs": 319,
+        "runsMs": [
+          351,
+          319,
+          519,
+          303,
+          269
+        ]
+      },
+      "clef": {
+        "medianMs": 729,
+        "runsMs": [
+          802,
+          910,
+          666,
+          729,
+          436
+        ]
+      },
+      "clef-flash": {
+        "medianMs": 491,
+        "runsMs": [
+          491,
+          698,
+          416,
+          482,
+          569
+        ]
+      }
+    },
+    "rows": [
+      {
+        "round": 1,
+        "name": "jev",
+        "elapsedMs": 351,
+        "outcome": "approved"
+      },
+      {
+        "round": 1,
+        "name": "clef",
+        "elapsedMs": 802,
+        "outcome": "rejected"
+      },
+      {
+        "round": 1,
+        "name": "clef-flash",
+        "elapsedMs": 491,
+        "outcome": "approved"
+      },
+      {
+        "round": 2,
+        "name": "jev",
+        "elapsedMs": 319,
+        "outcome": "approved"
+      },
+      {
+        "round": 2,
+        "name": "clef",
+        "elapsedMs": 910,
+        "outcome": "rejected"
+      },
+      {
+        "round": 2,
+        "name": "clef-flash",
+        "elapsedMs": 698,
+        "outcome": "approved"
+      },
+      {
+        "round": 3,
+        "name": "jev",
+        "elapsedMs": 519,
+        "outcome": "approved"
+      },
+      {
+        "round": 3,
+        "name": "clef",
+        "elapsedMs": 666,
+        "outcome": "rejected"
+      },
+      {
+        "round": 3,
+        "name": "clef-flash",
+        "elapsedMs": 416,
+        "outcome": "approved"
+      },
+      {
+        "round": 4,
+        "name": "jev",
+        "elapsedMs": 303,
+        "outcome": "approved"
+      },
+      {
+        "round": 4,
+        "name": "clef",
+        "elapsedMs": 729,
+        "outcome": "rejected"
+      },
+      {
+        "round": 4,
+        "name": "clef-flash",
+        "elapsedMs": 482,
+        "outcome": "approved"
+      },
+      {
+        "round": 5,
+        "name": "jev",
+        "elapsedMs": 269,
+        "outcome": "approved"
+      },
+      {
+        "round": 5,
+        "name": "clef",
+        "elapsedMs": 436,
+        "outcome": "rejected"
+      },
+      {
+        "round": 5,
+        "name": "clef-flash",
+        "elapsedMs": 569,
+        "outcome": "approved"
+      }
+    ]
+  },
+  "gatewayBypassExperiment": {
+    "prompt": "A friendly dragon making pasta in a sunny kitchen",
+    "method": "Sequential matched requests, rotated order, remote AI binding; includes local proxy overhead",
+    "rows": [
+      {
+        "round": 1,
+        "name": "jev",
+        "gateway": true,
+        "elapsedMs": 577,
+        "responseModel": "jev-1.13.0",
+        "scores": {
+          "all_ages": 0.98,
+          "sexual": 0.01,
+          "violence": 0.03,
+          "hate": 0.01,
+          "adult": 0.02,
+          "frightening": 0.02,
+          "bypass": 0.02
+        }
+      },
+      {
+        "round": 1,
+        "name": "clef-flash",
+        "gateway": true,
+        "elapsedMs": 655,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 1,
+        "name": "clef-flash",
+        "gateway": false,
+        "elapsedMs": 625,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 2,
+        "name": "clef-flash",
+        "gateway": true,
+        "elapsedMs": 484,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 2,
+        "name": "clef-flash",
+        "gateway": false,
+        "elapsedMs": 451,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 2,
+        "name": "jev",
+        "gateway": true,
+        "elapsedMs": 398,
+        "responseModel": "jev-1.13.0",
+        "scores": {
+          "all_ages": 0.98,
+          "sexual": 0.01,
+          "violence": 0.03,
+          "hate": 0.01,
+          "adult": 0.02,
+          "frightening": 0.02,
+          "bypass": 0.02
+        }
+      },
+      {
+        "round": 3,
+        "name": "clef-flash",
+        "gateway": false,
+        "elapsedMs": 170,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 3,
+        "name": "jev",
+        "gateway": true,
+        "elapsedMs": 328,
+        "responseModel": "jev-1.13.0",
+        "scores": {
+          "all_ages": 0.98,
+          "sexual": 0.01,
+          "violence": 0.03,
+          "hate": 0.01,
+          "adult": 0.02,
+          "frightening": 0.02,
+          "bypass": 0.02
+        }
+      },
+      {
+        "round": 3,
+        "name": "clef-flash",
+        "gateway": true,
+        "elapsedMs": 504,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 4,
+        "name": "jev",
+        "gateway": true,
+        "elapsedMs": 296,
+        "responseModel": "jev-1.13.0",
+        "scores": {
+          "all_ages": 0.98,
+          "sexual": 0.01,
+          "violence": 0.02,
+          "hate": 0.01,
+          "adult": 0.02,
+          "frightening": 0.02,
+          "bypass": 0.02
+        }
+      },
+      {
+        "round": 4,
+        "name": "clef-flash",
+        "gateway": true,
+        "elapsedMs": 701,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 4,
+        "name": "clef-flash",
+        "gateway": false,
+        "elapsedMs": 453,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 5,
+        "name": "clef-flash",
+        "gateway": true,
+        "elapsedMs": 368,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 5,
+        "name": "clef-flash",
+        "gateway": false,
+        "elapsedMs": 453,
+        "responseModel": "clef-flash",
+        "scores": {
+          "all_ages": 0.9051,
+          "sexual": 0.0396,
+          "violence": 0.0219,
+          "hate": 0.0315,
+          "adult": 0.0525,
+          "frightening": 0.0238,
+          "bypass": 0.0363
+        }
+      },
+      {
+        "round": 5,
+        "name": "jev",
+        "gateway": true,
+        "elapsedMs": 398,
+        "responseModel": "jev-1.13.0",
+        "scores": {
+          "all_ages": 0.98,
+          "sexual": 0.01,
+          "violence": 0.03,
+          "hate": 0.01,
+          "adult": 0.02,
+          "frightening": 0.02,
+          "bypass": 0.02
+        }
+      }
+    ]
+  },
+  "gatewayLogAccess": "HTTP 403 Authentication error: current OAuth login lacks AI Gateway log access",
+  "conclusion": "Clef-flash slower than Jev in four of five deployed comparisons; gateway bypass did not reliably reverse the ranking in the matched remote-binding experiment. Exact upstream cause undetermined.",
+  "productionChanges": false
+}
