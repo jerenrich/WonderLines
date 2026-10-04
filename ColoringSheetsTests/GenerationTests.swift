@@ -652,7 +652,7 @@ final class StateTests: XCTestCase {
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
         XCTAssertEqual(store.model, .sunburst)
-        XCTAssertEqual(store.imageCount, 5)
+        XCTAssertEqual(store.imageCount, 3)
         store.model = .flare
         store.setImageCount(1)
         store.age = 8; store.description = "Synthetic flower"
@@ -669,15 +669,17 @@ final class StateTests: XCTestCase {
         await waitFor { store.phase == .result }
         XCTAssertEqual(store.results.count, 1)
         store.generate()
-        await waitFor { service.pendingCount == 5 }
-        XCTAssertEqual(service.captured.dropFirst().map(\.model), Array(repeating: .sunburst, count: 5))
+        await waitFor { service.pendingCount == 3 }
+        XCTAssertEqual(service.captured.dropFirst().map(\.model), Array(repeating: .sunburst, count: 3))
         service.succeed()
         await waitFor { store.phase == .result }
-        XCTAssertEqual(store.results.count, 5)
+        XCTAssertEqual(store.results.count, 3)
         store.setImageCount(99)
-        XCTAssertEqual(store.imageCount, 5)
+        XCTAssertEqual(store.imageCount, 3)
         store.setImageCount(0)
         XCTAssertEqual(store.imageCount, 1)
+        defaults.set(5, forKey: "imageCount")
+        XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 3, "Old five-image preferences must be clamped")
         defaults.set(-4, forKey: "imageCount")
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 1)
         defaults.set("unsupported", forKey: "generationModel")
@@ -703,13 +705,13 @@ final class StateTests: XCTestCase {
         store.generate(); store.generate()
         await waitFor { service.calls == ColoringViewModel.batchSize }
         XCTAssertEqual(service.pendingCount, ColoringViewModel.batchSize, "All requests start before any completes")
-        XCTAssertEqual(ColoringViewModel.batchSize, 5)
-        XCTAssertEqual(Set(service.captured.map(\.subject)).count, 5)
+        XCTAssertEqual(ColoringViewModel.batchSize, 3)
+        XCTAssertEqual(Set(service.captured.map(\.subject)).count, 3)
         XCTAssertTrue(service.captured.allSatisfy {
             $0.subject.hasPrefix("Synthetic flower\n\n") && $0.subject.contains("very simple") &&
             $0.model == .sunburst && $0.width == 1200 && $0.height == 848
         })
-        XCTAssertEqual(Set(service.captured.map(\.subject)), Set(SheetComposition.allCases.map {
+        XCTAssertEqual(Set(service.captured.map(\.subject)), Set(SheetComposition.allCases.prefix(3).map {
             "Synthetic flower\n\n" + (try! GenerationRequest.guidance(age: 3)) + "\n\n" + $0.guidance
         }))
         XCTAssertEqual(store.description, "Synthetic flower", "Composition guidance must not change the editable prompt")
@@ -769,13 +771,11 @@ final class StateTests: XCTestCase {
         let second = try XCTUnwrap(store.result)
         XCTAssertNotEqual(first.data, second.data)
         service.fail(at: 0)
-        service.fail(at: 3)
-        service.fail(at: 4)
         await waitFor { !store.isGenerating }
         XCTAssertEqual(store.phase, .result)
         XCTAssertEqual(store.results.count, 2)
         XCTAssertEqual(store.completedCount, ColoringViewModel.batchSize)
-        XCTAssertEqual(store.failedCount, 3)
+        XCTAssertEqual(store.failedCount, 1)
         XCTAssertNotNil(store.batchMessage)
         XCTAssertEqual(store.result?.id, second.id)
         XCTAssertEqual(store.results.first?.id, first.id, "Later results append without reordering")
@@ -818,7 +818,7 @@ final class StateTests: XCTestCase {
 
         store.generate()
         await waitFor { service.calls == ColoringViewModel.batchSize * 2 }
-        for index in [0, 1, 3, 4] { service.succeed(at: index) }
+        for index in [0, 1] { service.succeed(at: index) }
         try await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(store.completedCount, 0, "Cancelled responses cannot enter a new batch")
         XCTAssertEqual(store.result?.id, retainedID)
@@ -852,21 +852,21 @@ final class StateTests: XCTestCase {
         service.succeed()
         await waitFor { store.phase == .result }
         XCTAssertEqual(store.results.count, ColoringViewModel.batchSize, "Completion bypasses the five-second delay")
-        store.selectResult(at: 3)
+        store.selectResult(at: 2)
         let previousID = store.result?.id
 
         store.generate()
         await waitFor { service.pendingCount == ColoringViewModel.batchSize }
-        service.succeed(at: 7)
+        service.succeed(at: ColoringViewModel.batchSize + 2)
         await waitFor { store.readyCount == 1 }
         XCTAssertEqual(store.result?.id, previousID)
         await waitFor(timeout: 6) { store.results.count == 1 }
         XCTAssertNotEqual(store.result?.id, previousID)
-        service.succeed(at: 6)
+        service.succeed(at: ColoringViewModel.batchSize + 1)
         await waitFor { store.results.count == 2 }
         store.selectResult(at: 1)
         let selectedID = store.result?.id
-        service.succeed(at: 5)
+        service.succeed(at: ColoringViewModel.batchSize)
         await waitFor { store.results.count == 3 }
         XCTAssertEqual(store.result?.id, selectedID)
         service.fail()
@@ -890,7 +890,7 @@ final class StateTests: XCTestCase {
         service.fail()
         await waitFor { store.phase == .result }
         XCTAssertEqual(store.results.count, 1)
-        XCTAssertEqual(store.failedCount, 4)
+        XCTAssertEqual(store.failedCount, 2)
         XCTAssertNotNil(store.batchMessage)
     }
 
@@ -916,7 +916,7 @@ final class StateTests: XCTestCase {
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
         store.age = 6
-        let longest = try XCTUnwrap(SheetComposition.allCases.max { $0.guidance.utf16.count < $1.guidance.utf16.count })
+        let longest = try XCTUnwrap(SheetComposition.allCases.prefix(3).max { $0.guidance.utf16.count < $1.guidance.utf16.count })
         let overhead = try GenerationRequest.guidance(age: 6).utf16.count + longest.guidance.utf16.count + 4
         let limit = 500 - overhead
         let valid = String(repeating: "😀", count: limit / 2) + (limit % 2 == 1 ? "x" : "")

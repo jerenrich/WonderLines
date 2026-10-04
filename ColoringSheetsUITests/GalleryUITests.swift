@@ -93,7 +93,7 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(app.buttons["nextSheet"].isHittable)
         XCTAssertTrue(app.buttons["settings"].isHittable)
         app.buttons["nextSheet"].tap()
-        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        XCTAssertEqual(position.label, "Sheet 2 of 3")
         assertVisibleSheetMatchesSelection()
 
         if app.buttons["sheetActions"].exists {
@@ -110,7 +110,7 @@ final class GalleryUITests: XCTestCase {
         usage.lifetime = .keepAlways
         add(usage)
         app.buttons["Done"].tap()
-        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        XCTAssertEqual(position.label, "Sheet 2 of 3")
         assertVisibleSheetMatchesSelection()
 
         let portrait = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -139,11 +139,11 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "Manually collapsed descriptions must also open the keyboard in one tap")
         subject.typeText("!")
         app.buttons["dismissKeyboard"].tap()
-        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        XCTAssertEqual(position.label, "Sheet 2 of 3")
         assertVisibleSheetMatchesSelection()
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["nextSheet"].isHittable)
-        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        XCTAssertEqual(position.label, "Sheet 2 of 3")
         assertVisibleSheetMatchesSelection()
         let beforeClearSize = subject.frame.size
         app.buttons["clearDescription"].tap()
@@ -164,7 +164,7 @@ final class GalleryUITests: XCTestCase {
         subject.typeText("A moonlit garden")
         XCTAssertEqual(subject.value as? String, "A moonlit garden")
         app.buttons["dismissKeyboard"].tap()
-        XCTAssertEqual(position.label, "Sheet 2 of 5")
+        XCTAssertEqual(position.label, "Sheet 2 of 3")
         assertVisibleSheetMatchesSelection()
     }
 
@@ -254,7 +254,7 @@ final class GalleryUITests: XCTestCase {
         let position = app.staticTexts["sheetPosition"]
         func expectPage(_ number: Int) {
             let expectation = XCTNSPredicateExpectation(
-                predicate: NSPredicate(format: "label == %@", "Sheet \(number) of 5"), object: position)
+                predicate: NSPredicate(format: "label == %@", "Sheet \(number) of 3"), object: position)
             XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 8), .completed)
         }
         expectPage(1)
@@ -271,14 +271,10 @@ final class GalleryUITests: XCTestCase {
         gallery.swipeLeft()
         expectPage(3)
         gallery.swipeLeft()
-        expectPage(4)
-        gallery.swipeLeft()
-        expectPage(5)
-        gallery.swipeLeft()
-        expectPage(5)
+        expectPage(3)
         XCTAssertFalse(app.buttons["nextSheet"].isEnabled)
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        screenshot.name = "Five-sheet landscape gallery"
+        screenshot.name = "Three-sheet landscape gallery"
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
@@ -288,13 +284,13 @@ final class GalleryUITests: XCTestCase {
         XCTAssertEqual(subject.frame.height, restingSize.height, accuracy: 1)
         XCTAssertEqual(subject.frame.width, restingSize.width, accuracy: 1)
         subject.typeText(" with stars")
-        expectPage(5)
+        expectPage(3)
         XCTAssertTrue(gallery.exists)
         app.buttons["dismissKeyboard"].tap()
         app.buttons["minimizeComposer"].tap()
-        expectPage(5)
+        expectPage(3)
         XCTAssertTrue(app.buttons["expandComposer"].label.contains("with stars"))
         app.buttons["previousSheet"].tap()
-        expectPage(4)
+        expectPage(2)
     }
 }

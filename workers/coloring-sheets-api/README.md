@@ -93,7 +93,7 @@ For a first deployment, create the `coloring-sheets-generations` R2 bucket and a
 
 Keep Worker source changes in Git and merge them into `main`; the next automated deployment replaces any manual source changes with tested `main`. Dashboard-managed variables remain independently adjustable. A Worker change affects both app and browser clients.
 
-`FREE_DAILY_ALLOWANCE` is configured as `1000` images per anonymous account per UTC day. Both access reporting and reservation enforcement accept whole-number allowances up to `100000`. Account reservations are serialized across the global budget call so simultaneous requests cannot reuse the same free allowance. The global daily limit remains an independent ceiling across all accounts.
+`FREE_DAILY_ALLOWANCE` is configured as `100` images per anonymous account per UTC day, resetting at midnight UTC. The Worker enforces a hard ceiling of 100 images per account per day, including credit-funded images. Access reporting clamps larger configured allowances to 100, so stale dashboard settings cannot raise the cap. Missing allowance configuration defaults to 100; malformed configuration fails closed. Each reserved image counts toward the limit even if generation fails or the client disconnects; recovery of an existing generation does not count again. Account reservations are serialized across the global budget call so simultaneous requests cannot reuse the same free allowance. The global daily limit remains an independent ceiling across all accounts.
 
 ## Enable AI Gateway using your current OpenAI credits
 

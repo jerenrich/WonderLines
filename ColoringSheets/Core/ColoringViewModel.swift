@@ -3,7 +3,7 @@ import SwiftUI
 @MainActor
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
-    static let batchSize = SheetComposition.allCases.count
+    static let batchSize = 3
     @Published var description = ""
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
     @Published var model: ImageModel { didSet { defaults.set(model.rawValue, forKey: "generationModel") } }

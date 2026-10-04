@@ -6,7 +6,7 @@
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "images": { "binding": "IMAGES" },
   "vars": {
-    "FREE_DAILY_ALLOWANCE": "1000"
+    "FREE_DAILY_ALLOWANCE": "100"
   },
   "durable_objects": {
     "bindings": [

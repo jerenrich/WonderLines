@@ -89,16 +89,41 @@ try {
   largeEnv.ACCOUNTS = new Accounts(largeEnv); largeEnv.BUDGET = new BudgetNamespace(largeEnv);
   const accountID = crypto.randomUUID(), largeStub = largeEnv.ACCOUNTS.get(accountID);
   response = await largeStub.fetch('https://account/initialize', {method: 'POST', body: JSON.stringify({accountId: accountID})});
-  assert.equal((await response.json()).access.freeGenerationsRemaining, 1000);
+  assert.equal((await response.json()).access.freeGenerationsRemaining, 100, 'A stale dashboard allowance cannot exceed the daily cap.');
   const account = largeEnv.ACCOUNTS.objects.get(accountID);
-  await account.state.storage.put('usage', {day: new Date().toISOString().slice(0, 10), used: 998});
+  const today = new Date().toISOString().slice(0, 10);
+  await account.state.storage.put('usage', {day: today, used: 98});
   const reserve = generationId => largeStub.fetch('https://account/reserve', {method: 'POST', body: JSON.stringify({generationId, fingerprint: 'synthetic'})});
-  const ids = Array.from({length: 5}, () => crypto.randomUUID());
+  const ids = Array.from({length: 3}, () => crypto.randomUUID());
   const reservations = await Promise.all(ids.map(reserve));
-  assert.deepEqual(reservations.map(r => r.status), [201, 201, 429, 429, 429]);
+  assert.deepEqual(reservations.map(r => r.status), [201, 201, 429]);
   assert.equal((await account.access()).freeGenerationsRemaining, 0);
   assert.equal((await reserve(ids[0])).status, 200, 'A repeated ID must not consume another allowance.');
-  assert.equal((await account.state.storage.get('usage')).used, 1000);
+  assert.equal((await account.state.storage.get('usage')).used, 100);
+  await account.state.storage.put('credits', 7);
+  const accountCapResponse = await reserve(crypto.randomUUID());
+  assert.equal(accountCapResponse.status, 429, 'Credits cannot bypass the daily cap.');
+  assert.match((await accountCapResponse.json()).error.message, /100 images.*midnight UTC/);
+  assert.equal(await account.state.storage.get('credits'), 7);
+  const otherID = crypto.randomUUID(), otherStub = largeEnv.ACCOUNTS.get(otherID);
+  response = await otherStub.fetch('https://account/initialize', {method: 'POST', body: JSON.stringify({accountId: otherID})});
+  assert.equal((await response.json()).access.freeGenerationsRemaining, 100, 'The cap is independent for each account.');
+  const yesterday = new Date(Date.parse(today + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10);
+  await account.state.storage.put('usage', {day: yesterday, used: 100});
+  assert.equal((await account.access()).freeGenerationsRemaining, 100);
+  assert.equal((await account.access()).allowanceResetsAt, new Date(Date.parse(today + 'T00:00:00Z') + 86400000).toISOString());
+  assert.equal((await reserve(ids[0])).status, 200, 'Recovering yesterday’s job must not spend today’s allowance.');
+  assert.equal((await reserve(crypto.randomUUID())).status, 201);
+  assert.deepEqual(await account.state.storage.get('usage'), {day: today, used: 1});
+  // Credit-funded images count toward the same cap when the free allowance is lower.
+  largeEnv.FREE_DAILY_ALLOWANCE = '0';
+  await account.state.storage.put('usage', {day: today, used: 99});
+  const creditReservations = await Promise.all([reserve(crypto.randomUUID()), reserve(crypto.randomUUID())]);
+  assert.deepEqual(creditReservations.map(r => r.status), [201, 429]);
+  assert.equal((await account.state.storage.get('usage')).used, 100);
+  assert.equal(await account.state.storage.get('credits'), 6);
+  largeEnv.FREE_DAILY_ALLOWANCE = undefined;
+  assert.equal((await largeEnv.ACCOUNTS.objects.get(otherID).access()).freeGenerationsRemaining, 100, 'Missing configuration defaults to 100.');
   // An in-flight duplicate recovers the existing job, without calling OpenAI twice.
   let releaseUpstream;
   const upstreamWaiting = new Promise(resolve => { releaseUpstream = resolve; });
@@ -758,4 +783,4 @@ try {
   const restricted = await falCostData({FAL_KEY: 'synthetic'}, 'test-job', 12.5);
   assert.equal(restricted.billingLookupStatus, 'http_403'); assert.equal(restricted.billableUnits, 12.5);
 } finally { globalThis.fetch = originalFetch; console.info = originalInfo; }
-console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, all nine Workers AI routes, multipart/JSON inputs, binary/base64 PNG conversion, size fitting, terminal provider failures, fal queue alarms, restart recovery, five-sheet batches, uncertain submissions, CDN validation and trial limits; no network.');
+console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, all nine Workers AI routes, multipart/JSON inputs, binary/base64 PNG conversion, size fitting, terminal provider failures, fal queue alarms, restart recovery, three-sheet batches, daily rollover and hard 100-image caps, uncertain submissions, CDN validation and trial limits; no network.');

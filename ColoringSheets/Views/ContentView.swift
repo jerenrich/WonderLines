@@ -472,7 +472,7 @@ struct ContentView: View {
                     }
                     .pickerStyle(.menu)
                     .accessibilityIdentifier("imageCountSetting")
-                    Text("Each image uses one generation. Changes apply to the next batch.")
+                    Text("Generate up to 100 images per day. The daily limit resets at midnight UTC. Changes apply to the next batch.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Help") {

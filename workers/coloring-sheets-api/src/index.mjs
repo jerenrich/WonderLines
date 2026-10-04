@@ -4,6 +4,7 @@ import {imageCost} from './image-cost.mjs';
 import {falCostData} from './fal-cost.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
+const DAILY_IMAGE_LIMIT = 100;
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status) => reply({error: {code, message}}, status);
 function dimensions(input) {
@@ -19,8 +20,8 @@ function globalDailyGenerationLimit(value) {
   const limit = Number(value); return limit <= 100000 ? limit : null;
 }
 function freeDailyAllowance(env) {
-  const value = Number(env.FREE_DAILY_ALLOWANCE ?? 3);
-  return Number.isSafeInteger(value) && value >= 0 && value <= 100000 ? value : 0;
+  const value = Number(env.FREE_DAILY_ALLOWANCE ?? DAILY_IMAGE_LIMIT);
+  return Number.isSafeInteger(value) && value >= 0 && value <= 100000 ? Math.min(value, DAILY_IMAGE_LIMIT) : 0;
 }
 function b64(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
 function unb64(s) { return Uint8Array.from(atob(s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
@@ -182,11 +183,13 @@ export class Account {
     if (existing) return existing.fingerprint === fingerprint ? reply({job: existing, access: await this.access()}) : fail('idempotency_conflict', 'Generation ID was already used.', 409);
     const day = new Date().toISOString().slice(0, 10), allowance = freeDailyAllowance(this.env), usage = await this.state.storage.get('usage');
     const used = usage?.day === day ? usage.used : 0; let credits = (await this.state.storage.get('credits')) ?? 0;
+    if (used >= DAILY_IMAGE_LIMIT) return fail('allowance_exhausted', 'Today’s limit of 100 images has been reached. It resets at midnight UTC.', 429);
     if (used >= allowance && credits < 1) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
     const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask ? 'fal' : undefined);
     if (global.status === 429) return fail('service_budget_exhausted', global.value.error.message, 429);
     if (global.status >= 400) return fail('service_unavailable', 'Could not reserve service capacity.', 503);
-    if (used < allowance) await this.state.storage.put('usage', {day, used: used + 1}); else await this.state.storage.put('credits', --credits);
+    await this.state.storage.put('usage', {day, used: used + 1});
+    if (used >= allowance) await this.state.storage.put('credits', --credits);
     const job = {id: generationId, fingerprint, state: 'processing', createdAt: Date.now(),
       ...(falTask ? {fal: {...falTask, stage: 'queued'}} : {})};
     if (falTask) {

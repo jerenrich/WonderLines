@@ -219,7 +219,7 @@ enum GenerationError: LocalizedError, Equatable {
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
         case .deviceVerification: return "Secure device verification failed before the generation request was sent. Check Settings → Diagnostics for the failing step and code."
         case .deviceRejected: return "The service rejected secure device verification before image generation. Check Diagnostics for the Worker error code."
-        case .allowance: return "Today’s free sheet allowance has been used. Please try again after it resets."
+        case .allowance: return "Today’s image allowance has been used. Please try again after midnight UTC."
         case .serviceBudget: return "The coloring service has reached today’s limit. Please try again after it resets."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
         case .invalidImage: return "The service did not return a valid PNG. Generation may have been charged. Check usage before trying again."
