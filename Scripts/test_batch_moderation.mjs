@@ -52,7 +52,9 @@ try {
   assert.equal(prompts.length, 3); assert.equal(new Set(prompts).size, 3);
   assert.ok(prompts.every(prompt => prompt.includes('Complexity: intricate outlines')));
   assert.equal(logs.filter(log => log.event === 'description_moderation').length, 1);
-  assert.ok(!JSON.stringify(logs).includes(description));
+  assert.deepEqual(logs.find(log => log.event === 'description_moderation').scores,
+    Object.fromEntries(Object.entries(safeModerationResult().answers).map(([name, answer]) => [name, answer.noul])));
+  assert.equal(logs.find(log => log.batchID === id).description, description);
   const object = env.ACCOUNTS.objects.get(identity.accountId);
   assert.ok(!JSON.stringify([...object.state.storage.values]).includes(description));
   // Recreating the account object simulates eviction/restart. Its cached
@@ -71,11 +73,17 @@ try {
   assert.deepEqual(denied.map(response => response.status), [400, 400, 400]);
   assert.equal(inputs.length, 2); assert.equal(prompts.length, beforeImages);
   assert.equal((await denied[0].json()).error.code, 'description_not_suitable');
+  assert.equal(logs.find(log => log.batchID === rejectedBatch).scores.all_ages, 0.5);
+  assert.equal(logs.find(log => log.batchID === rejectedBatch).description, description);
+  assert.ok(!JSON.stringify([...object.state.storage.values]).includes('scores'));
   unavailable = true;
   const unavailableBatch = crypto.randomUUID();
   const failures = await Promise.all(['side', 'front', 'wide'].map(composition => send({...options, batchID: unavailableBatch, composition})));
   assert.deepEqual(failures.map(response => response.status), [503, 503, 503]);
   assert.equal(inputs.length, 3); assert.equal(prompts.length, beforeImages);
+  assert.ok(!Object.hasOwn(logs.find(log => log.batchID === unavailableBatch), 'scores'));
+  assert.equal(logs.find(log => log.batchID === unavailableBatch).description, description);
+  assert.ok(!JSON.stringify(logs).includes('private upstream text'));
   // Recovering an already completed job doesn't require a fresh moderation.
   assert.equal((await send({...options, composition: 'side'}, generationIDs[0])).status, 200);
   assert.equal(inputs.length, 3);

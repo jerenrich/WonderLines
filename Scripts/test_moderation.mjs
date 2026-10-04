@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {moderateSubject, moderationDecision, moderationInput, MODERATION_MODEL} from '../workers/coloring-sheets-api/src/moderation.mjs';
+import {moderateSubject, moderationDecision, moderationInput, MODERATION_MODEL, MODERATION_MODELS, moderationModel} from '../workers/coloring-sheets-api/src/moderation.mjs';
 
 const names = Object.keys(moderationInput('').questions);
 export const safeModerationResult = () => ({answers: Object.fromEntries(names.map(name =>
@@ -15,7 +15,7 @@ for (const invalid of [
 ]) assert.throws(() => moderationDecision(invalid));
 for (const name of names) {
   const uncertain = safeModerationResult();
-  uncertain.answers[name].noul = name === 'all_ages' ? 0.94 : name === 'violence' ? 0.11 : 0.06;
+  uncertain.answers[name].noul = name === 'all_ages' ? 0.94 : ['violence', 'bypass'].includes(name) ? 0.11 : 0.06;
   assert.equal(moderationDecision(uncertain), false, name + ' uncertainty must block');
   for (const value of [undefined, null, '0', NaN, Infinity, -0.01, 1.01]) {
     const malformed = safeModerationResult(); malformed.answers[name].noul = value;
@@ -27,6 +27,10 @@ for (const name of names) {
   assert.throws(() => moderationDecision(wrongType));
 }
 assert.throws(() => moderationDecision({}));
+for (const [score, allowed] of [[0.0566, true], [0.10, true], [0.1001, false]]) {
+  const result = safeModerationResult(); result.answers.bypass.noul = score;
+  assert.equal(moderationDecision(result), allowed, 'Bypass threshold is inclusive at 10%.');
+}
 const harmlessAdventure = safeModerationResult(); harmlessAdventure.answers.violence.noul = 0.08;
 assert.equal(moderationDecision(harmlessAdventure), true);
 harmlessAdventure.answers.all_ages.noul = 0.94;
@@ -40,6 +44,18 @@ const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, opt
 }}};
 await moderateSubject(env, 'A friendly dragon. Complexity: intricate outlines.');
 assert.equal(calls, 1);
+for (const [name, model] of Object.entries(MODERATION_MODELS)) {
+  assert.equal(moderationModel({MODERATION_MODEL: name}), model);
+  assert.equal(moderationModel({MODERATION_MODEL: model}), model);
+  await moderateSubject({...env, MODERATION_MODEL: name, AI: {async run(actualModel, input) {
+    assert.equal(actualModel, model);
+    assert.equal(input.model, name === 'jev' ? undefined : name);
+    assert.deepEqual(input.questions, moderationInput('flower').questions);
+    return safeModerationResult();
+  }}}, 'flower');
+}
+await assert.rejects(moderateSubject({...env, MODERATION_MODEL: 'unknown'}, 'flower'), {code: 'moderation_unavailable'});
+
 for (const broken of [{}, {...env, AI: undefined}, {...env, AI_GATEWAY_ID: ''}, {...env, AI_GATEWAY_ID: 'https://untrusted.test'}]) {
   await assert.rejects(moderateSubject(broken, 'flower'), {code: 'moderation_unavailable', status: 503});
 }

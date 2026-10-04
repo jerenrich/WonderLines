@@ -1,0 +1,49 @@
+{
+  "description": "ferrari racing a dog with a smile",
+  "policy": "all-ages-v2",
+  "runsPerModel": 1,
+  "results": [
+    {
+      "model": "jev",
+      "scores": {
+        "all_ages": 0.67,
+        "sexual": 0.02,
+        "violence": 0.1,
+        "hate": 0.03,
+        "adult": 0.05,
+        "frightening": 0.06,
+        "bypass": 0.03
+      },
+      "allowed": false,
+      "elapsedMs": 1139
+    },
+    {
+      "model": "clef",
+      "scores": {
+        "all_ages": 0.7296,
+        "sexual": 0.049,
+        "violence": 0.2929,
+        "hate": 0.0384,
+        "adult": 0.0585,
+        "frightening": 0.0865,
+        "bypass": 0.0566
+      },
+      "allowed": false,
+      "elapsedMs": 691
+    },
+    {
+      "model": "clef-flash",
+      "scores": {
+        "all_ages": 0.8295,
+        "sexual": 0.0499,
+        "violence": 0.0274,
+        "hate": 0.0317,
+        "adult": 0.0455,
+        "frightening": 0.049,
+        "bypass": 0.0387
+      },
+      "allowed": false,
+      "elapsedMs": 334
+    }
+  ]
+}

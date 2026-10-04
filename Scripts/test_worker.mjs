@@ -309,7 +309,9 @@ try {
   assert.equal(audit.providerRequestID, 'fal-job-1'); assert.equal(audit.reportedDiscountUsd, 0.0025);
   assert.equal(audit.inferenceSteps, 30); assert.equal(audit.billableUnits, 12.5);
   const serializedLogs = JSON.stringify(auditLogs);
-  assert.ok(!serializedLogs.includes('synthetic-fal-key')); assert.ok(!serializedLogs.includes('A test flower'));
+  assert.ok(!serializedLogs.includes('synthetic-fal-key'));
+  assert.ok(auditLogs.some(log => log.event === 'description_moderation' && log.description === 'A test flower. Complexity: simple outlines'));
+  assert.ok(!JSON.stringify(auditLogs.filter(log => log.event !== 'description_moderation')).includes('A test flower'));
   assert.ok(auditLogs.some(log => log.event === 'fal_submitted'));
   assert.ok(auditLogs.some(log => log.event === 'fal_usage' && log.costStatus === 'reported'));
   assert.equal((await worker.fetch(new Request('https://example.test/v1/generations/' + falID + '/usage'), falEnv)).status, 401);

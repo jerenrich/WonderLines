@@ -3,7 +3,7 @@ import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProvide
 import {imageCost} from './image-cost.mjs';
 import {falCostData} from './fal-cost.mjs';
 import {structuredComposition, isUUID} from './composition.mjs';
-import {moderateSubject, ModerationError, MODERATION_MODEL, MODERATION_POLICY} from './moderation.mjs';
+import {moderateSubject, ModerationError, moderationModel, MODERATION_POLICY} from './moderation.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
@@ -146,7 +146,7 @@ export class Account {
   }
   async moderateBatch({batchID, description}) {
     if (!isUUID(batchID) || typeof description !== 'string' || !description.trim() || description.length > 500) return fail('invalid_request', 'Invalid batch.', 400);
-    const fingerprint = await digest(JSON.stringify({batchID, description, policy: MODERATION_POLICY}));
+    const fingerprint = await digest(JSON.stringify({batchID, description, policy: MODERATION_POLICY, model: this.env.MODERATION_MODEL ?? 'jev'}));
     const name = 'moderation:' + batchID;
     const previous = await this.state.storage.get(name);
     if (previous && previous.expires > Date.now()) {
@@ -159,15 +159,16 @@ export class Account {
     const current = [...entries].filter(([, value]) => value.expires > Date.now());
     for (const [key, value] of entries) if (value.expires <= Date.now()) await this.state.storage.delete(key);
     if (current.length >= 64) return fail('moderation_unavailable', 'Too many recent batches. Please try again later.', 503);
-    let error;
-    try { await moderateSubject(this.env, description); }
+    let error, scores;
+    try { scores = await moderateSubject(this.env, description); }
     catch (caught) {
       if (!(caught instanceof ModerationError)) throw caught;
+      scores = caught.scores;
       error = {code: caught.code, message: caught.message, status: caught.status};
     }
     await this.state.storage.put(name, {fingerprint, expires: Date.now() + 600000, ...(error ? {error} : {})});
-    console.info(JSON.stringify({event: 'description_moderation', batchID, model: MODERATION_MODEL,
-      policy: MODERATION_POLICY, outcome: error?.code ?? 'approved'}));
+    console.info(JSON.stringify({event: 'description_moderation', batchID, description, model: moderationModelForLog(this.env),
+      policy: MODERATION_POLICY, outcome: error?.code ?? 'approved', ...(scores ? {scores} : {})}));
     return error ? fail(error.code, error.message, error.status) : reply({approved: true});
   }
   async registerAttestation(input) {
@@ -379,12 +380,18 @@ async function generate(request, env, account) {
   if (composed) {
     const decision = await call(env, account.id, '/moderate-batch', {batchID: composed.batchID, description: composed.description});
     if (decision.status !== 200) return reply(decision.value, decision.status);
-  } else try { await moderateSubject(env, subject); }
-  catch (error) {
-    if (!(error instanceof ModerationError)) throw error;
-    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
-      model: MODERATION_MODEL, policy: MODERATION_POLICY, outcome: error.code}));
-    return fail(error.code, error.message, error.status);
+  } else {
+    let error, scores;
+    try { scores = await moderateSubject(env, subject); }
+    catch (caught) {
+      if (!(caught instanceof ModerationError)) throw caught;
+      error = caught;
+      scores = caught.scores;
+    }
+    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId, description: subject,
+      model: moderationModelForLog(env), policy: MODERATION_POLICY, outcome: error?.code ?? 'approved',
+      ...(scores ? {scores} : {})}));
+    if (error) return fail(error.code, error.message, error.status);
   }
   const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint,
     ...(upstreamRequest.provider === 'fal' ? {falTask: {request: upstreamRequest, publicModel: model,
@@ -495,3 +502,7 @@ export default { async fetch(request, env) {
   const match = /^\/v1\/generations\/([0-9a-f-]{36})$/.exec(url.pathname); if (match && request.method === 'GET') { const found = await call(env, account.id, '/job', {generationId: match[1]}); return found.status === 200 ? saved(env, found.value.job, found.value.access) : fail('not_found', 'Generation not found.', 404); }
   return fail('not_found', 'Not found.', 404);
 }};
+
+function moderationModelForLog(env) {
+  try { return moderationModel(env); } catch { return 'invalid'; }
+}
