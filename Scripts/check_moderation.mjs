@@ -1,6 +1,6 @@
 // Explicit live text-only evaluation. Does not register accounts or generate images.
 import {readFileSync} from 'node:fs';
-import {moderationInput, moderationDecision, moderationResult, MODERATION_MODEL} from '../workers/coloring-sheets-api/src/moderation.mjs';
+import {moderationInput, moderationDecision, moderationResult, moderationModel} from '../workers/coloring-sheets-api/src/moderation.mjs';
 
 const {CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_API_TOKEN: token,
   MODERATION_GATEWAY_ID: gateway} = process.env;
@@ -9,6 +9,7 @@ if (!process.argv.includes('--live') || !/^[a-fA-F0-9]{32}$/.test(account ?? '')
   console.error('For paid text-only checks, pass --live and set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN (AI Gateway Run), and MODERATION_GATEWAY_ID securely in the environment.');
   process.exit(1);
 }
+const model = moderationModel(process.env);
 const onlyArg = process.argv.find(arg => arg.startsWith('--cases='));
 const selected = onlyArg?.slice('--cases='.length).split(',');
 const cases = JSON.parse(readFileSync(new URL('./fixtures/moderation-cases.json', import.meta.url), 'utf8'))
@@ -17,12 +18,12 @@ if (!cases.length) { console.error('No matching moderation cases.'); process.exi
 let failures = 0, inputTokens = 0;
 for (const test of cases) {
   try {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run`, {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${model}`, {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(8000),
       headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json',
         'cf-aig-gateway-id': gateway, 'cf-aig-skip-cache': 'true',
         'cf-aig-collect-log': 'false', 'cf-aig-max-attempts': '1'},
-      body: JSON.stringify({model: MODERATION_MODEL, input: moderationInput(test.description)}),
+      body: JSON.stringify(moderationInput(test.description, model)),
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const envelope = await response.json();

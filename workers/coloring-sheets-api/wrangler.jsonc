@@ -7,8 +7,10 @@
   "images": { "binding": "IMAGES" },
   "ai": { "binding": "AI" },
   "vars": {
+    "MODERATION_MODEL": "clef-flash",
     "FREE_DAILY_ALLOWANCE": "100",
-    "MODERATION_GATEWAY_ID": "default"
+    "AI_GATEWAY_ID": "coloring-sheets",
+    "MODERATION_GATEWAY_ID": "coloring-sheets"
   },
   "durable_objects": {
     "bindings": [

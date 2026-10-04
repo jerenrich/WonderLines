@@ -14,7 +14,7 @@ try {
     const started = Date.now();
     try {
       const result = await proxy.env.AI.run(model, moderationInput(subject, model), {
-        gateway: {id: proxy.env.MODERATION_GATEWAY_ID ?? 'default', skipCache: true, collectLog: false},
+        gateway: {id: proxy.env.AI_GATEWAY_ID ?? proxy.env.MODERATION_GATEWAY_ID ?? 'coloring-sheets', skipCache: true, collectLog: false},
       });
       console.log(JSON.stringify({model: name, scores: moderationScores(result), allowed: moderationDecision(result), elapsedMs: Date.now() - started}));
     } catch {

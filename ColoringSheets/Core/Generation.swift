@@ -403,11 +403,16 @@ final class WorkerClient: GenerationServing {
         await DiagnosticLog.shared.record("Generation POST", "response", generationID: generationID,
                                           model: request.model, httpStatus: response.statusCode,
                                           workerCode: Self.workerErrorCode(data, response: response))
+        if let outcome = Self.moderationDiagnostic(data, response: response) {
+            await DiagnosticLog.shared.record("Content moderation", outcome, generationID: generationID,
+                                              model: request.model, httpStatus: response.statusCode,
+                                              workerCode: Self.workerErrorCode(data, response: response))
+        }
         if response.statusCode == 202 {
             return try await recover(generationID, authorization: authToken, requestedModel: request.model)
         }
         // A configuration rejection happens before the server reserves a job.
-        if response.statusCode == 503, Self.workerErrorCode(data, response: response) == "service_unavailable",
+        if response.statusCode == 503, ["service_unavailable", "moderation_unavailable"].contains(Self.workerErrorCode(data, response: response) ?? ""),
            let scope = await pendingScope() {
             await pendingStore.remove(generationID, scope: scope)
         }
@@ -582,6 +587,20 @@ final class WorkerClient: GenerationServing {
         return code
     }
 
+    static func moderationDiagnostic(_ data: Data, response: HTTPURLResponse) -> String? {
+        let code = workerErrorCode(data, response: response)
+        if code == "moderation_unavailable", response.statusCode == 503 {
+            return "safety check unavailable; allowanceUsed=false"
+        }
+        guard code == "description_not_suitable", response.statusCode == 400 else { return nil }
+        // Only fixed server-owned reason codes may enter the shared report.
+        let known: Set<String> = ["sexual", "violence", "hate", "adult", "frightening", "bypass", "uncertain"]
+        let reasons = ((try? JSONDecoder().decode(WorkerErrorBody.self, from: data))?.error.reasonCodes ?? [])
+            .filter { known.contains($0) }
+        let codes = Set(reasons).sorted().joined(separator: ",")
+        return "description rejected; reasons=\(codes.isEmpty ? "unspecified" : codes); allowanceUsed=false"
+    }
+
     private static func logResponse(_ stage: String, data: Data, response: HTTPURLResponse, generationID: UUID? = nil) {
         let code = workerErrorCode(data, response: response) ?? "none"
         let id = generationID?.uuidString ?? "none"
@@ -687,7 +706,18 @@ final class WorkerClient: GenerationServing {
 }
 
 private struct WorkerErrorBody: Decodable {
-    struct Detail: Decodable { let code: String; let message: String? }
+    struct Detail: Decodable {
+        let code: String
+        let message: String?
+        let reasonCodes: [String]?
+        enum CodingKeys: String, CodingKey { case code, message, reasonCodes }
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            code = try values.decode(String.self, forKey: .code)
+            message = try values.decodeIfPresent(String.self, forKey: .message)
+            reasonCodes = try? values.decode([String].self, forKey: .reasonCodes)
+        }
+    }
     let error: Detail
 }
 

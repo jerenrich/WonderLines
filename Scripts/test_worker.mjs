@@ -86,7 +86,17 @@ try {
   const unsafe = safeModerationResult(); unsafe.answers.sexual.noul = 0.99;
   env.AI = {run: async () => unsafe};
   response = await worker.fetch(rejectedRequest(), env);
-  assert.equal(response.status, 400); assert.equal((await response.json()).error.code, 'description_not_suitable');
+  assert.equal(response.status, 400);
+  const rejectedBody = await response.json();
+  assert.equal(rejectedBody.error.code, 'description_not_suitable');
+  assert.deepEqual(rejectedBody.error.reasonCodes, ['sexual']);
+  assert.match(rejectedBody.error.message, /possible sexual content or nudity/);
+  const rejectedAudit = auditLogs.find(log => log.generationID === rejectedID && log.outcome === 'description_not_suitable');
+  assert.equal(rejectedAudit.gateway, 'synthetic-gateway');
+  assert.deepEqual(rejectedAudit.reasonCodes, ['sexual']);
+  assert.ok(rejectedAudit.elapsedMs >= 0);
+  assert.equal(rejectedAudit.description, 'Unsuitable synthetic request');
+  assert.equal(rejectedAudit.scores.sexual, 0.99);
   assert.deepEqual(await accountBeforeModeration.access(), accessBeforeModeration, 'Moderation must not consume allowance or credits.');
   assert.equal(await accountBeforeModeration.state.storage.get('job:' + rejectedID), undefined);
   const budgetObject = env.BUDGET.objects.get('daily-generation-budget');

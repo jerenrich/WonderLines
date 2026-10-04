@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {moderateSubject, moderationDecision, moderationInput, MODERATION_MODEL, MODERATION_MODELS, moderationModel} from '../workers/coloring-sheets-api/src/moderation.mjs';
+import {moderateSubject, moderationAssessment, moderationDecision, moderationInput, MODERATION_MODEL, MODERATION_MODELS, moderationModel} from '../workers/coloring-sheets-api/src/moderation.mjs';
 
 const names = Object.keys(moderationInput('').questions);
 export const safeModerationResult = () => ({answers: Object.fromEntries(names.map(name =>
@@ -44,6 +44,7 @@ const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, opt
 }}};
 await moderateSubject(env, 'A friendly dragon. Complexity: intricate outlines.');
 assert.equal(calls, 1);
+assert.equal(moderationModel(), '@cf/cloudflare/clef-flash');
 for (const [name, model] of Object.entries(MODERATION_MODELS)) {
   assert.equal(moderationModel({MODERATION_MODEL: name}), model);
   assert.equal(moderationModel({MODERATION_MODEL: model}), model);
@@ -60,6 +61,12 @@ for (const broken of [{}, {...env, AI: undefined}, {...env, AI_GATEWAY_ID: ''}, 
   await assert.rejects(moderateSubject(broken, 'flower'), {code: 'moderation_unavailable', status: 503});
 }
 assert.equal(calls, 1, 'Invalid local configuration must not call Jev');
+await moderateSubject({...env, MODERATION_GATEWAY_ID: 'default'}, 'A friendly dragon. Complexity: intricate outlines.');
+assert.equal(calls, 2, 'The shared gateway must override a stale moderation-only gateway.');
+await moderateSubject({MODERATION_GATEWAY_ID: 'coloring-sheets', AI: {async run(model, input, options) {
+  assert.equal(options.gateway.id, 'coloring-sheets');
+  return safeModerationResult();
+}}}, 'flower');
 for (const result of [null, {answers: {}}, {success: false, errors: [{message: 'private'}]}]) {
   await assert.rejects(moderateSubject({...env, AI: {run: async () => result}}, 'flower'), {code: 'moderation_unavailable', status: 503});
 }
@@ -71,6 +78,39 @@ await assert.rejects(moderateSubject({...env, AI: {run: async () => blocked}}, '
 const originalTimeout = globalThis.setTimeout;
 try {
   globalThis.setTimeout = (callback, delay) => { assert.equal(delay, 8000); return originalTimeout(callback, 0); };
-  await assert.rejects(moderateSubject({...env, AI: {run: () => new Promise(() => {})}}, 'flower'), {code: 'moderation_unavailable', status: 503});
+  await assert.rejects(moderateSubject({...env, AI: {run: () => new Promise(() => {})}}, 'flower'), error => error.code === 'moderation_unavailable' && error.diagnostics.failure === 'timeout');
 } finally { globalThis.setTimeout = originalTimeout; }
+
+const multiHazard = safeModerationResult(); multiHazard.answers.sexual.noul = 0.8; multiHazard.answers.violence.noul = 0.7;
+assert.deepEqual(moderationAssessment(multiHazard), {allowed: false, reasonCodes: ['sexual', 'violence']});
+const uncertainOverall = safeModerationResult(); uncertainOverall.answers.all_ages.noul = 0.7;
+assert.deepEqual(moderationAssessment(uncertainOverall), {allowed: false, reasonCodes: ['uncertain']});
+await assert.rejects(moderateSubject({...env, AI: {run: async () => multiHazard}}, 'private input'), error => {
+  assert.deepEqual(error.reasonCodes, ['sexual', 'violence']);
+  assert.match(error.message, /possible sexual content or nudity, violence or weapons/);
+  assert.match(error.message, /No sheet allowance was used/);
+  assert.equal(error.diagnostics.gateway, 'existing-gateway');
+  assert.ok(error.diagnostics.elapsedMs >= 0);
+  assert.ok(!JSON.stringify(error).includes('private input'));
+  return true;
+});
+for (const [ai, failure, upstreamCode] of [[undefined, 'configuration'], [{run: async () => ({answers:{}})}, 'invalid_response'],
+  [{run: async () => { throw Error('2049: private upstream text'); }}, 'upstream', 2049]]) {
+  await assert.rejects(moderateSubject({...env, AI: ai}, 'private input'), error => {
+    assert.equal(error.diagnostics.failure, failure);
+    assert.equal(error.diagnostics.upstreamCode, upstreamCode);
+    assert.ok(!JSON.stringify(error).includes('private'));
+    return true;
+  });
+}
+
+const overlapping = safeModerationResult();
+overlapping.answers.sexual.noul = 0.6; overlapping.answers.violence.noul = 0.7; overlapping.answers.adult.noul = 0.99;
+assert.deepEqual(moderationAssessment(overlapping).reasonCodes, ['adult', 'violence', 'sexual']);
+await assert.rejects(moderateSubject({...env, AI: {run: async () => overlapping}}, 'private input'), error => {
+  assert.deepEqual(error.reasonCodes, ['adult', 'violence', 'sexual']);
+  assert.match(error.message, /possible adult themes, violence or weapons/);
+  assert.ok(!error.message.includes('sexual content'), 'User copy leads with two strongest flags; diagnostics retain all categories.');
+  return true;
+});
 console.log('Moderation protocol tests passed (synthetic responses; no model calls).');
