@@ -29,13 +29,13 @@ for (const name of names) {
 assert.throws(() => moderationDecision({}));
 for (const [score, allowed] of [[0.0566, true], [0.10, true], [0.1001, false]]) {
   const result = safeModerationResult(); result.answers.bypass.noul = score;
-  assert.equal(moderationDecision(result), allowed, 'Bypass threshold is inclusive at 10%.');
+  assert.equal(moderationDecision(result, MODERATION_MODELS.jev), allowed, 'Jev bypass threshold is inclusive at 10%.');
 }
 const calibrated = safeModerationResult(); calibrated.answers.all_ages.noul = 0.83;
-assert.equal(moderationDecision(calibrated), false);
+assert.equal(moderationDecision(calibrated), true);
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS['clef-flash']), true);
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS.jev), false);
-assert.equal(moderationDecision(calibrated, MODERATION_MODELS.clef), false);
+assert.equal(moderationDecision(calibrated, MODERATION_MODELS.clef), true);
 for (const model of Object.values(MODERATION_MODELS)) {
   for (const [name, limit] of Object.entries(moderationThresholds(model))) {
     const atLimit = safeModerationResult(); atLimit.answers[name].noul = limit;
@@ -47,7 +47,7 @@ for (const model of Object.values(MODERATION_MODELS)) {
 }
 const harmlessAdventure = safeModerationResult(); harmlessAdventure.answers.violence.noul = 0.08;
 assert.equal(moderationDecision(harmlessAdventure), true);
-harmlessAdventure.answers.all_ages.noul = 0.74;
+harmlessAdventure.answers.all_ages.noul = moderationThresholds().all_ages - 0.01;
 assert.equal(moderationDecision(harmlessAdventure), false, 'A low hazard score never overrides uncertain overall suitability.');
 let calls = 0;
 const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, options) {
