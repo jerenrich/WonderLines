@@ -12,16 +12,48 @@ final class GenerationTests: XCTestCase {
         let id = UUID()
         let error = NSError(domain: NSURLErrorDomain, code: -1001,
                             userInfo: [NSLocalizedDescriptionKey: "private prompt and token"])
-        for _ in 0..<101 {
+        for _ in 0..<(DiagnosticLog.capacity + 1) {
             log.record("Generation POST", "transport failed", generationID: id, model: .flare, error: error)
         }
-        XCTAssertEqual(log.events.count, 100)
+        XCTAssertEqual(log.events.count, DiagnosticLog.capacity)
         let restored = DiagnosticLog(defaults: defaults)
-        XCTAssertEqual(restored.events.count, 100)
+        XCTAssertEqual(restored.events.count, DiagnosticLog.capacity)
         XCTAssertTrue(restored.report.contains(id.uuidString.lowercased()))
         XCTAssertTrue(restored.report.contains("NSURLErrorDomain:-1001"))
         XCTAssertFalse(restored.report.contains("private prompt"))
         XCTAssertFalse(restored.report.contains("token"))
+    }
+
+    @MainActor
+    func testDiagnosticRetentionMigrationAndClear() throws {
+        let suite = "diagnostic-retention-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let log = DiagnosticLog(defaults: defaults)
+        log.record("Batch", "started", batchID: UUID())
+        XCTAssertNil(defaults.data(forKey: "diagnosticEvents.v1"), "Routine writes are coalesced.")
+        log.flush()
+        var saved = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "diagnosticEvents.v1"))) as? [[String: Any]])
+        var expired = saved[0]
+        expired["date"] = Date().addingTimeInterval(-DiagnosticLog.retention - 60).timeIntervalSinceReferenceDate
+        expired.removeValue(forKey: "batchID") // Original records had no batch ID.
+        saved.insert(expired, at: 0)
+        defaults.set(try JSONSerialization.data(withJSONObject: saved), forKey: "diagnosticEvents.v1")
+        let restored = DiagnosticLog(defaults: defaults)
+        XCTAssertEqual(restored.events.count, 1)
+        XCTAssertTrue(restored.report.contains("diagnosticFormat=2"))
+        XCTAssertTrue(restored.report.contains("build"))
+        restored.record("Batch", "started")
+        restored.clear()
+        restored.flush()
+        XCTAssertTrue(DiagnosticLog(defaults: defaults).events.isEmpty)
+    }
+
+    func testImageValidationReasonsExcludeResponseContent() {
+        let png = Data([137, 80, 78, 71, 13, 10, 26, 10])
+        XCTAssertEqual(WorkerClient.imageValidationFailure(Data("private response".utf8), response: response(200, type: "text/html")), "unexpected_content_type")
+        XCTAssertEqual(WorkerClient.imageValidationFailure(Data("private response".utf8), response: response(200, type: "image/png")), "invalid_png_signature")
+        XCTAssertEqual(WorkerClient.imageValidationFailure(png, response: response(200, type: "image/png")), "image_decode_failed")
     }
 
     func testSelectableModelsExcludeRetiredChoices() {
@@ -345,6 +377,8 @@ final class NetworkingTests: XCTestCase {
         }
         _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare))
         XCTAssertEqual(methods, ["POST", "GET"])
+        let summary = await MainActor.run { DiagnosticLog.shared.events.last { $0.stage == "Recovery summary" && $0.generationID?.uuidString.lowercased() == generationID } }
+        XCTAssertTrue(summary?.outcome.contains("recovered; attempts=1") == true)
     }
     func testRecoveryPreservesTerminalErrorsAndCancellation() async throws {
         let configuration = URLSessionConfiguration.ephemeral
@@ -417,6 +451,10 @@ final class NetworkingTests: XCTestCase {
         XCTAssertEqual(result.generationID?.uuidString.lowercased(), generationID)
         XCTAssertEqual(methods.filter { $0 == "POST" }.count, 1)
         XCTAssertEqual(polls, 5, "fal recovery must tolerate more than the previous three short checks")
+        let events = await MainActor.run { DiagnosticLog.shared.events.filter { $0.generationID?.uuidString.lowercased() == generationID } }
+        XCTAssertEqual(events.filter { $0.stage == "Recovery" && $0.httpStatus == 202 }.count, 2, "One waiting event per recovery session, not one per identical poll.")
+        XCTAssertTrue(events.contains { $0.stage == "Recovery summary" && $0.outcome.contains("cancelled") })
+        XCTAssertTrue(events.contains { $0.stage == "Recovery summary" && $0.outcome.contains("recovered; attempts=5") })
         let remaining = await nextClient.pendingGenerations()
         XCTAssertTrue(remaining.isEmpty)
         MockURLProtocol.handler = { request in
@@ -811,6 +849,10 @@ final class StateTests: XCTestCase {
         await waitFor { store.readyCount == 1 }
         XCTAssertTrue(store.results.isEmpty)
         store.cancel()
+        let stopped = DiagnosticLog.shared.events.last { $0.stage == "Batch summary" }
+        XCTAssertTrue(stopped?.outcome.contains("user stopped waiting") == true)
+        XCTAssertTrue(stopped?.outcome.contains("succeeded=1; failed=0; unfinished=2") == true)
+        XCTAssertNotNil(stopped?.batchID)
         let retainedID = try XCTUnwrap(store.result?.id)
         XCTAssertFalse(store.isGenerating)
         XCTAssertNotNil(store.batchMessage)
@@ -827,6 +869,9 @@ final class StateTests: XCTestCase {
         XCTAssertEqual(store.results.count, 1)
         XCTAssertEqual(store.result?.id, retainedID, "Retain the previous gallery during the reveal delay")
         store.enteredBackground()
+        let background = DiagnosticLog.shared.events.last { $0.stage == "Batch summary" }
+        XCTAssertTrue(background?.outcome.contains("app entered background") == true)
+        XCTAssertNotEqual(background?.batchID, stopped?.batchID)
         let newID = try XCTUnwrap(store.result?.id)
         XCTAssertNotEqual(newID, retainedID)
         service.succeed()

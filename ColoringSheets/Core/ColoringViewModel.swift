@@ -29,6 +29,7 @@ final class ColoringViewModel: ObservableObject {
     private var pendingResults: [ColoringResult] = []
     private var revealTask: Task<Void, Never>?
     private var hasRevealedResults = false
+    private var batchStarted = ContinuousClock.now
     private var firstFailure: String?
 
     init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard) {
@@ -86,6 +87,8 @@ final class ColoringViewModel: ObservableObject {
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = false
         let current = UUID(); attempt = current
+        batchStarted = .now
+        DiagnosticLog.shared.record("Batch", "started; requested=\(activeBatchSize); mode=\(isMock ? "mock" : "live")", batchID: current)
         // Each task starts its own request without waiting for the other requests.
         // Validate and capture every composition before starting any paid request.
         // Editing/resizing cannot change the subject, age, or size of this batch.
@@ -93,7 +96,7 @@ final class ColoringViewModel: ObservableObject {
             Task { [weak self, service] in
                 guard !Task.isCancelled else { return }
                 let outcome: Result<ColoringResult, Error>
-                do { outcome = .success(try await service.generate(request)) }
+                do { outcome = .success(try await DiagnosticContext.$batchID.withValue(current) { try await service.generate(request) }) }
                 catch { outcome = .failure(error) }
                 guard !Task.isCancelled else { return }
                 self?.receive(outcome, attempt: current)
@@ -129,6 +132,7 @@ final class ColoringViewModel: ObservableObject {
             }
         }
         guard completedCount == activeBatchSize else { return }
+        logBatchSummary("completed")
         Task { await refreshUnfinishedSheets() }
         tasks = []
         revealTask?.cancel(); revealTask = nil
@@ -160,8 +164,17 @@ final class ColoringViewModel: ObservableObject {
         pendingResults = []
     }
 
-    func cancel() {
+    private func logBatchSummary(_ reason: String) {
+        let duration = batchStarted.duration(to: .now).components
+        let elapsed = duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000
+        DiagnosticLog.shared.record("Batch summary", "\(reason); requested=\(activeBatchSize); succeeded=\(readyCount); failed=\(failedCount); unfinished=\(activeBatchSize - completedCount); elapsedMs=\(elapsed)", batchID: attempt)
+    }
+
+    func cancel() { cancel(reason: "user stopped waiting") }
+
+    private func cancel(reason: String) {
         guard isGenerating else { return }
+        logBatchSummary(reason)
         attempt = UUID()
         tasks.forEach { $0.cancel() }; tasks = []
         Task { await refreshUnfinishedSheets() }
@@ -174,7 +187,10 @@ final class ColoringViewModel: ObservableObject {
             phase = .error(message)
         }
     }
-    func enteredBackground() { cancel() }
+    func enteredBackground() {
+        cancel(reason: "app entered background")
+        DiagnosticLog.shared.flush()
+    }
 
     func refreshUsage() async {
         guard let selected = result, selected.requestedModel == .redmond, let generationID = selected.generationID else { return }
@@ -199,10 +215,12 @@ final class ColoringViewModel: ObservableObject {
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = true // Recovery appends to the existing gallery.
         let current = UUID(); attempt = current
+        batchStarted = .now
+        DiagnosticLog.shared.record("Batch", "recovery started; requested=\(activeBatchSize); mode=\(isMock ? "mock" : "live")", batchID: current)
         tasks = pending.map { entry in
             Task { [weak self, service] in
                 let outcome: Result<ColoringResult, Error>
-                do { outcome = .success(try await service.recoverPending(entry)) }
+                do { outcome = .success(try await DiagnosticContext.$batchID.withValue(current) { try await service.recoverPending(entry) }) }
                 catch { outcome = .failure(error) }
                 guard !Task.isCancelled else { return }
                 self?.receive(outcome, attempt: current)

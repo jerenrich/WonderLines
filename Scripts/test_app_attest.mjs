@@ -124,4 +124,19 @@ assert.equal((await worker.fetch(new Request(base + '/v1/app-attest/attest', {
   method: 'POST', headers: {...auth, 'Content-Type': 'application/json'},
   body: JSON.stringify({challenge, keyID: 'bad', attestation: 'bad'})
 }), env)).status, 403, 'Assertion challenge cannot be used for attestation.');
+// Only validated opaque request IDs and fixed labels may reach logs.
+const warnings = [], originalWarn = console.warn;
+try {
+  console.warn = value => warnings.push(JSON.parse(value));
+  await worker.fetch(makeRequest(), env); // Known replay, valid ID.
+  assert.deepEqual(warnings.pop(), {event: 'app_attest_rejected', generationID: id, reason: 'Replayed assertion'});
+  await object.assertion({assertion: 'private-proof', clientData: 'private-data', generationID: 'private-token'});
+  const rejected = warnings.pop();
+  assert.deepEqual(Object.keys(rejected).sort(), ['event', 'reason']);
+  assert.ok(!JSON.stringify(rejected).includes('private'));
+  const badBinding = makeRequest('tampered');
+  badBinding.headers.set('Idempotency-Key', 'private-token');
+  await worker.fetch(badBinding, env);
+  assert.deepEqual(warnings.pop(), {event: 'app_attest_rejected', reason: 'Invalid request binding'});
+} finally { console.warn = originalWarn; }
 console.log('PASS: App Attest assertion signature, request binding, account policy, replay window, and challenge scope; no network.');

@@ -150,9 +150,12 @@ export class Account {
     }
     return reply({attested: true});
   }
-  async assertion({assertion, clientData}) {
+  async assertion({assertion, clientData, generationID}) {
     const record = await this.state.storage.get('app-attest');
-    if (!record) return fail('app_attest_required', 'This installation needs App Attest enrollment.', 403);
+    if (!record) {
+      logAttestRejection('Enrollment required', generationID);
+      return fail('app_attest_required', 'This installation needs App Attest enrollment.', 403);
+    }
     try {
       const counter = verifyAssertion(assertion, fromB64url(clientData, 2048), record.publicKey, this.env.APP_ATTEST_APP_ID);
       await this.state.storage.put('app-attest', acceptCounter(record, counter));
@@ -162,8 +165,7 @@ export class Account {
       // arbitrary exception messages, or request headers.
       const labels = ['Invalid encoding', 'Invalid CBOR', 'Invalid assertion', 'Invalid assertion extensions',
         'Invalid RP ID', 'Invalid App ID', 'Invalid assertion counter', 'Invalid assertion signature', 'Replayed assertion'];
-      console.warn(JSON.stringify({event: 'app_attest_rejected',
-        reason: labels.includes(error?.message) ? error.message : 'Verification unavailable'}));
+      logAttestRejection(labels.includes(error?.message) ? error.message : 'Verification unavailable', generationID);
       return fail('invalid_assertion', 'App Attest assertion could not be verified.', 403);
     }
   }
@@ -365,6 +367,15 @@ async function generate(request, env, account) {
   }
 }
 
+function logAttestRejection(reason, generationID) {
+  console.warn(JSON.stringify({event: 'app_attest_rejected', reason,
+    ...(typeof generationID === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(generationID) ? {generationID} : {})}));
+}
+function bindingRejection(request) {
+  logAttestRejection('Invalid request binding', request.headers.get('Idempotency-Key'));
+  return fail('invalid_assertion', 'Invalid App Attest request binding.', 403);
+}
+
 export default { async fetch(request, env) {
   const url = new URL(request.url);
   if (!env.ACCOUNT_TOKEN_SECRET) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
@@ -421,10 +432,10 @@ export default { async fetch(request, env) {
             parsed.idempotencyKey !== request.headers.get('Idempotency-Key') ||
             parsed.bodySHA256 !== b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', raw))) ||
             !await challengeValid(parsed.challenge, account.id, 'assertion', env.ACCOUNT_TOKEN_SECRET)) {
-          return fail('invalid_assertion', 'Invalid App Attest request binding.', 403);
+          return bindingRejection(request);
         }
-      } catch { return fail('invalid_assertion', 'Invalid App Attest request binding.', 403); }
-      const checked = await call(env, account.id, '/assertion', {assertion: signed, clientData: encoded});
+      } catch { return bindingRejection(request); }
+      const checked = await call(env, account.id, '/assertion', {assertion: signed, clientData: encoded, generationID: request.headers.get('Idempotency-Key')});
       if (checked.status !== 200) return reply(checked.value, checked.status);
     }
     return generate(request, env, account);

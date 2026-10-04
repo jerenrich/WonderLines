@@ -393,46 +393,71 @@ final class WorkerClient: GenerationServing {
     }
 
     private func recover(_ generationID: UUID, authorization: String, requestedModel: ImageModel) async throws -> ColoringResult {
-        // fal jobs may wait for a runner. Every attempt is a read-only GET.
-        let attempts = requestedModel == .redmond ? 40 : 3
-        for attempt in 0..<attempts {
-            guard !Task.isCancelled else { throw GenerationError.cancelled }
-            if attempt > 0 {
-                do { try await recoverySleep(.seconds(requestedModel == .redmond ? min(15, attempt * 5) : 5)) }
-                catch { throw GenerationError.cancelled }
-            }
-            var request = URLRequest(url: endpoint.appending(path: generationID.uuidString.lowercased()))
-            request.timeoutInterval = 30
-            request.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
-            do {
-                let (data, response) = try await session.data(for: request)
-                guard let http = response as? HTTPURLResponse else { continue }
-                Self.logResponse("recovery attempt \(attempt + 1)", data: data, response: http, generationID: generationID)
-                await DiagnosticLog.shared.record("Recovery GET \(attempt + 1)", "response",
-                                                  generationID: generationID, model: requestedModel,
-                                                  httpStatus: http.statusCode,
-                                                  workerCode: Self.workerErrorCode(data, response: http))
-                if http.statusCode == 202 { continue }
-                return try await parseRecovered(data, response: http, generationID: generationID, requestedModel: requestedModel)
-            } catch is CancellationError { throw GenerationError.cancelled }
-            catch let error as GenerationError { throw error }
-            catch {
-                if Task.isCancelled || (error as? URLError)?.code == .cancelled {
-                    throw GenerationError.cancelled
-                }
-                if let urlError = error as? URLError {
-                    Self.logger.error("Recovery transport failed id=\(generationID.uuidString, privacy: .public) attempt=\(attempt + 1) urlError=\(urlError.errorCode)")
-                } else {
-                    Self.logger.error("Recovery response could not be used id=\(generationID.uuidString, privacy: .public) attempt=\(attempt + 1)")
-                }
-                await DiagnosticLog.shared.record("Recovery GET \(attempt + 1)", "transport failed",
-                                                  generationID: generationID, model: requestedModel, error: error)
-                continue
-            }
+        let started = ContinuousClock.now
+        var completedAttempts = 0
+        var lastState: String?
+        var exhausted = false
+        func summary(_ outcome: String, error: Error? = nil) async {
+            let duration = started.duration(to: .now).components
+            let elapsed = duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000
+            await DiagnosticLog.shared.record("Recovery summary", "\(outcome); attempts=\(completedAttempts); elapsedMs=\(elapsed)", generationID: generationID, model: requestedModel, error: error)
         }
-        throw GenerationError.uncertain
+        let attempts = requestedModel == .redmond ? 40 : 3
+        do {
+            for attempt in 0..<attempts {
+                try Task.checkCancellation()
+                if attempt > 0 {
+                    try await recoverySleep(.seconds(requestedModel == .redmond ? min(15, attempt * 5) : 5))
+                }
+                var request = URLRequest(url: endpoint.appending(path: generationID.uuidString.lowercased()))
+                request.timeoutInterval = 30
+                request.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
+                completedAttempts += 1
+                do {
+                    let (data, response) = try await session.data(for: request)
+                    guard let http = response as? HTTPURLResponse else { continue }
+                    let code = Self.workerErrorCode(data, response: http)
+                    let state = "HTTP \(http.statusCode):\(code ?? "none")"
+                    if state != lastState {
+                        Self.logResponse("recovery", data: data, response: http, generationID: generationID)
+                        await DiagnosticLog.shared.record("Recovery", "state changed; attempt=\(attempt + 1)", generationID: generationID, model: requestedModel, httpStatus: http.statusCode, workerCode: code)
+                        lastState = state
+                    }
+                    if http.statusCode == 202 { continue }
+                    let result = try await parseRecovered(data, response: http, generationID: generationID, requestedModel: requestedModel)
+                    await summary("recovered")
+                    return result
+                } catch is CancellationError { throw GenerationError.cancelled }
+                catch let error as GenerationError { throw error }
+                catch {
+                    if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw GenerationError.cancelled }
+                    let nsError = error as NSError
+                    let state = "\(nsError.domain):\(nsError.code)"
+                    if state != lastState {
+                        await DiagnosticLog.shared.record("Recovery", "transport failed; attempt=\(attempt + 1)", generationID: generationID, model: requestedModel, error: error)
+                        lastState = state
+                    }
+                }
+            }
+            exhausted = true
+            await summary("attempts exhausted")
+            throw GenerationError.uncertain
+        } catch {
+            if error is CancellationError || Self.isCancelled(error) {
+                await summary("cancelled")
+                throw GenerationError.cancelled
+            }
+            if !exhausted {
+                await summary("failed", error: error)
+            }
+            throw error
+        }
     }
 
+    private static func isCancelled(_ error: Error) -> Bool {
+        if case GenerationError.cancelled = error { return true }
+        return false
+    }
     func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? {
         var request = URLRequest(url: endpoint.appending(path: id.uuidString.lowercased()).appending(path: "usage"))
         request.setValue("Bearer " + (try await authorization()), forHTTPHeaderField: "Authorization")
@@ -468,6 +493,9 @@ final class WorkerClient: GenerationServing {
             if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
             return result
         } catch {
+            if response.statusCode == 200, let reason = Self.imageValidationFailure(data, response: response) {
+                await DiagnosticLog.shared.record("Response validation", reason, generationID: generationID, model: requestedModel)
+            }
             await DiagnosticLog.shared.record("Generation result", "unusable", generationID: generationID,
                                               model: requestedModel, error: error)
             // Keep interrupted, authentication and transient failures recoverable.
@@ -601,13 +629,20 @@ final class WorkerClient: GenerationServing {
             }
         }
         guard contentType == "image/png", data.starts(with: [137, 80, 78, 71, 13, 10, 26, 10]),
-              let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else {
-            throw GenerationError.invalidImage
-        }
+              let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else { throw GenerationError.invalidImage }
         return ColoringResult(data: data, image: image, requestedModel: requestedModel,
                               metrics: .decode(response.value(forHTTPHeaderField: "X-Generation-Metrics")),
                               access: Self.decodeAccess(response.value(forHTTPHeaderField: "X-Access-Snapshot")),
                               generationID: response.value(forHTTPHeaderField: "X-Generation-ID").flatMap { UUID(uuidString: $0) })
+    }
+
+    static func imageValidationFailure(_ data: Data, response: HTTPURLResponse) -> String? {
+        let type = response.value(forHTTPHeaderField: "Content-Type")?.lowercased().split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
+        guard type == "image/png" else { return "unexpected_content_type" }
+        guard data.starts(with: [137, 80, 78, 71, 13, 10, 26, 10]) else { return "invalid_png_signature" }
+        guard let image = UIImage(data: data) else { return "image_decode_failed" }
+        guard image.size.width > 0, image.size.height > 0 else { return "invalid_image_dimensions" }
+        return nil
     }
 
     private static func decodeAccess(_ header: String?) -> AccessSnapshot? {
