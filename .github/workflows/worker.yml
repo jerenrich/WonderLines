@@ -9,6 +9,7 @@ on:
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
+      - 'Scripts/test_batch_moderation.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   push:
@@ -19,6 +20,7 @@ on:
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
+      - 'Scripts/test_batch_moderation.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:
@@ -57,7 +59,9 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Run offline Worker and image cost tests
-        run: node Scripts/test_worker.mjs
+        run: |
+          node Scripts/test_worker.mjs
+          node Scripts/test_batch_moderation.mjs
 
       - name: Check deployment credentials
         if: github.event_name != 'pull_request'

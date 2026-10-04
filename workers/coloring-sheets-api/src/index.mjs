@@ -2,6 +2,7 @@
 import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
 import {falCostData} from './fal-cost.mjs';
+import {structuredComposition, isUUID} from './composition.mjs';
 import {moderateSubject, ModerationError, MODERATION_MODEL, MODERATION_POLICY} from './moderation.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
@@ -103,7 +104,7 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); }
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); }
   async fetch(request) {
     const input = await request.json().catch(() => null), path = new URL(request.url).pathname;
     if (!input || request.method !== 'POST') return fail('invalid_request', 'Send JSON.', 400);
@@ -125,6 +126,11 @@ export class Account {
       this.attestUpdates = update.catch(() => {});
       return update;
     }
+    if (path === '/moderate-batch') {
+      const decision = this.moderationUpdates.then(() => this.moderateBatch(input));
+      this.moderationUpdates = decision.catch(() => {});
+      return decision;
+    }
     if (path === '/reserve') {
       // The global budget call yields to other requests. Keep account reservations
       // in order so a parallel batch cannot read and spend the same allowance.
@@ -137,6 +143,32 @@ export class Account {
     if (path === '/complete') return this.complete(input);
     if (path === '/access') return reply({access: await this.access()});
     return fail('not_found', 'Not found.', 404);
+  }
+  async moderateBatch({batchID, description}) {
+    if (!isUUID(batchID) || typeof description !== 'string' || !description.trim() || description.length > 500) return fail('invalid_request', 'Invalid batch.', 400);
+    const fingerprint = await digest(JSON.stringify({batchID, description, policy: MODERATION_POLICY}));
+    const name = 'moderation:' + batchID;
+    const previous = await this.state.storage.get(name);
+    if (previous && previous.expires > Date.now()) {
+      if (previous.fingerprint !== fingerprint) return fail('batch_conflict', 'This batch uses a different description.', 409);
+      return previous.error ? fail(previous.error.code, previous.error.message, previous.error.status) : reply({approved: true});
+    }
+    // Retain only opaque fingerprints and fixed outcomes, never user text or
+    // model scores. Bound storage and expire decisions after ten minutes.
+    const entries = await this.state.storage.list({prefix: 'moderation:'});
+    const current = [...entries].filter(([, value]) => value.expires > Date.now());
+    for (const [key, value] of entries) if (value.expires <= Date.now()) await this.state.storage.delete(key);
+    if (current.length >= 64) return fail('moderation_unavailable', 'Too many recent batches. Please try again later.', 503);
+    let error;
+    try { await moderateSubject(this.env, description); }
+    catch (caught) {
+      if (!(caught instanceof ModerationError)) throw caught;
+      error = {code: caught.code, message: caught.message, status: caught.status};
+    }
+    await this.state.storage.put(name, {fingerprint, expires: Date.now() + 600000, ...(error ? {error} : {})});
+    console.info(JSON.stringify({event: 'description_moderation', batchID, model: MODERATION_MODEL,
+      policy: MODERATION_POLICY, outcome: error?.code ?? 'approved'}));
+    return error ? fail(error.code, error.message, error.status) : reply({approved: true});
   }
   async registerAttestation(input) {
     if (typeof input.keyID !== 'string' || typeof input.publicKey !== 'string' || input.publicKey.length > 1024) return fail('invalid_request', 'Invalid attestation.', 400);
@@ -324,11 +356,15 @@ async function generate(request, env, account) {
   const input = await body(request), generationId = request.headers.get('Idempotency-Key');
   if (!input || !/^[0-9a-f-]{36}$/.test(generationId ?? '')) return fail('invalid_request', 'Send JSON and a UUID Idempotency-Key.', 400);
   const size = dimensions(input);
-  if (typeof input.subject !== 'string' || !input.subject.trim() || input.subject.length > 500 || !size) return fail('invalid_request', 'Description or dimensions are invalid.', 400);
+  const structured = Object.hasOwn(input, 'batchID') || Object.hasOwn(input, 'description');
+  const composed = structured ? structuredComposition(input) : null;
+  if (structured && !composed) return fail('invalid_request', 'Invalid description or composition.', 400);
+  const subject = composed?.subject ?? input.subject;
+  if (typeof subject !== 'string' || !subject.trim() || subject.length > 500 || !size) return fail('invalid_request', 'Description or dimensions are invalid.', 400);
   // A retry identifies the original public request, not today's provider route.
   // Recover it before validating configuration so rotations cannot strand jobs.
   const model = input.model ?? env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
-  const fingerprint = await digest(JSON.stringify({subject: input.subject, model, ...size}));
+  const fingerprint = await digest(JSON.stringify({subject, model, ...size}));
   const existing = await call(env, account.id, '/job', {generationId});
   if (existing.status === 200) return existing.value.job.fingerprint === fingerprint
     ? saved(env, existing.value.job, existing.value.access)
@@ -338,9 +374,12 @@ async function generate(request, env, account) {
   try { catalog = modelCatalog(env); }
   catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
   if (typeof model !== 'string' || !Object.hasOwn(catalog.routes, model)) return fail('invalid_request', 'Model is invalid.', 400);
-  try { upstreamRequest = imageRequest(env, catalog.routes[model], input.subject, size); }
+  try { upstreamRequest = imageRequest(env, catalog.routes[model], subject, size); }
   catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
-  try { await moderateSubject(env, input.subject); }
+  if (composed) {
+    const decision = await call(env, account.id, '/moderate-batch', {batchID: composed.batchID, description: composed.description});
+    if (decision.status !== 200) return reply(decision.value, decision.status);
+  } else try { await moderateSubject(env, subject); }
   catch (error) {
     if (!(error instanceof ModerationError)) throw error;
     console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,

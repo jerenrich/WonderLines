@@ -56,6 +56,19 @@ final class GenerationTests: XCTestCase {
         XCTAssertEqual(WorkerClient.imageValidationFailure(png, response: response(200, type: "image/png")), "image_decode_failed")
     }
 
+    func testBatchRequestSendsOriginalDescriptionAndBoundedChoices() throws {
+        let batch = UUID()
+        let request = try GenerationRequest(description: "  ferarri  ", age: 18, model: .sunburst,
+            composition: .wide, batchID: batch)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.encoded()) as? [String: Any])
+        XCTAssertEqual(Set(body.keys), ["description", "age", "composition", "batchID", "model", "width", "height"])
+        XCTAssertEqual(body["description"] as? String, "ferarri")
+        XCTAssertEqual(body["age"] as? Int, 18)
+        XCTAssertEqual(body["composition"] as? String, "wide")
+        XCTAssertEqual(body["batchID"] as? String, batch.uuidString.lowercased())
+        XCTAssertNil(body["subject"], "Trusted guidance must be composed by the server.")
+    }
+
     func testSelectableModelsExcludeRetiredChoices() {
         XCTAssertEqual(ImageModel.selectable.map(\.rawValue), [
             "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
@@ -861,6 +874,9 @@ final class StateTests: XCTestCase {
         store.age = 8; store.description = "A moon bicycle"
         store.generate()
         await waitFor { service.pendingCount == ColoringViewModel.batchSize }
+        XCTAssertEqual(Set(service.captured.map(\.batchID)).count, 1)
+        XCTAssertNotNil(service.captured.first?.batchID)
+        XCTAssertEqual(Set(service.captured.compactMap { $0.composition?.rawValue }), ["side", "front", "wide"])
         service.succeed(at: 2)
         await waitFor { store.readyCount == 1 }
         XCTAssertTrue(store.results.isEmpty)

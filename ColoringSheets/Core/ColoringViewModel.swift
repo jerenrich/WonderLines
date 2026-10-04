@@ -62,11 +62,11 @@ final class ColoringViewModel: ObservableObject {
     var validationMessage: String? {
         do { _ = try requests(); return nil } catch { return error.localizedDescription }
     }
-    private func requests() throws -> [GenerationRequest] {
+    private func requests(batchID: UUID? = nil) throws -> [GenerationRequest] {
         let size = pageFormat.imageSize(for: previewSize, displayScale: displayScale)
         return try SheetComposition.allCases.prefix(imageCount).map { composition in
             try GenerationRequest(description: description, age: age, model: model,
-                                  size: size, composition: composition)
+                                  size: size, composition: composition, batchID: batchID)
         }
     }
 
@@ -78,15 +78,16 @@ final class ColoringViewModel: ObservableObject {
 
     func generate() {
         guard !isGenerating else { return }
+        let current = UUID()
         let requests: [GenerationRequest]
-        do { requests = try self.requests() } catch { phase = .error(error.localizedDescription); return }
+        do { requests = try self.requests(batchID: current) } catch { phase = .error(error.localizedDescription); return }
         phase = .generating
         activeBatchSize = requests.count
         completedCount = 0; failedCount = 0; batchMessage = nil
         receivedFirstResult = false; firstFailure = nil
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = false
-        let current = UUID(); attempt = current
+        attempt = current
         batchStarted = .now
         DiagnosticLog.shared.record("Batch", "started; requested=\(activeBatchSize); mode=\(isMock ? "mock" : "live")", batchID: current)
         // Each task starts its own request without waiting for the other requests.

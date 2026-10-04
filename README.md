@@ -165,3 +165,5 @@ Redmond sheets may wait in a queue. The Worker continues processing after the ap
 ## App Store submission audit
 
 The [submitted App Store baseline](docs/app-store/README.md) preserves the exact Apple listing, privacy and age-rating declarations, pricing, review notes, uploaded screenshots and build identifiers. Review it before changing app or backend behavior for a new release. Run `python3 Scripts/audit_app_store.py --include-working-tree` to verify the archived files and flag source changes for declaration review.
+
+Batch description moderation: updated app batches send the original user description with a shared random batch ID, age, and a bounded composition choice. The server checks that original description once for concurrent requests and adds trusted complexity/composition guidance itself. Each image still generates in parallel after approval. Moderation decisions are shared for ten minutes per batch; a fresh Generate action uses a fresh batch ID. Older apps retain full-prompt moderation. The updated Worker must be deployed before installing this client.

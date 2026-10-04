@@ -106,7 +106,7 @@ struct GenerationSize: Equatable {
     var cgSize: CGSize { CGSize(width: width, height: height) }
 }
 
-enum SheetComposition: CaseIterable {
+enum SheetComposition: String, CaseIterable {
     case side, front, wide, close, elevated
     var guidance: String {
         let view: String
@@ -123,6 +123,10 @@ enum SheetComposition: CaseIterable {
 
 struct GenerationRequest: Encodable, Equatable {
     let subject: String
+    let originalDescription: String
+    let age: Int
+    let composition: SheetComposition?
+    let batchID: UUID?
     let model: ImageModel
     let width: Int
     let height: Int
@@ -138,11 +142,12 @@ struct GenerationRequest: Encodable, Equatable {
     }
 
     init(description: String, age: Int, model: ImageModel, size: GenerationSize = .a4Default,
-         composition: SheetComposition? = nil) throws {
+         composition: SheetComposition? = nil, batchID: UUID? = nil) throws {
         guard size.isValid else { throw GenerationError.validation("The page size is unsupported. Choose a smaller page size.") }
         width = size.width; height = size.height
         let original = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !original.isEmpty else { throw GenerationError.validation("Describe what you’d like on the sheet.") }
+        originalDescription = original; self.age = age; self.composition = composition; self.batchID = batchID
         subject = original + "\n\n" + (try Self.guidance(age: age)) +
             (composition.map { "\n\n" + $0.guidance } ?? "")
         self.model = model
@@ -150,6 +155,23 @@ struct GenerationRequest: Encodable, Equatable {
             throw GenerationError.validation("Please shorten the description. It must fit within 500 characters including the complexity guidance.")
         }
         _ = try encoded()
+    }
+
+    private enum CodingKeys: String, CodingKey { case subject, description, age, composition, batchID, model, width, height }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let batchID {
+            guard let composition else { throw GenerationError.configuration }
+            try container.encode(originalDescription, forKey: .description)
+            try container.encode(age, forKey: .age)
+            try container.encode(composition.rawValue, forKey: .composition)
+            try container.encode(batchID.uuidString.lowercased(), forKey: .batchID)
+        } else {
+            try container.encode(subject, forKey: .subject)
+        }
+        try container.encode(model, forKey: .model)
+        try container.encode(width, forKey: .width)
+        try container.encode(height, forKey: .height)
     }
 
     func encoded() throws -> Data {
