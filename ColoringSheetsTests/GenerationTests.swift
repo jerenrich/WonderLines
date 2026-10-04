@@ -182,6 +182,20 @@ final class GenerationTests: XCTestCase {
         }
     }
 
+    func testModerationDiagnosticsOnlyRetainKnownCategories() throws {
+        let body = try JSONSerialization.data(withJSONObject: ["error": ["code": "description_not_suitable", "message": "private message", "reasonCodes": ["violence", "private prompt and token", "uncertain", "violence"]]])
+        XCTAssertEqual(WorkerClient.moderationDiagnostic(body, response: response(400, type: "application/json")),
+                       "description rejected; reasons=uncertain,violence; allowanceUsed=false")
+        XCTAssertNil(WorkerClient.moderationDiagnostic(body, response: response(503, type: "application/json")))
+        XCTAssertNil(WorkerClient.moderationDiagnostic(body, response: response(400, type: "text/html")))
+        let legacy = Data("{\"error\":{\"code\":\"description_not_suitable\",\"message\":\"Please rewrite your description.\",\"reasonCodes\":42}}".utf8)
+        XCTAssertEqual(WorkerClient.moderationDiagnostic(legacy, response: response(400, type: "application/json")),
+                       "description rejected; reasons=unspecified; allowanceUsed=false")
+        XCTAssertThrowsError(try WorkerClient.parse(legacy, response: response(400, type: "application/json"), requestedModel: .flare)) {
+            XCTAssertEqual($0 as? GenerationError, .validation("Please rewrite your description."))
+        }
+    }
+
     func testV1AllowanceResponse() {
         let body = Data(#"{"error":{"code":"allowance_exhausted","message":"Today’s free sheet allowance has been used."}}"#.utf8)
         XCTAssertThrowsError(try WorkerClient.parse(body, response: response(429, type: "application/json"), requestedModel: .flare)) {
@@ -283,6 +297,39 @@ final class MockURLProtocol: URLProtocol {
 }
 
 final class NetworkingTests: XCTestCase {
+    func testModerationFailureIsLoggedAndNeverLeftPending() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let suite = "ModerationTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let identities = AnonymousIdentityStore(service: suite)
+        try await identities.save(AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600)))
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        let client = WorkerClient(session: session, identities: identities, pendingStore: PendingGenerationStore(defaults: defaults))
+        for (status, code) in [(400, "description_not_suitable"), (503, "moderation_unavailable")] {
+            var calls = 0
+            var generationID: String?
+            MockURLProtocol.handler = { request in
+                calls += 1
+                generationID = request.value(forHTTPHeaderField: "Idempotency-Key")
+                XCTAssertEqual(request.httpMethod, "POST")
+                let data = try JSONSerialization.data(withJSONObject: ["error": ["code": code, "message": "No sheet allowance was used.", "reasonCodes": ["violence"]]])
+                return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!, data)
+            }
+            do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected moderation failure") }
+            catch { XCTAssertTrue(error.localizedDescription.contains("No sheet allowance")) }
+            XCTAssertEqual(calls, 1)
+            let pending = await client.pendingGenerations()
+            XCTAssertTrue(pending.isEmpty, "Moderation failed before any image job was reserved.")
+            let event = await MainActor.run { DiagnosticLog.shared.events.last { $0.stage == "Content moderation" && $0.generationID?.uuidString.lowercased() == generationID } }
+            XCTAssertEqual(event?.workerCode, code)
+            XCTAssertEqual(event?.httpStatus, status)
+            XCTAssertTrue(event?.outcome.contains("allowanceUsed=false") == true)
+        }
+    }
+
     func testOnePOSTAndNoRetryForAllModelsAndTimeout() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]

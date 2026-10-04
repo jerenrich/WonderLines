@@ -8,7 +8,7 @@ import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} f
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
-const fail = (code, message, status) => reply({error: {code, message}}, status);
+const fail = (code, message, status, details = {}) => reply({error: {code, message, ...details}}, status);
 function dimensions(input) {
   const {width, height} = input ?? {};
   if (width === undefined && height === undefined) return DEFAULT;
@@ -151,24 +151,29 @@ export class Account {
     const previous = await this.state.storage.get(name);
     if (previous && previous.expires > Date.now()) {
       if (previous.fingerprint !== fingerprint) return fail('batch_conflict', 'This batch uses a different description.', 409);
-      return previous.error ? fail(previous.error.code, previous.error.message, previous.error.status) : reply({approved: true});
+      return previous.error ? fail(previous.error.code, previous.error.message, previous.error.status, {reasonCodes: previous.error.reasonCodes}) : reply({approved: true});
     }
     // Retain only opaque fingerprints and fixed outcomes, never user text or
     // model scores. Bound storage and expire decisions after ten minutes.
     const entries = await this.state.storage.list({prefix: 'moderation:'});
     const current = [...entries].filter(([, value]) => value.expires > Date.now());
     for (const [key, value] of entries) if (value.expires <= Date.now()) await this.state.storage.delete(key);
-    if (current.length >= 64) return fail('moderation_unavailable', 'Too many recent batches. Please try again later.', 503);
-    let error;
-    try { await moderateSubject(this.env, description); }
+    if (current.length >= 64) {
+      console.info(JSON.stringify({event: 'description_moderation', batchID, model: MODERATION_MODEL,
+        policy: MODERATION_POLICY, outcome: 'moderation_unavailable', failure: 'batch_limit'}));
+      return fail('moderation_unavailable', 'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503);
+    }
+    let error, diagnostics;
+    try { diagnostics = await moderateSubject(this.env, description); }
     catch (caught) {
       if (!(caught instanceof ModerationError)) throw caught;
-      error = {code: caught.code, message: caught.message, status: caught.status};
+      diagnostics = caught.diagnostics;
+      error = {code: caught.code, message: caught.message, status: caught.status, reasonCodes: caught.reasonCodes};
     }
     await this.state.storage.put(name, {fingerprint, expires: Date.now() + 600000, ...(error ? {error} : {})});
     console.info(JSON.stringify({event: 'description_moderation', batchID, model: MODERATION_MODEL,
-      policy: MODERATION_POLICY, outcome: error?.code ?? 'approved'}));
-    return error ? fail(error.code, error.message, error.status) : reply({approved: true});
+      policy: MODERATION_POLICY, outcome: error?.code ?? 'approved', ...diagnostics, reasonCodes: error?.reasonCodes ?? []}));
+    return error ? fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes}) : reply({approved: true});
   }
   async registerAttestation(input) {
     if (typeof input.keyID !== 'string' || typeof input.publicKey !== 'string' || input.publicKey.length > 1024) return fail('invalid_request', 'Invalid attestation.', 400);
@@ -378,13 +383,21 @@ async function generate(request, env, account) {
   catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
   if (composed) {
     const decision = await call(env, account.id, '/moderate-batch', {batchID: composed.batchID, description: composed.description});
-    if (decision.status !== 200) return reply(decision.value, decision.status);
-  } else try { await moderateSubject(env, subject); }
+    if (decision.status !== 200) {
+      console.info(JSON.stringify({event: 'moderation_gate', generationID: generationId, batchID: composed.batchID,
+        outcome: decision.value.error?.code, status: decision.status}));
+      return reply(decision.value, decision.status);
+    }
+  } else try {
+    const diagnostics = await moderateSubject(env, subject);
+    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
+      model: MODERATION_MODEL, policy: MODERATION_POLICY, outcome: 'approved', ...diagnostics, reasonCodes: []}));
+  }
   catch (error) {
     if (!(error instanceof ModerationError)) throw error;
     console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
-      model: MODERATION_MODEL, policy: MODERATION_POLICY, outcome: error.code}));
-    return fail(error.code, error.message, error.status);
+      model: MODERATION_MODEL, policy: MODERATION_POLICY, outcome: error.code, ...error.diagnostics, reasonCodes: error.reasonCodes}));
+    return fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes});
   }
   const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint,
     ...(upstreamRequest.provider === 'fal' ? {falTask: {request: upstreamRequest, publicModel: model,

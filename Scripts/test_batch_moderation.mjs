@@ -70,12 +70,21 @@ try {
   const denied = await Promise.all(['side', 'front', 'wide'].map(composition => send({...options, batchID: rejectedBatch, composition})));
   assert.deepEqual(denied.map(response => response.status), [400, 400, 400]);
   assert.equal(inputs.length, 2); assert.equal(prompts.length, beforeImages);
-  assert.equal((await denied[0].json()).error.code, 'description_not_suitable');
+  const deniedBodies = await Promise.all(denied.map(response => response.json()));
+  assert.ok(deniedBodies.every(body => body.error.code === 'description_not_suitable'));
+  assert.ok(deniedBodies.every(body => body.error.message === deniedBodies[0].error.message));
+  assert.ok(deniedBodies.every(body => body.error.reasonCodes.join(',') === 'uncertain'));
+  const rejectionAudit = logs.find(log => log.batchID === rejectedBatch && log.event === 'description_moderation');
+  assert.equal(rejectionAudit.gateway, 'test');
+  assert.deepEqual(rejectionAudit.reasonCodes, ['uncertain']);
+  assert.equal(logs.filter(log => log.batchID === rejectedBatch && log.event === 'moderation_gate').length, 3);
   unavailable = true;
   const unavailableBatch = crypto.randomUUID();
   const failures = await Promise.all(['side', 'front', 'wide'].map(composition => send({...options, batchID: unavailableBatch, composition})));
   assert.deepEqual(failures.map(response => response.status), [503, 503, 503]);
   assert.equal(inputs.length, 3); assert.equal(prompts.length, beforeImages);
+  assert.equal(logs.find(log => log.batchID === unavailableBatch && log.event === 'description_moderation').failure, 'upstream');
+  assert.ok(!JSON.stringify(logs).includes('private upstream text'));
   // Recovering an already completed job doesn't require a fresh moderation.
   assert.equal((await send({...options, composition: 'side'}, generationIDs[0])).status, 200);
   assert.equal(inputs.length, 3);

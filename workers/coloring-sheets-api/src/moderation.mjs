@@ -49,7 +49,7 @@ export function moderationResult(value) {
   throw new Error('Invalid moderation response');
 }
 
-export function moderationDecision(value) {
+export function moderationAssessment(value) {
   const result = moderationResult(value);
   const scores = {};
   for (const name of ['all_ages', ...Object.keys(hazards)]) {
@@ -60,24 +60,43 @@ export function moderationDecision(value) {
     }
     scores[name] = answer.noul;
   }
-  return scores.all_ages >= SAFE_PROBABILITY &&
-    Object.keys(hazards).every(name => scores[name] <= (name === 'violence' ? VIOLENCE_PROBABILITY_LIMIT : 0.05));
+  const reasonCodes = Object.keys(hazards).filter(name => scores[name] > (name === 'violence' ? VIOLENCE_PROBABILITY_LIMIT : 0.05));
+  if (!reasonCodes.length && scores.all_ages < SAFE_PROBABILITY) reasonCodes.push('uncertain');
+  return {allowed: scores.all_ages >= SAFE_PROBABILITY && reasonCodes.length === 0, reasonCodes};
+}
+
+export function moderationDecision(value) { return moderationAssessment(value).allowed; }
+
+const reasonLabels = {
+  sexual: 'sexual content or nudity', violence: 'violence or weapons', hate: 'hate or harassment',
+  adult: 'adult themes', frightening: 'frightening content', bypass: 'instructions to bypass safety checks',
+};
+function rejectionMessage(reasonCodes) {
+  const labels = reasonCodes.map(code => reasonLabels[code]).filter(Boolean);
+  return (labels.length ? 'The safety check flagged possible ' + labels.join(', ') + '.'
+    : 'The safety check could not confirm that this description is suitable for all ages.') +
+    ' Please rewrite it as a gentle, family-friendly scene and try again. No sheet allowance was used.';
 }
 
 export class ModerationError extends Error {
-  constructor(code, message, status) { super(message); this.code = code; this.status = status; }
+  constructor(code, message, status, diagnostics, reasonCodes = []) {
+    super(message); this.code = code; this.status = status; this.diagnostics = diagnostics; this.reasonCodes = reasonCodes;
+  }
 }
 
 export async function moderateSubject(env, subject) {
   // Share the image gateway; tolerate the legacy moderation-only setting when
   // no shared gateway is configured. A stale override must not split traffic.
   const gatewayID = env.AI_GATEWAY_ID ?? env.MODERATION_GATEWAY_ID;
-  if (typeof env.AI?.run !== 'function' || typeof gatewayID !== 'string' ||
-      !/^[A-Za-z0-9_-]{1,64}$/.test(gatewayID)) {
-    throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
-  }
+  const started = Date.now();
+  const configured = typeof gatewayID === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(gatewayID);
+  const gateway = configured ? gatewayID : 'unconfigured';
+  const diagnostics = (failure, extra = {}) => ({gateway, elapsedMs: Math.max(0, Date.now() - started), ...(failure ? {failure} : {}), ...extra});
+  const unavailable = (failure, extra) => new ModerationError('moderation_unavailable',
+    'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503, diagnostics(failure, extra));
+  if (typeof env.AI?.run !== 'function' || !configured) throw unavailable('configuration');
   const controller = new AbortController();
-  let timer, allowed;
+  let timer, assessment, failure = 'upstream';
   try {
     const result = await Promise.race([
       env.AI.run(MODERATION_MODEL, moderationInput(subject), {
@@ -85,13 +104,18 @@ export async function moderateSubject(env, subject) {
         signal: controller.signal,
       }),
       new Promise((_, reject) => { timer = setTimeout(() => {
-        controller.abort(); reject(new Error('Moderation timeout'));
+        failure = 'timeout'; controller.abort(); reject(new Error('Moderation timeout'));
       }, TIMEOUT_MS); }),
     ]);
-    allowed = moderationDecision(result);
-  } catch {
-    // Never expose upstream text: it could echo descriptions or credentials.
-    throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
+    failure = 'invalid_response';
+    assessment = moderationAssessment(result);
+  } catch (error) {
+    // Retain only a numeric provider code, never upstream messages or payloads.
+    const match = failure === 'upstream' && typeof error?.message === 'string'
+      ? /^(\d{3,5}):/.exec(error.message) : null;
+    throw unavailable(failure, match ? {upstreamCode: Number(match[1])} : {});
   } finally { clearTimeout(timer); }
-  if (!allowed) throw new ModerationError('description_not_suitable', 'Please describe a gentle, family-friendly scene suitable for all ages. No sheet allowance was used.', 400);
+  if (!assessment.allowed) throw new ModerationError('description_not_suitable', rejectionMessage(assessment.reasonCodes),
+    400, diagnostics(null), assessment.reasonCodes);
+  return diagnostics(null);
 }
