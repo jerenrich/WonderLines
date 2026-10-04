@@ -60,7 +60,8 @@ export function moderationAssessment(value) {
     }
     scores[name] = answer.noul;
   }
-  const reasonCodes = Object.keys(hazards).filter(name => scores[name] > (name === 'violence' ? VIOLENCE_PROBABILITY_LIMIT : 0.05));
+  const reasonCodes = Object.keys(hazards).filter(name => scores[name] > (name === 'violence' ? VIOLENCE_PROBABILITY_LIMIT : 0.05))
+    .sort((a, b) => scores[b] - scores[a]);
   if (!reasonCodes.length && scores.all_ages < SAFE_PROBABILITY) reasonCodes.push('uncertain');
   return {allowed: scores.all_ages >= SAFE_PROBABILITY && reasonCodes.length === 0, reasonCodes};
 }
@@ -72,7 +73,7 @@ const reasonLabels = {
   adult: 'adult themes', frightening: 'frightening content', bypass: 'instructions to bypass safety checks',
 };
 function rejectionMessage(reasonCodes) {
-  const labels = reasonCodes.map(code => reasonLabels[code]).filter(Boolean);
+  const labels = reasonCodes.slice(0, 2).map(code => reasonLabels[code]).filter(Boolean);
   return (labels.length ? 'The safety check flagged possible ' + labels.join(', ') + '.'
     : 'The safety check could not confirm that this description is suitable for all ages.') +
     ' Please rewrite it as a gentle, family-friendly scene and try again. No sheet allowance was used.';
