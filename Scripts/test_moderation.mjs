@@ -52,7 +52,7 @@ let calls = 0;
 const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, options) {
   calls++; assert.equal(model, MODERATION_MODEL);
   assert.equal(input.state.description, 'A friendly dragon. Complexity: intricate outlines.');
-  assert.deepEqual(options.gateway, {id: 'existing-gateway', skipCache: true, collectLog: false});
+  assert.deepEqual(options.gateway, {id: 'existing-gateway', skipCache: true, collectLog: true});
   return safeModerationResult();
 }}};
 await moderateSubject(env, 'A friendly dragon. Complexity: intricate outlines.');

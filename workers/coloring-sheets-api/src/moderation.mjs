@@ -132,7 +132,7 @@ export async function moderateSubject(env, subject) {
   try {
     const result = await Promise.race([
       env.AI.run(model, moderationInput(subject, model), {
-        gateway: {id: gatewayID, skipCache: true, collectLog: false},
+        gateway: {id: gatewayID, skipCache: true, collectLog: true},
         signal: controller.signal,
       }),
       new Promise((_, reject) => { timer = setTimeout(() => {

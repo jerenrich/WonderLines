@@ -23,7 +23,7 @@ for (const test of cases) {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(8000),
       headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json',
         'cf-aig-gateway-id': gateway, 'cf-aig-skip-cache': 'true',
-        'cf-aig-collect-log': 'false', 'cf-aig-max-attempts': '1'},
+        'cf-aig-collect-log': 'true', 'cf-aig-max-attempts': '1'},
       body: JSON.stringify(moderationInput(test.description, model)),
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
