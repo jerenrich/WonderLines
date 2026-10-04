@@ -12,7 +12,8 @@ if (!process.argv.includes('--live') || !/^[a-fA-F0-9]{32}$/.test(account ?? '')
 const model = moderationModel(process.env);
 const onlyArg = process.argv.find(arg => arg.startsWith('--cases='));
 const selected = onlyArg?.slice('--cases='.length).split(',');
-const cases = JSON.parse(readFileSync(new URL('./fixtures/moderation-cases.json', import.meta.url), 'utf8'))
+const fixtureFiles = ['moderation-cases.json', ...(process.argv.includes('--validation') ? ['moderation-validation-cases.json'] : [])];
+const cases = fixtureFiles.flatMap(file => JSON.parse(readFileSync(new URL('./fixtures/' + file, import.meta.url), 'utf8')))
   .filter(test => !selected || selected.includes(test.name));
 if (!cases.length) { console.error('No matching moderation cases.'); process.exit(1); }
 let failures = 0, inputTokens = 0;
@@ -29,7 +30,7 @@ for (const test of cases) {
     const envelope = await response.json();
     if (envelope.success !== true) throw new Error('Unsuccessful Cloudflare response');
     const result = moderationResult(envelope);
-    const allowed = moderationDecision(result);
+    const allowed = moderationDecision(result, model);
     if (allowed !== test.allowed) {
       failures++; console.log('FAIL: ' + test.name + ' (expected ' + test.allowed + ', received ' + allowed + ')');
       console.log(JSON.stringify(Object.fromEntries(Object.keys(moderationInput('').questions).map(name => [name, result.answers[name].noul]))));

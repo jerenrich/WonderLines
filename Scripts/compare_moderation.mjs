@@ -16,7 +16,7 @@ try {
       const result = await proxy.env.AI.run(model, moderationInput(subject, model), {
         gateway: {id: proxy.env.AI_GATEWAY_ID ?? proxy.env.MODERATION_GATEWAY_ID ?? 'coloring-sheets', skipCache: true, collectLog: false},
       });
-      console.log(JSON.stringify({model: name, scores: moderationScores(result), allowed: moderationDecision(result), elapsedMs: Date.now() - started}));
+      console.log(JSON.stringify({model: name, scores: moderationScores(result), allowed: moderationDecision(result, model), elapsedMs: Date.now() - started}));
     } catch {
       console.error(JSON.stringify({model: name, error: 'moderation_unavailable'}));
       process.exitCode = 1;

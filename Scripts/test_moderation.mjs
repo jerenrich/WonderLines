@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {moderateSubject, moderationAssessment, moderationDecision, moderationInput, MODERATION_MODEL, MODERATION_MODELS, moderationModel} from '../workers/coloring-sheets-api/src/moderation.mjs';
+import {moderateSubject, moderationAssessment, moderationDecision, moderationInput, MODERATION_MODEL, MODERATION_MODELS, moderationModel, moderationThresholds} from '../workers/coloring-sheets-api/src/moderation.mjs';
 
 const names = Object.keys(moderationInput('').questions);
 export const safeModerationResult = () => ({answers: Object.fromEntries(names.map(name =>
@@ -15,7 +15,7 @@ for (const invalid of [
 ]) assert.throws(() => moderationDecision(invalid));
 for (const name of names) {
   const uncertain = safeModerationResult();
-  uncertain.answers[name].noul = name === 'all_ages' ? 0.94 : ['violence', 'bypass'].includes(name) ? 0.11 : 0.06;
+  uncertain.answers[name].noul = moderationThresholds()[name] + (name === 'all_ages' ? -0.01 : 0.01);
   assert.equal(moderationDecision(uncertain), false, name + ' uncertainty must block');
   for (const value of [undefined, null, '0', NaN, Infinity, -0.01, 1.01]) {
     const malformed = safeModerationResult(); malformed.answers[name].noul = value;
@@ -31,9 +31,22 @@ for (const [score, allowed] of [[0.0566, true], [0.10, true], [0.1001, false]]) 
   const result = safeModerationResult(); result.answers.bypass.noul = score;
   assert.equal(moderationDecision(result), allowed, 'Bypass threshold is inclusive at 10%.');
 }
+const calibrated = safeModerationResult(); calibrated.answers.all_ages.noul = 0.83;
+assert.equal(moderationDecision(calibrated), true);
+assert.equal(moderationDecision(calibrated, MODERATION_MODELS.jev), false);
+assert.equal(moderationDecision(calibrated, MODERATION_MODELS.clef), false);
+for (const model of Object.values(MODERATION_MODELS)) {
+  for (const [name, limit] of Object.entries(moderationThresholds(model))) {
+    const atLimit = safeModerationResult(); atLimit.answers[name].noul = limit;
+    assert.equal(moderationDecision(atLimit, model), true, model + ' accepts boundary for ' + name);
+    atLimit.answers[name].noul += name === 'all_ages' ? -0.0001 : 0.0001;
+    assert.equal(moderationDecision(atLimit, model), false, model + ' rejects beyond boundary for ' + name);
+    assert.deepEqual(moderationAssessment(atLimit, model).reasonCodes, [name === 'all_ages' ? 'uncertain' : name]);
+  }
+}
 const harmlessAdventure = safeModerationResult(); harmlessAdventure.answers.violence.noul = 0.08;
 assert.equal(moderationDecision(harmlessAdventure), true);
-harmlessAdventure.answers.all_ages.noul = 0.94;
+harmlessAdventure.answers.all_ages.noul = 0.74;
 assert.equal(moderationDecision(harmlessAdventure), false, 'A low hazard score never overrides uncertain overall suitability.');
 let calls = 0;
 const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, options) {
