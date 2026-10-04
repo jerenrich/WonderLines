@@ -1,0 +1,42 @@
+Name: Wonder Lines
+Subtitle: Dream it. Print it. Color it.
+Promotional text:
+A dinosaur cycling on the moon? Describe an idea, choose the age difficulty, and create a coloring sheet to save, share, or print.
+
+Description:
+Turn a big imagination into a page to color. And then print with an easy button.  No sign in required
+
+A dinosaur riding a bike on the moon. A friendly dragon in a garden. Whatever scene you have in mind, Wonder Lines turns your description into AI-generated coloring sheets on iPhone and iPad.
+
+DESCRIBE YOUR IDEA
+Type a character, scene, or story. Choose an age difficulty to guide the drawing toward simpler shapes and larger coloring areas, or finer details.
+
+FIND YOUR FAVORITE
+Create one to three sheets at a time. Swipe through the results and choose the page you want to use. Adjust your description or try another image model for your next set.
+
+TAKE IT TO PAPER
+Save a sheet to Photos, share it, or print it with a compatible AirPrint printer. Landscape pages give your ideas room to grow and keep the whole drawing visible in the preview.
+
+MAKE SOMETHING TOGETHER
+Use a child's favorite idea as the starting point for a quiet afternoon, a rainy-day activity, or a page to share with family.
+
+No sign-in is required. An internet connection is needed to generate new sheets. Generation is subject to service availability and usage limits. AI-generated results vary with your description and chosen settings.
+
+Keywords: colouring,printable,drawing,art,creative,family,activities,dinosaur,imagination,pages
+Support URL: https://jerenrich.github.io/WonderLines/
+Marketing URL: https://jerenrich.github.io/WonderLines/
+Copyright: 2026 Jordan Erenrich
+
+App Review Notes:
+Wonder Lines creates AI-generated coloring sheets from text descriptions. No sign-in or review account is required; the app creates an anonymous service identity automatically.
+
+To test:
+1. Open Settings and choose an age difficulty, for example 6 years.
+2. Set Images per generation to 1 and keep the default model.
+3. Return to the main screen and enter: Dinosaur riding a bike on the moon.
+4. Tap Generate (the sparkle button on compact iPhone layouts) and wait for the result.
+5. Save to Photos, Share, or Print the selected sheet. On iPhone, these actions are in the Sheet actions menu at the top right.
+
+New sheet generation requires an internet connection and the hosted generation service. Saving requests add-only Photos access. Printing requires a compatible AirPrint printer.
+
+The listing screenshots were captured from the current interface in iOS simulators with a locally supplied dinosaur illustration. The submitted app generates its images through the live service; no screenshot fixture or special screenshot mode is included in the shipping source.

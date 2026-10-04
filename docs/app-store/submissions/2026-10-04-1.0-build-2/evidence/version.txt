@@ -1,0 +1,251 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information":
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - heading "iOS App Version 1.0" [level=2]
+  - button "Save" [disabled]
+  - separator
+  - paragraph:
+    - generic: You can edit some information while your version is waiting for review. To submit a new build, you must remove this version from review.
+  - paragraph: The assets and metadata below appear on your app’s product page, when users install your app, and will be used for web engine search results once you release your app.
+  - button "English (U.S.)" [disabled]
+  - button "?"
+  - separator
+  - heading "Previews and Screenshots" [level=3]
+  - button "More information": "?"
+  - paragraph: Adding accurate screenshots of your app on the newest devices can help you represent the app's user experience. Keep in mind that we'll use these screenshots for all display sizes and localizations. Screenshots are only required for iOS apps, and only the first 3 will be used on the app installation sheets.
+  - tablist:
+    - tab "iPhone" [selected]:
+      - generic: iPhone
+    - tab "iPad":
+      - generic: iPad
+  - paragraph:
+    - link "View All Sizes in Media Manager":
+      - /url: /apps/6817505650/distribution/ios/version/inflight/media-manager/iphone
+  - alert
+  - tabpanel "iPhone":
+    - generic: iPhone
+    - generic: 6.5" Display
+    - region:
+      - tabpanel:
+        - paragraph: Using 6.9" Display
+        - list "App Previews from English (U.S.) 6.9\" Display"
+        - list "Screenshots from English (U.S.) 6.9\" Display":
+          - img "Screenshot 01-dinosaur-gallery.png":
+          - img "Screenshot 02-describe-your-idea.png":
+          - img "Screenshot 03-age-and-generation-settings.png":
+          - img "Screenshot 04-save-share-and-print.png":
+  - generic: Promotional Text
+  - button "More information": "?"
+  - textbox "Promotional Text": A dinosaur cycling on the moon? Describe an idea, choose the age difficulty, and create a coloring sheet to save, share, or print.
+  - status "Characters remaining": "40"
+  - separator
+  - generic: Description
+  - button "More information": "?"
+  - textbox "Description": Turn a big imagination into a page to color. And then print with an easy button. No sign in required A dinosaur riding a bike on the moon. A friendly dragon in a garden. Whatever scene you have in mind, Wonder Lines turns your description into AI-generated coloring sheets on iPhone and iPad. DESCRIBE YOUR IDEA Type a character, scene, or story. Choose an age difficulty to guide the drawing toward simpler shapes and larger coloring areas, or finer details. FIND YOUR FAVORITE Create one to three sheets at a time. Swipe through the results and choose the page you want to use. Adjust your description or try another image model for your next set. TAKE IT TO PAPER Save a sheet to Photos, share it, or print it with a compatible AirPrint printer. Landscape pages give your ideas room to grow and keep the whole drawing visible in the preview. MAKE SOMETHING TOGETHER Use a child's favorite idea as the starting point for a quiet afternoon, a rainy-day activity, or a page to share with family. No sign-in is required. An internet connection is needed to generate new sheets. Generation is subject to service availability and usage limits. AI-generated results vary with your description and chosen settings.
+  - status "Characters remaining": 2,784
+  - generic: Keywords
+  - button "More information": "?"
+  - textbox "Keywords": colouring,printable,drawing,art,creative,family,activities,dinosaur,imagination,pages
+  - status "Characters remaining": "15"
+  - generic: Support URL
+  - button "More information": "?"
+  - textbox "Support URL": https://jerenrich.github.io/WonderLines/
+  - generic: Marketing URL
+  - button "More information": "?"
+  - textbox "Marketing URL": https://jerenrich.github.io/WonderLines/
+  - generic: Version
+  - button "More information": "?"
+  - textbox "Version": "1.0"
+  - generic: Copyright
+  - button "More information": "?"
+  - textbox "Copyright": 2026 Jordan Erenrich
+  - status "Characters remaining": "180"
+  - generic: Routing App Coverage File
+  - button "More information": "?"
+  - button "Choose File"
+  - generic: Choose File
+  - separator
+  - button "App Clip":
+    - text: App Clip
+  - heading "Build" [level=3]
+  - table:
+    - rowgroup:
+      - row "Build Version Has App Clip":
+        - columnheader "Build":
+          - generic: Build
+        - columnheader "Version":
+          - generic: Version
+        - columnheader "Has App Clip":
+          - generic: Has App Clip
+    - rowgroup:
+      - row "App Icon 2 1.0 No":
+        - cell "App Icon 2":
+          - link "App Icon":
+            - /url: /apps/6817505650/testflight/ios/85f200ea-fb06-4d5c-a4c7-8787f601abcb/metadata
+            - generic "App Icon":
+              - img "App Icon"
+          - link "2":
+            - /url: /apps/6817505650/testflight/ios/85f200ea-fb06-4d5c-a4c7-8787f601abcb/metadata
+        - cell "1.0":
+          - generic: "1.0"
+        - cell "No":
+          - paragraph: "No"
+  - paragraph: Included Assets
+  - button "App Icon":
+    - generic "App Icon":
+      - img "App Icon"
+  - paragraph: App Icon
+  - checkbox "Game Center" [disabled]
+  - text: Game Center
+  - separator
+  - heading "App Review Information" [level=3]
+  - generic: Sign-In Information
+  - button "More information": "?"
+  - paragraph: Provide a user name and password so we can sign in to your app. We’ll need this to complete your app review.
+  - checkbox "Sign-in required"
+  - generic: Sign-in required
+  - generic: Contact Information
+  - button "More information": "?"
+  - textbox "First name": Jordan
+  - textbox "Last name": Erenrich
+  - textbox "Phone number": <redacted>
+  - textbox "Email": <redacted>
+  - generic: Notes
+  - button "More information": "?"
+  - textbox "Notes": "Wonder Lines creates AI-generated coloring sheets from text descriptions. No sign-in or review account is required; the app creates an anonymous service identity automatically. To test: 1. Open Settings and choose an age difficulty, for example 6 years. 2. Set Images per generation to 1 and keep the default model. 3. Return to the main screen and enter: Dinosaur riding a bike on the moon. 4. Tap Generate (the sparkle button on compact iPhone layouts) and wait for the result. 5. Save to Photos, Share, or Print the selected sheet. On iPhone, these actions are in the Sheet actions menu at the top right. New sheet generation requires an internet connection and the hosted generation service. Saving requests add-only Photos access. Printing requires a compatible AirPrint printer. The listing screenshots were captured from the current interface in iOS simulators with a locally supplied dinosaur illustration. The submitted app generates its images through the live service; no screenshot fixture or special screenshot mode is included in the shipping source."
+  - status "Characters remaining": 2,933
+  - generic: Attachment
+  - button "More information": "?"
+  - button "Choose File (Optional)"
+  - generic: Choose File (Optional)
+  - separator
+  - heading "App Store Version Release" [level=3]
+  - paragraph: To make your app available on the App Store, you can automatically release it after it’s been approved by App Review. You can also manually release it on the App Store at a later date.
+  - radio "Manually release this version"
+  - generic: Manually release this version
+  - radio "Automatically release this version" [checked]
+  - generic: Automatically release this version
+  - radio "Automatically release this version after App Review, no earlier than"
+  - generic: Automatically release this version after App Review, no earlier than
+  - paragraph: Your local date and time.
+  - textbox "Automatically release this version after App Review, no earlier than" [disabled]: Oct 4, 2026 09:00
+  - text: BST
+  - region "Draft Submissions":
+    - button "Draft Submissions (0)":
+      - text: Draft Submissions (0)
+- dialog "1 Item Submitted":
+  - document:
+    - button "Close":
+    - heading "1 Item Submitted" [level=2]
+    - paragraph: It can take up to 48 hours to be reviewed. You'll get an email when the review is complete.
+    - link "Go to App Review":
+      - /url: /apps/6817505650/distribution/reviewsubmissions/details/76e4aec3-d175-4425-9989-8fd79696755b
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

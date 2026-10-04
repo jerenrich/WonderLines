@@ -1,0 +1,201 @@
+Existing saved choices inspected without changing or saving answers.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - link "App Information":
+    - /url: /apps/6817505650/distribution/info
+    - text: App Information
+  - heading "Age Ratings" [level=2]
+  - paragraph:
+    - paragraph:
+      - text: Your app's age ratings are below. Users will only see the age rating that applies to their country or region on the App Store. If the content of your app changes, you can edit your age ratings.
+      - button "Edit Age Ratings"
+  - grid "App Age Ratings":
+    - rowgroup:
+      - row "Age Rating Countries or Regions":
+        - columnheader "Age Rating":
+          - generic: Age Rating
+        - columnheader "Countries or Regions":
+          - generic: Countries or Regions
+    - rowgroup:
+      - row "9+ Age 9+":
+        - rowheader "9+ Age 9+":
+          - button "9+ Age 9+" [expanded]:
+            - paragraph:
+              - generic: 9+
+            - text: Age 9+
+        - gridcell "172 Countries or Regions Afghanistan Bahrain Brunei Albania Barbados Bulgaria Algeria Belarus Burkina Faso Angola Belgium Cambodia Anguilla Belize Cameroon Antigua and Barbuda Benin Canada Argentina Bermuda Cape Verde Armenia Bhutan Cayman Islands Australia Bolivia Chad Austria Bosnia and Herzegovina Chile Azerbaijan Botswana China mainland Bahamas British Virgin Islands Colombia Show More":
+          - paragraph: 172 Countries or Regions
+          - region:
+            - separator
+            - paragraph: Afghanistan
+            - paragraph: Bahrain
+            - paragraph: Brunei
+            - paragraph: Albania
+            - paragraph: Barbados
+            - paragraph: Bulgaria
+            - paragraph: Algeria
+            - paragraph: Belarus
+            - paragraph: Burkina Faso
+            - paragraph: Angola
+            - paragraph: Belgium
+            - paragraph: Cambodia
+            - paragraph: Anguilla
+            - paragraph: Belize
+            - paragraph: Cameroon
+            - paragraph: Antigua and Barbuda
+            - paragraph: Benin
+            - paragraph: Canada
+            - paragraph: Argentina
+            - paragraph: Bermuda
+            - paragraph: Cape Verde
+            - paragraph: Armenia
+            - paragraph: Bhutan
+            - paragraph: Cayman Islands
+            - paragraph: Australia
+            - paragraph: Bolivia
+            - paragraph: Chad
+            - paragraph: Austria
+            - paragraph: Bosnia and Herzegovina
+            - paragraph: Chile
+            - paragraph: Azerbaijan
+            - paragraph: Botswana
+            - paragraph: China mainland
+            - paragraph: Bahamas
+            - paragraph: British Virgin Islands
+            - paragraph: Colombia
+            - paragraph:
+              - button "Show More"
+      - row "12+ Age 12+":
+        - rowheader "12+ Age 12+":
+          - paragraph:
+            - generic: 12+
+          - text: Age 12+
+        - gridcell "Vietnam":
+          - paragraph: Vietnam
+      - row "Age 10+":
+        - rowheader "Age 10+":
+          - text: Age 10+
+        - gridcell "Brazil":
+          - paragraph: Brazil
+      - row "All All Ages":
+        - rowheader "All All Ages":
+          - paragraph:
+            - generic: All
+          - text: All Ages
+        - gridcell "Korea, Republic of":
+          - paragraph: Korea, Republic of
+- 'dialog "Age Ratings Step 5: Violence" [active]':
+  - document:
+    - 'heading "Age Ratings Step 5: Violence" [level=2]':
+      - text: Age Ratings
+      - list:
+        - generic: Step 1
+        - generic: Step 2
+        - generic: Step 3
+        - generic: Step 4
+        - generic: "Step 5: Violence"
+        - generic: Step 6
+        - generic: Step 7
+    - paragraph: Select the frequency at which each type of content occurs in your app based on the definitions below. If you have in-app controls, consider what a user who has those turned on will encounter while using your app.
+    - list:
+      - listitem: "Infrequent: Users will rarely encounter this content in your app."
+      - listitem: "Frequent: Users will regularly encounter this content in your app."
+    - table:
+      - rowgroup:
+        - row "Violence None Infrequent Frequent":
+          - columnheader "Violence":
+            - text: Violence
+          - columnheader "None"
+          - columnheader "Infrequent"
+          - columnheader "Frequent"
+      - rowgroup:
+        - row "Cartoon or Fantasy Violence More information Physical conflict or harm of an exaggerated or fantastical nature that can easily be distinguished from real life.":
+          - cell "Cartoon or Fantasy Violence More information Physical conflict or harm of an exaggerated or fantastical nature that can easily be distinguished from real life.":
+            - paragraph: Cartoon or Fantasy Violence
+            - button "More information": "?"
+            - paragraph: Physical conflict or harm of an exaggerated or fantastical nature that can easily be distinguished from real life.
+          - cell:
+            - radio
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "Realistic Violence More information Aggressive physical conflict or harm involving humans in lifelike situations.":
+          - cell "Realistic Violence More information Aggressive physical conflict or harm involving humans in lifelike situations.":
+            - paragraph: Realistic Violence
+            - button "More information": "?"
+            - paragraph: Aggressive physical conflict or harm involving humans in lifelike situations.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+          - cell:
+            - radio
+        - row "Prolonged Graphic or Sadistic Realistic Violence More information Prolonged detailed or realistic-looking depictions of physical conflict.":
+          - cell "Prolonged Graphic or Sadistic Realistic Violence More information Prolonged detailed or realistic-looking depictions of physical conflict.":
+            - paragraph: Prolonged Graphic or Sadistic Realistic Violence
+            - button "More information": "?"
+            - paragraph: Prolonged detailed or realistic-looking depictions of physical conflict.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+          - cell:
+            - radio
+        - row "Guns or Other Weapons More information References to or depictions of guns, weapons, or objects that may cause bodily harm.":
+          - cell "Guns or Other Weapons More information References to or depictions of guns, weapons, or objects that may cause bodily harm.":
+            - paragraph: Guns or Other Weapons
+            - button "More information": "?"
+            - paragraph: References to or depictions of guns, weapons, or objects that may cause bodily harm.
+          - cell:
+            - radio
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+    - button "Back"
+    - button "Cancel"
+    - button "Next"
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

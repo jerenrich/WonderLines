@@ -1,0 +1,151 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information":
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - heading "App Accessibility" [level=2]
+  - separator
+  - heading "Showcase Your Accessibility Support" [level=1]
+  - paragraph: Accessibility features help make the common tasks in your app faster and easier to complete. To give users a better understanding of how your app can work for them, you can specify the features your app supports. Supported features will display on your product page.
+  - button "Get Started"
+  - img "An iPhone open to the App Accessibility section of an App Store product page with Supported Features listed."
+  - separator
+  - heading "Learn More About Accessibility Features" [level=3]
+  - paragraph:
+    - text: When providing your accessibility information, you'll be asked if your app supports a series of accessibility features. You can learn more about each of these features and what it means to support them below.
+    - link "Learn More About Accessibility Support Criteria":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels
+  - button "VoiceOver Users can navigate and explore the app using gestures, keyboard, braille, and speech output.":
+    - paragraph: VoiceOver
+    - paragraph: Users can navigate and explore the app using gestures, keyboard, braille, and speech output.
+  - button "Voice Control Users can navigate and interact with the app using their voice to tap, swipe, click, type, and more.":
+    - paragraph: Voice Control
+    - paragraph: Users can navigate and interact with the app using their voice to tap, swipe, click, type, and more.
+  - button "Larger Text Increases the text size in the app to 200% or more.":
+    - paragraph: Larger Text
+    - paragraph: Increases the text size in the app to 200% or more.
+  - button "Dark Interface Applies a dark color scheme to the screens, menus, and controls to reduce eye strain.":
+    - paragraph: Dark Interface
+    - paragraph: Applies a dark color scheme to the screens, menus, and controls to reduce eye strain.
+  - button "Differentiate Without Color Alone Uses shapes or text, in addition to or instead of color, to distinguish key information.":
+    - paragraph: Differentiate Without Color Alone
+    - paragraph: Uses shapes or text, in addition to or instead of color, to distinguish key information.
+  - button "Sufficient Contrast Increases or adjusts the contrast between text or iconography and background.":
+    - paragraph: Sufficient Contrast
+    - paragraph: Increases or adjusts the contrast between text or iconography and background.
+  - button "Reduced Motion Modifies or reduces certain types of animation that may cause motion sickness or discomfort.":
+    - paragraph: Reduced Motion
+    - paragraph: Modifies or reduces certain types of animation that may cause motion sickness or discomfort.
+  - button "Captions Users can follow the dialogue and relevant sounds of video or audio-only content with text, usually time-synchronized.":
+    - paragraph: Captions
+    - paragraph: Users can follow the dialogue and relevant sounds of video or audio-only content with text, usually time-synchronized.
+  - button "Audio Descriptions Users can hear audio descriptions of video content in a clip, show, or movie with narration.":
+    - paragraph: Audio Descriptions
+    - paragraph: Users can hear audio descriptions of video content in a clip, show, or movie with narration.
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

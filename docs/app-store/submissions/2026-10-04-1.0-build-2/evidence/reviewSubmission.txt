@@ -1,0 +1,87 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - link "App Review":
+    - /url: /apps/6817505650/distribution/reviewsubmissions
+    - text: App Review
+  - heading "iOS Submission" [level=2]
+  - paragraph:
+    - text: Waiting for Review
+  - heading "Items Submitted (1)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Item Type Review Status":
+        - columnheader "Item":
+          - generic: Item
+        - columnheader "Type":
+          - generic: Type
+        - columnheader "Review Status":
+          - generic: Review Status
+        - columnheader
+        - columnheader
+    - rowgroup:
+      - row "App Icon iOS App 1.0 1.0 (2) App Version Waiting for Review":
+        - cell "App Icon iOS App 1.0 1.0 (2)":
+          - generic "App Icon":
+            - img "App Icon"
+          - paragraph: iOS App 1.0
+          - paragraph:
+            - link "1.0 (2)":
+              - /url: /apps/6817505650/testflight/ios/85f200ea-fb06-4d5c-a4c7-8787f601abcb/metadata
+          - paragraph
+        - cell "App Version":
+          - generic: App Version
+        - cell "Waiting for Review":
+          - text: Waiting for Review
+        - cell
+        - cell
+  - generic: Date Submitted
+  - generic: Oct 4, 2026 at 8:29 AM
+  - generic: Submission ID
+  - generic: 76e4aec3-d175-4425-9989-8fd79696755b
+  - generic: Submitted By
+  - generic: Jordan Erenrich
+  - button "Cancel Submission"
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

@@ -1,0 +1,129 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - link "App Information":
+    - /url: /apps/6817505650/distribution/info
+    - text: App Information
+  - heading "Age Ratings" [level=2]
+  - paragraph:
+    - paragraph:
+      - text: Your app's age ratings are below. Users will only see the age rating that applies to their country or region on the App Store. If the content of your app changes, you can edit your age ratings.
+      - button "Edit Age Ratings"
+  - grid "App Age Ratings":
+    - rowgroup:
+      - row "Age Rating Countries or Regions":
+        - columnheader "Age Rating":
+          - generic: Age Rating
+        - columnheader "Countries or Regions":
+          - generic: Countries or Regions
+    - rowgroup:
+      - row "9+ Age 9+":
+        - rowheader "9+ Age 9+":
+          - button "9+ Age 9+" [expanded]:
+            - paragraph:
+              - generic: 9+
+            - text: Age 9+
+        - gridcell "172 Countries or Regions Afghanistan Bahrain Brunei Albania Barbados Bulgaria Algeria Belarus Burkina Faso Angola Belgium Cambodia Anguilla Belize Cameroon Antigua and Barbuda Benin Canada Argentina Bermuda Cape Verde Armenia Bhutan Cayman Islands Australia Bolivia Chad Austria Bosnia and Herzegovina Chile Azerbaijan Botswana China mainland Bahamas British Virgin Islands Colombia Show More":
+          - paragraph: 172 Countries or Regions
+          - region:
+            - separator
+            - paragraph: Afghanistan
+            - paragraph: Bahrain
+            - paragraph: Brunei
+            - paragraph: Albania
+            - paragraph: Barbados
+            - paragraph: Bulgaria
+            - paragraph: Algeria
+            - paragraph: Belarus
+            - paragraph: Burkina Faso
+            - paragraph: Angola
+            - paragraph: Belgium
+            - paragraph: Cambodia
+            - paragraph: Anguilla
+            - paragraph: Belize
+            - paragraph: Cameroon
+            - paragraph: Antigua and Barbuda
+            - paragraph: Benin
+            - paragraph: Canada
+            - paragraph: Argentina
+            - paragraph: Bermuda
+            - paragraph: Cape Verde
+            - paragraph: Armenia
+            - paragraph: Bhutan
+            - paragraph: Cayman Islands
+            - paragraph: Australia
+            - paragraph: Bolivia
+            - paragraph: Chad
+            - paragraph: Austria
+            - paragraph: Bosnia and Herzegovina
+            - paragraph: Chile
+            - paragraph: Azerbaijan
+            - paragraph: Botswana
+            - paragraph: China mainland
+            - paragraph: Bahamas
+            - paragraph: British Virgin Islands
+            - paragraph: Colombia
+            - paragraph:
+              - button "Show More"
+      - row "12+ Age 12+":
+        - rowheader "12+ Age 12+":
+          - paragraph:
+            - generic: 12+
+          - text: Age 12+
+        - gridcell "Vietnam":
+          - paragraph: Vietnam
+      - row "Age 10+":
+        - rowheader "Age 10+":
+          - text: Age 10+
+        - gridcell "Brazil":
+          - paragraph: Brazil
+      - row "All All Ages":
+        - rowheader "All All Ages":
+          - paragraph:
+            - generic: All
+          - text: All Ages
+        - gridcell "Korea, Republic of":
+          - paragraph: Korea, Republic of
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

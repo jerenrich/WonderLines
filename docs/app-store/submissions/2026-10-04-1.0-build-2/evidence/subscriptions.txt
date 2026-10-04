@@ -1,0 +1,146 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information":
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - heading "Subscriptions" [level=2]
+  - separator
+  - heading "Auto-Renewable Subscriptions" [level=3]
+  - paragraph:
+    - text: A subscription is a product that allows users to purchase dynamic content for a set period. This type of subscription renews automatically unless cancelled by the user. Once your binary has been uploaded and your first subscription has been submitted for review, additional subscriptions can be submitted using the table below.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-subscriptions/offer-auto-renewable-subscriptions
+  - heading "Subscription Groups" [level=3]
+  - paragraph:
+    - text: You can create a subscription after you create a subscription group. All subscriptions must be a part of a group. Users can only subscribe to one subscription in a group at a time, but can change to another subscription in the same group. If they do, you'll still receive 85% of the proceeds in the second year (after tax, if applicable).
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-subscriptions/offer-auto-renewable-subscriptions
+  - button "Create"
+  - heading "Billing Grace Period" [level=5]
+  - paragraph:
+    - text: A billing grace period lets subscribers retain access to your app's paid content even after their subscription expires due to a billing issue. If Apple successfully recovers the subscription during this grace period, you will not experience any interruption in your revenue.
+    - link "Learn more":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-subscriptions/enable-billing-grace-period-for-auto-renewable-subscriptions
+  - paragraph:
+    - button "Set Up Billing Grace Period"
+  - heading "Streamlined Purchasing" [level=5]
+  - paragraph:
+    - text: Streamlined purchasing lets customers buy subscriptions from outside your app. You can turn it off for subscriptions with contingent pricing or win-back offers.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-streamlined-purchasing
+  - paragraph: Turned On
+  - paragraph:
+    - button "Edit"
+  - separator
+  - heading "Non-Renewing Subscriptions" [level=3]
+  - paragraph: Users can purchase access to services or content for a limited duration, such as a season pass to in-game content. This type of subscription doesn't renew automatically, so users need to purchase a new subscription once it concludes if they wish to retain access.
+  - paragraph:
+    - link "Manage":
+      - /url: /apps/6817505650/distribution/non-renewing-subscriptions
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

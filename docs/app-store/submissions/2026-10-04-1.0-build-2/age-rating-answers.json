@@ -1,0 +1,95 @@
+{
+  "provenance": "All seven saved questionnaire steps reopened and inspected in App Store Connect after submission; Next used to inspect, Cancel used to exit without saving. See evidence/age-rating-step-*.txt.",
+  "steps": [
+    {
+      "step": 1,
+      "section": "Features",
+      "answers": {
+        "Parental Controls": "No",
+        "Age Assurance": "No",
+        "Unrestricted Web Access": "No",
+        "User-Generated Content": "No",
+        "Social Media": "No",
+        "Social Media Disabled for Users Under 13": "No",
+        "Messaging and Chat": "No",
+        "Advertising": "No"
+      }
+    },
+    {
+      "step": 2,
+      "section": "Mature Themes",
+      "answers": {
+        "Profanity or Crude Humor": "None",
+        "Horror/Fear Themes": "Infrequent",
+        "Alcohol, Tobacco, or Drug Use or References": "None"
+      }
+    },
+    {
+      "step": 3,
+      "section": "Medical or Wellness",
+      "answers": {
+        "Medical or Treatment Information": "None",
+        "Health or Wellness Topics": "No"
+      }
+    },
+    {
+      "step": 4,
+      "section": "Sexual Content or Nudity",
+      "answers": {
+        "Mature or Suggestive Themes": "None",
+        "Sexual Content or Nudity": "None",
+        "Graphic Sexual Content and Nudity": "None"
+      }
+    },
+    {
+      "step": 5,
+      "section": "Violence",
+      "answers": {
+        "Cartoon or Fantasy Violence": "Infrequent",
+        "Realistic Violence": "None",
+        "Prolonged Graphic or Sadistic Realistic Violence": "None",
+        "Guns or Other Weapons": "Infrequent"
+      }
+    },
+    {
+      "step": 6,
+      "section": "Chance-Based Activities",
+      "answers": {
+        "Simulated Gambling": "None",
+        "Contests": "None",
+        "Gambling": "No",
+        "Loot Boxes": "No"
+      }
+    },
+    {
+      "step": 7,
+      "section": "Additional Information",
+      "answers": {
+        "Age Categories and Override": "Not Applicable",
+        "Made for Kids": false,
+        "Override to Higher Age Rating": false,
+        "Age Suitability URL": null
+      }
+    }
+  ],
+  "calculated_rating": "9+",
+  "regional_ratings": [
+    {
+      "rating": "9+",
+      "countries_or_regions": 172
+    },
+    {
+      "rating": "12+",
+      "region": "Vietnam"
+    },
+    {
+      "rating": "10+",
+      "region": "Brazil"
+    },
+    {
+      "rating": "All Ages",
+      "region": "Korea, Republic of"
+    }
+  ],
+  "operating_systems_earlier_than_26": "Global rating of 9+ with regional exceptions; older-OS regional details not separately inspected."
+}

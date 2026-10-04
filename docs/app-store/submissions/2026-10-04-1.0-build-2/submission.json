@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-04T07:46:29+00:00",
+  "record_kind": "Post-submission audit baseline",
+  "app": {
+    "name": "Wonder Lines",
+    "subtitle": "Dream it. Print it. Color it.",
+    "apple_id": "6817505650",
+    "bundle_id": "com.jordan.family.ColoringSheets",
+    "sku": "wonderlines-ios",
+    "primary_language": "English (U.S.)",
+    "primary_category": "Graphics & Design",
+    "secondary_category": null
+  },
+  "submission": {
+    "id": "76e4aec3-d175-4425-9989-8fd79696755b",
+    "url": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/76e4aec3-d175-4425-9989-8fd79696755b",
+    "submitted_by": "Jordan Erenrich",
+    "date_displayed": "Oct 4, 2026 at 8:29 AM",
+    "date_interpreted": "2026-10-04T08:29+01:00",
+    "timezone_note": "Minute precision. Europe/London inferred from session timezone; Apple UI did not display a UTC offset.",
+    "status_at_capture": "Waiting for Review",
+    "items": [
+      {
+        "type": "App Version",
+        "platform": "iOS",
+        "version": "1.0",
+        "build": "2"
+      }
+    ],
+    "release_mode": "Automatically release this version",
+    "scheduled_release_date": null,
+    "version_url": "https://appstoreconnect.apple.com/apps/6817505650/distribution/ios/version/inflight"
+  },
+  "listing": {
+    "locale": "English (U.S.)",
+    "version": "1.0",
+    "promotional_text": "A dinosaur cycling on the moon? Describe an idea, choose the age difficulty, and create a coloring sheet to save, share, or print.",
+    "description": "Turn a big imagination into a page to color. And then print with an easy button.  No sign in required\n\nA dinosaur riding a bike on the moon. A friendly dragon in a garden. Whatever scene you have in mind, Wonder Lines turns your description into AI-generated coloring sheets on iPhone and iPad.\n\nDESCRIBE YOUR IDEA\nType a character, scene, or story. Choose an age difficulty to guide the drawing toward simpler shapes and larger coloring areas, or finer details.\n\nFIND YOUR FAVORITE\nCreate one to three sheets at a time. Swipe through the results and choose the page you want to use. Adjust your description or try another image model for your next set.\n\nTAKE IT TO PAPER\nSave a sheet to Photos, share it, or print it with a compatible AirPrint printer. Landscape pages give your ideas room to grow and keep the whole drawing visible in the preview.\n\nMAKE SOMETHING TOGETHER\nUse a child's favorite idea as the starting point for a quiet afternoon, a rainy-day activity, or a page to share with family.\n\nNo sign-in is required. An internet connection is needed to generate new sheets. Generation is subject to service availability and usage limits. AI-generated results vary with your description and chosen settings.",
+    "keywords": "colouring,printable,drawing,art,creative,family,activities,dinosaur,imagination,pages",
+    "support_url": "https://jerenrich.github.io/WonderLines/",
+    "marketing_url": "https://jerenrich.github.io/WonderLines/",
+    "copyright": "2026 Jordan Erenrich",
+    "whats_new": null,
+    "whats_new_note": "First release; no What’s New field submitted. Earlier local text was a draft.",
+    "screenshots_manifest": "screenshots-manifest.json",
+    "app_icon": "app-icon.png",
+    "app_clip": false,
+    "game_center_enabled": false,
+    "routing_app_coverage_file": null
+  },
+  "app_review": {
+    "sign_in_required": false,
+    "username": null,
+    "password": null,
+    "contact": {
+      "first_name": "Jordan",
+      "last_name": "Erenrich",
+      "email": "jordan.erenrich@gmail.com",
+      "phone_record": "review-contact.private.json (Git-ignored local annex)",
+      "provenance": "Names verified in UI. Browser masked email and phone; those values come from the owner-supplied contact details and earlier saved-form workflow."
+    },
+    "notes": "Wonder Lines creates AI-generated coloring sheets from text descriptions. No sign-in or review account is required; the app creates an anonymous service identity automatically.\n\nTo test:\n1. Open Settings and choose an age difficulty, for example 6 years.\n2. Set Images per generation to 1 and keep the default model.\n3. Return to the main screen and enter: Dinosaur riding a bike on the moon.\n4. Tap Generate (the sparkle button on compact iPhone layouts) and wait for the result.\n5. Save to Photos, Share, or Print the selected sheet. On iPhone, these actions are in the Sheet actions menu at the top right.\n\nNew sheet generation requires an internet connection and the hosted generation service. Saving requests add-only Photos access. Printing requires a compatible AirPrint printer.\n\nThe listing screenshots were captured from the current interface in iOS simulators with a locally supplied dinosaur illustration. The submitted app generates its images through the live service; no screenshot fixture or special screenshot mode is included in the shipping source.",
+    "attachment": null
+  },
+  "privacy": {
+    "published": true,
+    "privacy_policy_url": "https://jerenrich.github.io/WonderLines/privacy.html",
+    "user_privacy_choices_url": null,
+    "data_collected": true,
+    "data_types": [
+      {
+        "type": "Other User Content",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "User ID",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Device ID",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Product Interaction",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Performance Data",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Other Diagnostic Data",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      }
+    ],
+    "other_data_types_selected": false,
+    "policy_snapshot": "privacy-policy.html",
+    "policy_source_commit": "16c38010d82d3ca669552932548bce140f10f9d0",
+    "policy_effective_date": "2026-10-04",
+    "operator": "Jordan Erenrich",
+    "contact_email": "jordan.erenrich@gmail.com",
+    "provenance": "Published UI and Product Page Preview details verify the six types, App Functionality and linking. No tracking bucket is displayed; individual No-tracking answers and data-collection Yes were also recorded in the earlier publish workflow, not reopened individually in this audit.",
+    "owner_approval": "Owner explicitly agreed and authorized publishing the privacy responses, including keeping them accurate and updating them when practices change."
+  },
+  "content_rights": {
+    "apple_answer": "No, this app does not contain, show, or access third-party content.",
+    "owner_attestation": "Yes, I confirm the necessary rights",
+    "attestation_scope": "AI provider accounts and model licenses permit displaying and distributing generated images.",
+    "provenance": "Apple answer verified on App Information. Rights attestation from owner reply in this chat; not an independent license determination."
+  },
+  "license": {
+    "type": "Apple’s Standard License Agreement",
+    "url": "http://www.apple.com/legal/itunes/appstore/dev/stdeula",
+    "custom_license": false
+  },
+  "age_rating_file": "age-rating-answers.json",
+  "encryption": {
+    "apple_build_answer": "None of the algorithms mentioned above",
+    "interpretation_used": "App uses Apple operating-system cryptography and networking; no app-supplied proprietary or third-party encryption implementation identified during submission preparation.",
+    "provenance": "Saved during the build-2 compliance workflow in this chat; not re-entered in the post-submission audit.",
+    "ITSAppUsesNonExemptEncryption_key_present": false,
+    "uploaded_export_document": false,
+    "recheck_on": "Adding cryptography libraries, non-OS encryption, encrypted features, or changing export declarations."
+  },
+  "pricing": {
+    "launch_price": "Free",
+    "base_country": "United States",
+    "base_currency": "USD",
+    "base_price": "$0.00",
+    "price_country_count": 175,
+    "prices_file": "prices.csv",
+    "tax_category": "App Store software",
+    "distribution": "Public — Discoverable by anyone on the App Store (default)",
+    "school_manager_volume_reduced_price": true,
+    "country_availability": {
+      "state_observed": "Set Up Availability button",
+      "configured_regions": null,
+      "note": "Price schedule coverage is not proof of enabled availability. Saved country availability could not be confirmed from this page."
+    },
+    "preorder": "No configured preorder observed",
+    "apple_silicon_mac": {
+      "available": true,
+      "minimum_macos": "Automatic (macOS 14.0)",
+      "developer_verified_compatibility": false,
+      "apple_displayed_compatibility": "Version 1.0 is compatible."
+    },
+    "apple_vision_pro": {
+      "available": true,
+      "apple_displayed_compatibility": "Version 1.0 is compatible"
+    }
+  },
+  "monetization": {
+    "in_app_purchases": "No entries shown; Create screen",
+    "auto_renewing_subscription_groups": "No entries shown; Create screen",
+    "billing_grace_period": "Not configured; Set Up Billing Grace Period",
+    "streamlined_purchasing": "Turned On",
+    "non_renewing_subscriptions": "Manage page not inspected"
+  },
+  "accessibility": {
+    "published_labels": "Not configured; Get Started screen",
+    "note": "No claim is made here about actual feature support."
+  },
+  "testflight": {
+    "show_approved_screenshots_and_category": true,
+    "beta_app_description": null,
+    "feedback_email": null,
+    "marketing_url": null,
+    "privacy_policy_url": null,
+    "beta_review_contact": "All fields blank in Test Information",
+    "beta_sign_in_required": false,
+    "beta_review_notes": null,
+    "what_to_test": "Build-specific field not inspected",
+    "provenance": "Current Test Information UI. Prepared beta description / What to Test copy in the older draft is not a submitted App Store field."
+  },
+  "build": {
+    "source_commit": "7e541a87eaa5c7d921695298a8bccee5b56c57d6",
+    "version": "1.0",
+    "number": "2",
+    "app_store_connect_id": "85f200ea-fb06-4d5c-a4c7-8787f601abcb",
+    "team_id": "9PG633BF3R",
+    "service_mode": "live",
+    "service_url": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+    "ipa_sha256": "9bfa7727c8a80f1658ed53c6006073a2cbc5c5d5ac414328190dc93f2b8ca5f9",
+    "archive_info": "build-info.json",
+    "signature_validation": "Passed strict verification; App Store distribution; get-task-allow false; production App Attest",
+    "source_note": "Main source commit. Archive also used local Xcode signing/project formatting changes; checkout was not entirely clean. Archive/IPA hash identifies the actual artifact. Binary is kept locally, not committed.",
+    "backend_deployment": {
+      "worker_version": "ec0f2053-226d-4ba6-a81d-b510b0c967c8",
+      "ci_url": "https://github.com/jerenrich/WonderLines/actions/runs/37185459423",
+      "provenance": "Deployment and upload logs recorded in the immediately preceding release workflow; deployment not queried again here."
+    },
+    "verification": "Offline Worker checks passed; simulator tests: 43 tests, 2 intentional skips, 0 failures. No paid generations for the limit change."
+  },
+  "behavior_baseline": {
+    "maximum_images_per_generation": 3,
+    "default_images_per_generation": 3,
+    "daily_image_limit": 100,
+    "daily_limit_scope": "Anonymous service account, including credit-funded generations; not a verified natural person across devices/accounts",
+    "daily_reset": "00:00 UTC",
+    "reservation_semantics": "Each image reservation counts, including failed or interrupted attempts. Repeated recovery or the same idempotent job does not create a new reservation.",
+    "age_setting": "Local drawing-difficulty setting (3–18); not age assurance or parental controls",
+    "no_sign_in": "An anonymous account and Keychain credential are created automatically",
+    "data_flow": "Prompts, complexity guidance, model, image dimensions and generated results through hosted service/provider; anonymous account, device/App Attest data and usage/diagnostic records. Full retention/sharing details in the archived policy.",
+    "source_of_truth": "App/backend source at build.source_commit; runtime provider/dashboard settings are not fully snapshotted."
+  },
+  "unverified_or_unconfigured": [
+    {
+      "item": "Country availability",
+      "observation": "Set Up Availability; configured download regions unverified."
+    },
+    {
+      "item": "Digital Services Act account declaration",
+      "observation": "App Information shows Set Up linking to Business; account trader status not inspected."
+    },
+    {
+      "item": "Vietnam game license / regulated medical device declaration",
+      "observation": "Add / Declare buttons visible. App category is Graphics & Design; no separate declaration verified."
+    },
+    {
+      "item": "Provider and AI Gateway retention/training settings, provider licenses and dashboard route overrides",
+      "observation": "Not exported from those services. Policy avoids promising fixed provider retention or no provider training."
+    },
+    {
+      "item": "App Store server notification production/sandbox URLs",
+      "observation": "Both show Set Up URL."
+    },
+    {
+      "item": "External TestFlight groups, invitations, build-specific What to Test, non-renewing subscriptions",
+      "observation": "Not fully inspected; no assumptions recorded."
+    },
+    {
+      "item": "Apple approval and future listing changes",
+      "observation": "Waiting for Review at capture; this baseline is not an approval record."
+    }
+  ],
+  "provenance": {
+    "primary": "Visible App Store Connect UI after owner submitted. Raw accessible snapshots in evidence/.",
+    "secondary": "Owner replies and agent release/build/upload/publish logs from this chat; actual archive and original capture assets.",
+    "drafts": "docs/app-store/2026-10-04 contains earlier prepared copy and subsequently refreshed images; it is not the authoritative submitted baseline.",
+    "private_contact": "Excluded from integrity manifest and Git; restore from owner records if local annex is unavailable."
+  },
+  "audit_rules": [
+    {
+      "label": "Privacy, account identity, data flow, retention, diagnostics, providers and encryption",
+      "patterns": [
+        "ColoringSheets/Core/**",
+        "workers/coloring-sheets-api/**",
+        "Config/**",
+        "ColoringSheets/Info.plist",
+        "ColoringSheets/**/PrivacyInfo.xcprivacy",
+        "privacy.html",
+        "style.css",
+        "Scripts/prepare_service_config.py",
+        "Scripts/create_project.py",
+        "ColoringSheets.xcodeproj/project.pbxproj",
+        ".github/workflows/*worker*"
+      ]
+    },
+    {
+      "label": "Listing claims, screenshots, age presentation, settings and export behavior",
+      "patterns": [
+        "ColoringSheets/Views/**",
+        "ColoringSheets/ColoringSheetsApp.swift",
+        "ColoringSheets/Assets.xcassets/**",
+        "ColoringSheets/**/*.strings",
+        "ColoringSheets/**/*.xcstrings",
+        "index.html",
+        "Scripts/capture_app_store.py",
+        "Scripts/normalize_screenshots.swift"
+      ]
+    },
+    {
+      "label": "New app/backend code or dependencies require declaration review",
+      "patterns": [
+        "ColoringSheets/**",
+        "workers/**",
+        "Package.swift",
+        "Package.resolved",
+        "**/Package.resolved",
+        "Podfile*",
+        "Cartfile*"
+      ]
+    }
+  ]
+}

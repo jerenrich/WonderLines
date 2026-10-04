@@ -1,0 +1,954 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information":
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - heading "Pricing and Availability" [level=2]
+  - button "Save"
+  - heading "Price Schedule" [level=3]
+  - button "Schedule a price change":
+  - link "All Prices and Currencies":
+    - /url: /apps/6817505650/distribution/pricing-matrix
+    - paragraph: All Prices and Currencies
+  - paragraph: Below is a summary of your current pricing and any upcoming changes.
+  - heading "Base Country or Region" [level=4]
+  - paragraph: Apple may automatically adjust prices from time to time in every country or region except your base to account for changes in tax or foreign exchange rates.
+  - paragraph: United States (USD)
+  - paragraph:
+    - button "Edit"
+  - heading "Prices" [level=4]
+  - button "Download":
+    - text: Download
+  - grid "Prices":
+    - rowgroup:
+      - row "Dates Countries or Regions Price Adjustment Actions":
+        - columnheader "Dates":
+          - generic: Dates
+        - columnheader "Countries or Regions":
+          - generic: Countries or Regions
+        - columnheader "Price Adjustment":
+          - generic: Price Adjustment
+        - columnheader "Actions"
+    - rowgroup:
+      - row "Current Price":
+        - rowheader "Current Price":
+          - button "Current Price"
+        - gridcell "Prices in 175 Countries or Regions":
+          - button "Prices in 175 Countries or Regions" [expanded] [active]: 175 Countries or Regions
+          - dialog:
+            - paragraph: Prices
+            - table:
+              - rowgroup:
+                - row "United States (USD) $0.00":
+                  - cell "United States (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Afghanistan (USD) $0.00":
+                  - cell "Afghanistan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Albania (USD) $0.00":
+                  - cell "Albania (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Algeria (USD) $0.00":
+                  - cell "Algeria (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Angola (USD) $0.00":
+                  - cell "Angola (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Anguilla (USD) $0.00":
+                  - cell "Anguilla (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Antigua and Barbuda (USD) $0.00":
+                  - cell "Antigua and Barbuda (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Argentina (USD) $0.00":
+                  - cell "Argentina (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Armenia (USD) $0.00":
+                  - cell "Armenia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Australia (AUD) $0.00":
+                  - cell "Australia (AUD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Austria (EUR) €0.00":
+                  - cell "Austria (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Azerbaijan (USD) $0.00":
+                  - cell "Azerbaijan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bahamas (USD) $0.00":
+                  - cell "Bahamas (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bahrain (USD) $0.00":
+                  - cell "Bahrain (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Barbados (USD) $0.00":
+                  - cell "Barbados (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Belarus (USD) $0.00":
+                  - cell "Belarus (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Belgium (EUR) €0.00":
+                  - cell "Belgium (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Belize (USD) $0.00":
+                  - cell "Belize (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Benin (USD) $0.00":
+                  - cell "Benin (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bermuda (USD) $0.00":
+                  - cell "Bermuda (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bhutan (USD) $0.00":
+                  - cell "Bhutan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bolivia (USD) $0.00":
+                  - cell "Bolivia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bosnia and Herzegovina (EUR) €0.00":
+                  - cell "Bosnia and Herzegovina (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Botswana (USD) $0.00":
+                  - cell "Botswana (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Brazil (BRL) R$0.00":
+                  - cell "Brazil (BRL)"
+                  - cell "R$0.00":
+                    - generic: R$0.00
+                - row "British Virgin Islands (USD) $0.00":
+                  - cell "British Virgin Islands (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Brunei (USD) $0.00":
+                  - cell "Brunei (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Bulgaria (EUR) €0.00":
+                  - cell "Bulgaria (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Burkina Faso (USD) $0.00":
+                  - cell "Burkina Faso (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Cambodia (USD) $0.00":
+                  - cell "Cambodia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Cameroon (USD) $0.00":
+                  - cell "Cameroon (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Canada (CAD) $0.00":
+                  - cell "Canada (CAD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Cape Verde (USD) $0.00":
+                  - cell "Cape Verde (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Cayman Islands (USD) $0.00":
+                  - cell "Cayman Islands (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Chad (USD) $0.00":
+                  - cell "Chad (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Chile (CLP) $0.00":
+                  - cell "Chile (CLP)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "China mainland (CNY) ¥0.00":
+                  - cell "China mainland (CNY)"
+                  - cell "¥0.00":
+                    - generic: ¥0.00
+                - row "Colombia (COP) $0.00":
+                  - cell "Colombia (COP)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Congo, Democratic Republic of the (USD) $0.00":
+                  - cell "Congo, Democratic Republic of the (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Congo, Republic of the (USD) $0.00":
+                  - cell "Congo, Republic of the (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Costa Rica (USD) $0.00":
+                  - cell "Costa Rica (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Côte d’Ivoire (USD) $0.00":
+                  - cell "Côte d’Ivoire (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Croatia (EUR) €0.00":
+                  - cell "Croatia (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Cyprus (EUR) €0.00":
+                  - cell "Cyprus (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Czech Republic (CZK) Kč 0.00":
+                  - cell "Czech Republic (CZK)"
+                  - cell "Kč 0.00":
+                    - generic: Kč 0.00
+                - row "Denmark (DKK) kr 0.00":
+                  - cell "Denmark (DKK)"
+                  - cell "kr 0.00":
+                    - generic: kr 0.00
+                - row "Dominica (USD) $0.00":
+                  - cell "Dominica (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Dominican Republic (USD) $0.00":
+                  - cell "Dominican Republic (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Ecuador (USD) $0.00":
+                  - cell "Ecuador (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Egypt (EGP) E£0.00":
+                  - cell "Egypt (EGP)"
+                  - cell "E£0.00":
+                    - generic: E£0.00
+                - row "El Salvador (USD) $0.00":
+                  - cell "El Salvador (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Estonia (EUR) €0.00":
+                  - cell "Estonia (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Eswatini (USD) $0.00":
+                  - cell "Eswatini (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Fiji (USD) $0.00":
+                  - cell "Fiji (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Finland (EUR) €0.00":
+                  - cell "Finland (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "France (EUR) €0.00":
+                  - cell "France (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Gabon (USD) $0.00":
+                  - cell "Gabon (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Gambia (USD) $0.00":
+                  - cell "Gambia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Georgia (USD) $0.00":
+                  - cell "Georgia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Germany (EUR) €0.00":
+                  - cell "Germany (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Ghana (USD) $0.00":
+                  - cell "Ghana (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Greece (EUR) €0.00":
+                  - cell "Greece (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Grenada (USD) $0.00":
+                  - cell "Grenada (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Guatemala (USD) $0.00":
+                  - cell "Guatemala (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Guinea-Bissau (USD) $0.00":
+                  - cell "Guinea-Bissau (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Guyana (USD) $0.00":
+                  - cell "Guyana (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Honduras (USD) $0.00":
+                  - cell "Honduras (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Hong Kong (HKD) $0.00":
+                  - cell "Hong Kong (HKD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Hungary (HUF) Ft 0.00":
+                  - cell "Hungary (HUF)"
+                  - cell "Ft 0.00":
+                    - generic: Ft 0.00
+                - row "Iceland (USD) $0.00":
+                  - cell "Iceland (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "India (INR) ₹0.00":
+                  - cell "India (INR)"
+                  - cell "₹0.00":
+                    - generic: ₹0.00
+                - row "Indonesia (IDR) Rp 0.00":
+                  - cell "Indonesia (IDR)"
+                  - cell "Rp 0.00":
+                    - generic: Rp 0.00
+                - row "Iraq (USD) $0.00":
+                  - cell "Iraq (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Ireland (EUR) €0.00":
+                  - cell "Ireland (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Israel (ILS) ₪0.00":
+                  - cell "Israel (ILS)"
+                  - cell "₪0.00":
+                    - generic: ₪0.00
+                - row "Italy (EUR) €0.00":
+                  - cell "Italy (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Jamaica (USD) $0.00":
+                  - cell "Jamaica (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Japan (JPY) ¥0.00":
+                  - cell "Japan (JPY)"
+                  - cell "¥0.00":
+                    - generic: ¥0.00
+                - row "Jordan (USD) $0.00":
+                  - cell "Jordan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Kazakhstan (KZT) ₸0.00":
+                  - cell "Kazakhstan (KZT)"
+                  - cell "₸0.00":
+                    - generic: ₸0.00
+                - row "Kenya (USD) $0.00":
+                  - cell "Kenya (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Korea, Republic of (KRW) ₩0.00":
+                  - cell "Korea, Republic of (KRW)"
+                  - cell "₩0.00":
+                    - generic: ₩0.00
+                - row "Kosovo (EUR) €0.00":
+                  - cell "Kosovo (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Kuwait (USD) $0.00":
+                  - cell "Kuwait (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Kyrgyzstan (USD) $0.00":
+                  - cell "Kyrgyzstan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Laos (USD) $0.00":
+                  - cell "Laos (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Latvia (EUR) €0.00":
+                  - cell "Latvia (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Lebanon (USD) $0.00":
+                  - cell "Lebanon (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Liberia (USD) $0.00":
+                  - cell "Liberia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Libya (USD) $0.00":
+                  - cell "Libya (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Lithuania (EUR) €0.00":
+                  - cell "Lithuania (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Luxembourg (EUR) €0.00":
+                  - cell "Luxembourg (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Macau (USD) $0.00":
+                  - cell "Macau (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Madagascar (USD) $0.00":
+                  - cell "Madagascar (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Malawi (USD) $0.00":
+                  - cell "Malawi (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Malaysia (MYR) RM 0.00":
+                  - cell "Malaysia (MYR)"
+                  - cell "RM 0.00":
+                    - generic: RM 0.00
+                - row "Maldives (USD) $0.00":
+                  - cell "Maldives (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Mali (USD) $0.00":
+                  - cell "Mali (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Malta (EUR) €0.00":
+                  - cell "Malta (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Mauritania (USD) $0.00":
+                  - cell "Mauritania (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Mauritius (USD) $0.00":
+                  - cell "Mauritius (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Mexico (MXN) $0.00":
+                  - cell "Mexico (MXN)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Micronesia (USD) $0.00":
+                  - cell "Micronesia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Moldova (USD) $0.00":
+                  - cell "Moldova (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Mongolia (USD) $0.00":
+                  - cell "Mongolia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Montenegro (EUR) €0.00":
+                  - cell "Montenegro (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Montserrat (USD) $0.00":
+                  - cell "Montserrat (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Morocco (USD) $0.00":
+                  - cell "Morocco (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Mozambique (USD) $0.00":
+                  - cell "Mozambique (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Myanmar (USD) $0.00":
+                  - cell "Myanmar (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Namibia (USD) $0.00":
+                  - cell "Namibia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Nauru (USD) $0.00":
+                  - cell "Nauru (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Nepal (USD) $0.00":
+                  - cell "Nepal (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Netherlands (EUR) €0.00":
+                  - cell "Netherlands (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "New Zealand (NZD) $0.00":
+                  - cell "New Zealand (NZD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Nicaragua (USD) $0.00":
+                  - cell "Nicaragua (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Niger (USD) $0.00":
+                  - cell "Niger (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Nigeria (NGN) ₦0.00":
+                  - cell "Nigeria (NGN)"
+                  - cell "₦0.00":
+                    - generic: ₦0.00
+                - row "North Macedonia (USD) $0.00":
+                  - cell "North Macedonia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Norway (NOK) kr 0.00":
+                  - cell "Norway (NOK)"
+                  - cell "kr 0.00":
+                    - generic: kr 0.00
+                - row "Oman (USD) $0.00":
+                  - cell "Oman (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Pakistan (PKR) Rs 0.00":
+                  - cell "Pakistan (PKR)"
+                  - cell "Rs 0.00":
+                    - generic: Rs 0.00
+                - row "Palau (USD) $0.00":
+                  - cell "Palau (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Panama (USD) $0.00":
+                  - cell "Panama (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Papua New Guinea (USD) $0.00":
+                  - cell "Papua New Guinea (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Paraguay (USD) $0.00":
+                  - cell "Paraguay (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Peru (PEN) PEN 0.00":
+                  - cell "Peru (PEN)"
+                  - cell "PEN 0.00":
+                    - generic: PEN 0.00
+                - row "Philippines (PHP) ₱0.00":
+                  - cell "Philippines (PHP)"
+                  - cell "₱0.00":
+                    - generic: ₱0.00
+                - row "Poland (PLN) zł 0.00":
+                  - cell "Poland (PLN)"
+                  - cell "zł 0.00":
+                    - generic: zł 0.00
+                - row "Portugal (EUR) €0.00":
+                  - cell "Portugal (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Qatar (QAR) QAR 0.00":
+                  - cell "Qatar (QAR)"
+                  - cell "QAR 0.00":
+                    - generic: QAR 0.00
+                - row "Romania (RON) lei 0.00":
+                  - cell "Romania (RON)"
+                  - cell "lei 0.00":
+                    - generic: lei 0.00
+                - row "Russia (RUB) ₽0.00":
+                  - cell "Russia (RUB)"
+                  - cell "₽0.00":
+                    - generic: ₽0.00
+                - row "Rwanda (USD) $0.00":
+                  - cell "Rwanda (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "São Tomé and Príncipe (USD) $0.00":
+                  - cell "São Tomé and Príncipe (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Saudi Arabia (SAR) SAR 0.00":
+                  - cell "Saudi Arabia (SAR)"
+                  - cell "SAR 0.00":
+                    - generic: SAR 0.00
+                - row "Senegal (USD) $0.00":
+                  - cell "Senegal (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Serbia (EUR) €0.00":
+                  - cell "Serbia (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Seychelles (USD) $0.00":
+                  - cell "Seychelles (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Sierra Leone (USD) $0.00":
+                  - cell "Sierra Leone (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Singapore (SGD) $0.00":
+                  - cell "Singapore (SGD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Slovakia (EUR) €0.00":
+                  - cell "Slovakia (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Slovenia (EUR) €0.00":
+                  - cell "Slovenia (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Solomon Islands (USD) $0.00":
+                  - cell "Solomon Islands (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "South Africa (ZAR) R 0.00":
+                  - cell "South Africa (ZAR)"
+                  - cell "R 0.00":
+                    - generic: R 0.00
+                - row "Spain (EUR) €0.00":
+                  - cell "Spain (EUR)"
+                  - cell "€0.00":
+                    - generic: €0.00
+                - row "Sri Lanka (USD) $0.00":
+                  - cell "Sri Lanka (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "St. Kitts and Nevis (USD) $0.00":
+                  - cell "St. Kitts and Nevis (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "St. Lucia (USD) $0.00":
+                  - cell "St. Lucia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "St. Vincent and the Grenadines (USD) $0.00":
+                  - cell "St. Vincent and the Grenadines (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Suriname (USD) $0.00":
+                  - cell "Suriname (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Sweden (SEK) kr 0.00":
+                  - cell "Sweden (SEK)"
+                  - cell "kr 0.00":
+                    - generic: kr 0.00
+                - row "Switzerland (CHF) CHF 0.00":
+                  - cell "Switzerland (CHF)"
+                  - cell "CHF 0.00":
+                    - generic: CHF 0.00
+                - row "Taiwan (TWD) $0.00":
+                  - cell "Taiwan (TWD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Tajikistan (USD) $0.00":
+                  - cell "Tajikistan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Tanzania (TZS) TZS 0.00":
+                  - cell "Tanzania (TZS)"
+                  - cell "TZS 0.00":
+                    - generic: TZS 0.00
+                - row "Thailand (THB) ฿0.00":
+                  - cell "Thailand (THB)"
+                  - cell "฿0.00":
+                    - generic: ฿0.00
+                - row "Tonga (USD) $0.00":
+                  - cell "Tonga (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Trinidad and Tobago (USD) $0.00":
+                  - cell "Trinidad and Tobago (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Tunisia (USD) $0.00":
+                  - cell "Tunisia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Türkiye (TRY) ₺0.00":
+                  - cell "Türkiye (TRY)"
+                  - cell "₺0.00":
+                    - generic: ₺0.00
+                - row "Turkmenistan (USD) $0.00":
+                  - cell "Turkmenistan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Turks and Caicos Islands (USD) $0.00":
+                  - cell "Turks and Caicos Islands (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Uganda (USD) $0.00":
+                  - cell "Uganda (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Ukraine (USD) $0.00":
+                  - cell "Ukraine (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "United Arab Emirates (AED) AED 0.00":
+                  - cell "United Arab Emirates (AED)"
+                  - cell "AED 0.00":
+                    - generic: AED 0.00
+                - row "United Kingdom (GBP) £0.00":
+                  - cell "United Kingdom (GBP)"
+                  - cell "£0.00":
+                    - generic: £0.00
+                - row "Uruguay (USD) $0.00":
+                  - cell "Uruguay (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Uzbekistan (USD) $0.00":
+                  - cell "Uzbekistan (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Vanuatu (USD) $0.00":
+                  - cell "Vanuatu (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Venezuela (USD) $0.00":
+                  - cell "Venezuela (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Vietnam (VND) ₫0.00":
+                  - cell "Vietnam (VND)"
+                  - cell "₫0.00":
+                    - generic: ₫0.00
+                - row "Yemen (USD) $0.00":
+                  - cell "Yemen (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Zambia (USD) $0.00":
+                  - cell "Zambia (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+                - row "Zimbabwe (USD) $0.00":
+                  - cell "Zimbabwe (USD)"
+                  - cell "$0.00":
+                    - generic: $0.00
+        - gridcell
+        - gridcell
+  - heading "App Availability" [level=3]
+  - paragraph:
+    - text: Determine where your app will be available to purchase or download. You can also make your app available for pre-order in specific countries or regions.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app
+  - button "Set Up Availability"
+  - separator
+  - heading "Tax Category" [level=3]
+  - generic: 
+  - button "Edit"
+  - generic: Category:App Store software
+  - separator
+  - heading "iPhone and iPad Apps on Apple Silicon Macs" [level=3]
+  - paragraph:
+    - text: Starting with macOS Big Sur, compatible iPhone and iPad apps can be made available on Apple silicon Macs. Apps will run natively and use the same frameworks, resources, and runtime environment as they do on iOS and iPadOS.
+    - link "Learn More":
+      - /url: https://developer.apple.com/go/?id=app-store-connect-ios-mac
+  - generic: Apple Silicon Mac Availability
+  - paragraph:
+    - text: Select the checkbox below if you want this app to be available on the Mac App Store. Apple will automatically pick the minimum macOS version required for compatibility, but you can choose a different one.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-of-iphone-and-ipad-apps-on-macs-with-apple-silicon
+  - checkbox "Make this app available" [checked]
+  - text: Make this app available
+  - combobox:
+    - option "Automatic (macOS 14.0)" [selected]
+    - option "macOS 26.5"
+    - option "macOS 26.4"
+    - option "macOS 26.3"
+    - option "macOS 26.2"
+    - option "macOS 26.1"
+    - option "macOS 26.0"
+    - option "macOS 15.7"
+    - option "macOS 15.6"
+    - option "macOS 15.5"
+    - option "macOS 15.4"
+    - option "macOS 15.3"
+    - option "macOS 15.2"
+    - option "macOS 15.1"
+    - option "macOS 15.0"
+    - option "macOS 14.7"
+    - option "macOS 14.6"
+    - option "macOS 14.5"
+    - option "macOS 14.4"
+    - option "macOS 14.3"
+    - option "macOS 14.2"
+    - option "macOS 14.1"
+    - option "macOS 14.0"
+    - option "macOS 13.6"
+    - option "macOS 13.5"
+    - option "macOS 13.4"
+    - option "macOS 13.3"
+    - option "macOS 13.2"
+    - option "macOS 13.1"
+    - option "macOS 13.0"
+    - option "macOS 12.5"
+    - option "macOS 12.4"
+    - option "macOS 12.3"
+    - option "macOS 12.2"
+    - option "macOS 12.1"
+    - option "macOS 12.0"
+    - option "macOS 11.5"
+    - option "macOS 11.4"
+    - option "macOS 11.3"
+    - option "macOS 11.0"
+  - generic: Compatibility with Apple Silicon Macs
+  - paragraph: This app's compatibility with Apple silicon Macs hasn't been verified yet. If you've tested your app on an Apple silicon Mac, and it functions as intended, verify its compatibility to let users know they'll receive a great experience on macOS.
+  - paragraph:
+    - button "Verify Compatibility"
+  - list:
+    - listitem: Version 1.0 is compatible.
+  - separator
+  - heading "iPhone and iPad Apps on Apple Vision Pro" [level=3]
+  - paragraph:
+    - text: Compatible iPhone and iPad apps can be made available on Apple Vision Pro. Apps will run natively and use the same frameworks, resources, and runtime environment as they do on iOS.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-of-iphone-and-ipad-apps-on-apple-vision-pro
+  - paragraph: Apple Vision Pro Availability
+  - checkbox "Make this app available on Apple Vision Pro" [checked]
+  - text: Make this app available on Apple Vision Pro
+  - generic: Compatibility
+  - list:
+    - listitem: Version 1.0 is compatible
+  - separator
+  - heading "App Distribution Methods" [level=3]
+  - paragraph:
+    - text: Select how you want your app distributed to users. Once your app is approved, the distribution method cannot be changed.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/set-distribution-methods
+  - radio "Public — Discoverable by anyone on the App Store (default) More information Offer a reduced price on the Apple School Manager for volume purchases More information" [checked]
+  - generic: Public — Discoverable by anyone on the App Store (default)
+  - button "More information": "?"
+  - checkbox "Offer a reduced price on the Apple School Manager for volume purchases More information" [checked]
+  - generic: Offer a reduced price on the Apple School Manager for volume purchases
+  - button "More information": "?"
+  - radio "Private — Available as a custom app on Apple Business or Apple School Manager More information"
+  - generic: Private — Available as a custom app on Apple Business or Apple School Manager
+  - button "More information": "?"
+  - separator
+  - button " Last-Compatible Version Settings":
+    - text: 
+    - heading "Last-Compatible Version Settings" [level=3]
+  - separator
+  - button "Remove App From Sale" [disabled]
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

@@ -1,0 +1,142 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "TestFlight":
+    - list:
+      - heading "Builds" [level=2]
+      - list:
+        - link "iOS":
+          - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight/ios
+          - generic: iOS
+      - separator
+      - heading "Feedback" [level=2]
+      - list:
+        - link "Crashes":
+          - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight/crashes
+          - generic: Crashes
+        - link "Screenshots":
+          - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight/screenshots
+          - generic: Screenshots
+      - separator
+      - heading "Testers" [level=2]
+      - list:
+        - link "All":
+          - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight/testers
+          - generic: All
+      - heading "Internal Testing" [level=3]
+      - button "New Group":
+      - list
+      - separator
+      - heading "Additional" [level=2]
+      - list:
+        - link "Test Information":
+          - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight/test-info
+          - generic: Test Information
+        - generic: About TestFlight Data
+        - button: "?"
+  - heading "Test Information" [level=2]
+  - paragraph:
+    - text: Provide TestFlight specific information below.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/test-a-beta-version/provide-test-information
+  - button "Save" [disabled]
+  - separator
+  - heading "Invitation Experience" [level=3]
+  - paragraph: You can use your app screenshots and category to communicate the app's user experience and give testers more information. Screenshots and category will be from the latest version that had a status of Ready for Distribution.
+  - checkbox "Show approved screenshots and category" [checked]
+  - text: Show approved screenshots and category
+  - heading "App Screenshots" [level=4]
+  - paragraph: Screenshots will be from the latest version that had a status of Ready for Distribution.
+  - paragraph: Your app in TestFlight will use screenshots from the last version that had a status of Ready for Distribution.
+  - paragraph:
+    - link "View in App Information":
+      - /url: /apps/6817505650/distribution/info
+  - heading "App Category" [level=4]
+  - paragraph:
+    - text: You can use app category to communicate the app's purpose. Category can be edited on
+    - link "App Information":
+      - /url: "#"
+    - text: .
+  - separator
+  - heading "Beta App Information" [level=3]
+  - button "English (U.S.)":
+    - text: English (U.S.)
+  - text: Beta App Description
+  - button "More information": "?"
+  - paragraph: "4000"
+  - text: Feedback Email
+  - button "More information": "?"
+  - textbox "Feedback Email More information"
+  - text: Marketing URL
+  - button "More information": "?"
+  - textbox "Marketing URL More information":
+    - /placeholder: http://example.com
+  - text: Privacy Policy URL
+  - button "More information": "?"
+  - textbox "Privacy Policy URL More information":
+    - /placeholder: http://example.com
+  - separator
+  - heading "Beta App Review Information" [level=3]
+  - heading "Contact Information" [level=4]
+  - generic: First Name
+  - textbox "First Name"
+  - generic: Last Name
+  - textbox "Last Name"
+  - generic: Phone number
+  - textbox "Phone number"
+  - generic: Email
+  - textbox "Email"
+  - text: Sign-In Information
+  - button "More information": "?"
+  - paragraph: Provide a user name and password so we can sign in to your app. We’ll need this to complete your app review.
+  - checkbox "Sign-in required"
+  - text: Sign-in required
+  - text: Review Notes
+  - button "More information": "?"
+  - textbox "Review Notes More information"
+  - paragraph: "4000"
+  - separator
+  - heading "License Agreement" [level=3]
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

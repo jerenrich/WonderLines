@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wonder Lines Privacy Policy</title>
+  <meta name="description" content="How Wonder Lines handles coloring descriptions, generated images, anonymous identifiers, and service diagnostics.">
+  <link rel="stylesheet" href="style.css">
+  <style>main.policy{max-width:780px;padding:48px 24px 80px;margin:auto}main.policy h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}main.policy h2{font-size:1.35rem;margin-top:2rem}main.policy p,main.policy li{line-height:1.7}main.policy ul{padding-left:1.4rem}main.policy a{text-decoration:underline;overflow-wrap:anywhere}</style>
+</head>
+<body>
+<main class="policy">
+  <a href="./">Wonder Lines home</a>
+  <h1>Privacy Policy</h1>
+  <p>Effective date: 4 October 2026</p>
+  <p>Wonder Lines is an iPhone and iPad app operated by Jordan Erenrich. It turns text descriptions into coloring sheets using a hosted service and AI image providers. This policy describes the app and its generation service.</p>
+  <h2>Information processed by the service</h2>
+  <ul>
+    <li><strong>Descriptions and generated images.</strong> When you tap Generate, your description, drawing-complexity instructions, selected model, and requested image dimensions are sent to the generation service and the provider used for that model. Generated images are stored by the service so interrupted requests can be recovered.</li>
+    <li><strong>Anonymous account and device identifiers.</strong> The app creates a random service account without asking for a name, email address, or sign-in. The service stores the account identifier, credential identifier, and generation records. Apple's App Attest is used for device verification on supported devices; the service stores the associated key identifier, public key, and verification counters. These identifiers can link activity from the same installation even though you have not provided a name.</li>
+    <li><strong>Usage and technical data.</strong> The service records generation counts, request and job identifiers, model choices, timestamps, status and error codes, and performance and cost metrics. Hosting and AI providers may process connection information, including IP addresses, and retain request or response logs under their own policies.</li>
+  </ul>
+  <p>The app does not request access to your contacts, location, microphone, camera, or existing photo library. Please avoid entering names, contact details, or other sensitive information in descriptions.</p>
+  <h2>Why information is used</h2>
+  <p>Descriptions and images are used to create and return coloring sheets. Identifiers, usage records, and technical data are used to authenticate requests, apply service limits, prevent abuse and duplicate generation, recover results, operate the service, and investigate failures.</p>
+  <p>Wonder Lines contains no advertising SDK and does not use an advertising identifier. The app and its backend do not sell data or use it for advertising or tracking across other companies' apps and websites.</p>
+  <h2>Service providers</h2>
+  <p>The backend runs on Cloudflare Workers, Durable Objects, and R2. Cloudflare AI Gateway routes generation requests and may log descriptions and image responses. Depending on the selected model and configured route, image generation is provided by OpenAI, Cloudflare Workers AI, or fal.ai. Provider-operated models may have their own terms and data practices. If a model route changes, the provider used for that route can change.</p>
+  <p>Provider retention and any provider use of content are governed by the applicable service terms and account settings. Wonder Lines does not promise that generation requests are processed without provider logging.</p>
+  <p>For more information, see <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>, <a href="https://openai.com/policies/privacy-policy/">OpenAI's privacy policy</a>, <a href="https://fal.ai/privacy">fal.ai's privacy policy</a>, and <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>. Service providers may process information in countries other than your own.</p>
+  <h2>Information on your device</h2>
+  <p>Age difficulty, model choice, and image-count preferences are saved locally. The numeric age setting stays on your device; the description sent to the service contains drawing-complexity guidance derived from that setting. Service credentials are stored in the iOS Keychain. The app keeps a local diagnostics history with request identifiers and technical status information, excluding descriptions, image bytes, and credentials.</p>
+  <p>Saving a sheet requests permission to add that image to Photos. The app does not read your existing photos. Sharing and printing send the selected image to the destination you choose through Apple's system controls. Those destinations handle the image under their own practices. A diagnostics report is shared only when you choose to share it.</p>
+  <h2>Retention and deletion</h2>
+  <p>The backend does not currently enforce a fixed automatic deletion period for anonymous accounts, completed images, or generation and usage records. Pending job descriptions are removed from the account job record when processing becomes terminal; provider or Gateway logs may retain copies. Provider and hosting logs follow their configured retention periods and policies.</p>
+  <p>Removing the app does not automatically delete server records, and iOS may retain Keychain credentials. Images you save or share remain in the destinations you selected. For questions or a request to remove information held by Wonder Lines, contact the address below. Because accounts are anonymous, it may be necessary to identify the relevant account or generation before records can be located. Do not send access tokens or other credentials.</p>
+  <h2>Family use</h2>
+  <p>Wonder Lines supports family coloring activities. Parents and guardians should supervise children's descriptions and sharing, avoid entering children's personal information, and review generated sheets before use. The drawing-difficulty slider is not an age-verification or parental-control system. AI results can vary.</p>
+  <h2>Contact and changes</h2>
+  <p>For support, privacy questions, or requests about your information, email Jordan Erenrich at <a href="mailto:jordan.erenrich@gmail.com">jordan.erenrich@gmail.com</a>. If you contact us, the information in your message is used to respond and handle your request.</p>
+  <p>Updates to this policy will be posted on this page with an updated effective date.</p>
+</main>
+</body>
+</html>

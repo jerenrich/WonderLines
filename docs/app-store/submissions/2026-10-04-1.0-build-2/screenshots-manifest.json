@@ -1,0 +1,68 @@
+{
+  "capture_source_commit": "56eb506d8a47b6f501bc76a4d6fece9ffb69591c",
+  "provenance": "The visible submission inventory has four iPhone 6.9-inch images and two iPad 13-inch images in this order. Original upload files recovered from PreviousScreenshots and verified against the original capture manifest. Refreshed build-2 captures were prepared but not uploaded. Apple-hosted files were not downloaded or independently hashed.",
+  "sample_content": "AI-created local dinosaur illustration; simulator captures of the current UI",
+  "devices": [
+    "iPhone 18 Pro Max / iOS 27.0",
+    "iPad Pro 13-inch (M5) / iOS 27.0"
+  ],
+  "app_preview_video_count": 0,
+  "iphone_6_5_inch": "Uses the 6.9-inch screenshots",
+  "other_display_families": "Not independently inventoried; may inherit screenshots.",
+  "images": [
+    {
+      "file": "screenshots/iphone-6.9-inch/01-dinosaur-gallery.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "37379d06265cfbbbcfc36ef5986242cedcc14655af87b46bde5a1be329cfc880",
+      "display_family": "iphone-6.9-inch",
+      "order": 1
+    },
+    {
+      "file": "screenshots/iphone-6.9-inch/02-describe-your-idea.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "779c5392956150114e5b08f8aec79df2d81048be1e0cb80d729b3dc577645f10",
+      "display_family": "iphone-6.9-inch",
+      "order": 2
+    },
+    {
+      "file": "screenshots/iphone-6.9-inch/03-age-and-generation-settings.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "8d4bd076671e9c3021e46866260e8560aef48de07315bef8d3b10fa3cfa7deaf",
+      "display_family": "iphone-6.9-inch",
+      "order": 3
+    },
+    {
+      "file": "screenshots/iphone-6.9-inch/04-save-share-and-print.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "2a9495da72f7d1605cc37a7a9d7e036306b325da61c18e456c279e94a866ed28",
+      "display_family": "iphone-6.9-inch",
+      "order": 4
+    },
+    {
+      "file": "screenshots/ipad-13-inch/01-dinosaur-gallery.png",
+      "width": 2752,
+      "height": 2064,
+      "format": "RGB PNG; no alpha",
+      "sha256": "62011fc60571c70e69be4a31f8bbcd6cac511bb880f9807eda823727c0f416ec",
+      "display_family": "ipad-13-inch",
+      "order": 1
+    },
+    {
+      "file": "screenshots/ipad-13-inch/03-age-and-generation-settings.png",
+      "width": 2752,
+      "height": 2064,
+      "format": "RGB PNG; no alpha",
+      "sha256": "5ff68026e269ff918c6ae5965bba1fb464a37c615e26ee78f588512cf5720a45",
+      "display_family": "ipad-13-inch",
+      "order": 2
+    }
+  ]
+}

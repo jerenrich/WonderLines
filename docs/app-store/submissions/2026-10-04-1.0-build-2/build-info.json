@@ -1,0 +1,28 @@
+{
+  "CFBundleIdentifier": "com.jordan.family.ColoringSheets",
+  "CFBundleVersion": "2",
+  "CFBundleShortVersionString": "1.0",
+  "CFBundleDisplayName": "Wonder Lines",
+  "MinimumOSVersion": "17.0",
+  "DTSDKName": "iphoneos27.0",
+  "DTXcode": "2700",
+  "DTXcodeBuild": "27A266a",
+  "UIDeviceFamily": [
+    1,
+    2
+  ],
+  "UISupportedInterfaceOrientations": null,
+  "UISupportedInterfaceOrientations~ipad": [
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight"
+  ],
+  "NSPhotoLibraryAddUsageDescription": "Save coloring sheets to your Photos library.",
+  "ITSAppUsesNonExemptEncryption": null,
+  "ServiceConfiguration": {
+    "mock": false,
+    "serviceURL": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+  },
+  "provenance": "Selected fields read from the actual submitted distribution archive. null means the Info.plist key is absent."
+}

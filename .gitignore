@@ -13,3 +13,6 @@ xcuserdata/
 Config/Local.xcconfig
 *.log
 .build-log.txt
+
+# Review-only contact information is local; public submission metadata is tracked.
+docs/app-store/**/review-contact.private.json

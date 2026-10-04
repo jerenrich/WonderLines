@@ -1,0 +1,250 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information":
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - heading "Pricing and Availability" [level=2]
+  - button "Save"
+  - heading "Price Schedule" [level=3]
+  - button "Schedule a price change":
+  - link "All Prices and Currencies":
+    - /url: /apps/6817505650/distribution/pricing-matrix
+    - paragraph: All Prices and Currencies
+  - paragraph: Below is a summary of your current pricing and any upcoming changes.
+  - heading "Base Country or Region" [level=4]
+  - paragraph: Apple may automatically adjust prices from time to time in every country or region except your base to account for changes in tax or foreign exchange rates.
+  - paragraph: United States (USD)
+  - paragraph:
+    - button "Edit"
+  - heading "Prices" [level=4]
+  - button "Download":
+    - text: Download
+  - grid "Prices":
+    - rowgroup:
+      - row "Dates Countries or Regions Price Adjustment Actions":
+        - columnheader "Dates":
+          - generic: Dates
+        - columnheader "Countries or Regions":
+          - generic: Countries or Regions
+        - columnheader "Price Adjustment":
+          - generic: Price Adjustment
+        - columnheader "Actions"
+    - rowgroup:
+      - row "Current Price":
+        - rowheader "Current Price":
+          - button "Current Price"
+        - gridcell "Prices in 175 Countries or Regions":
+          - button "Prices in 175 Countries or Regions": 175 Countries or Regions
+        - gridcell
+        - gridcell
+  - heading "App Availability" [level=3]
+  - paragraph:
+    - text: Determine where your app will be available to purchase or download. You can also make your app available for pre-order in specific countries or regions.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app
+  - button "Set Up Availability"
+  - separator
+  - heading "Tax Category" [level=3]
+  - generic: 
+  - button "Edit"
+  - generic: Category:App Store software
+  - separator
+  - heading "iPhone and iPad Apps on Apple Silicon Macs" [level=3]
+  - paragraph:
+    - text: Starting with macOS Big Sur, compatible iPhone and iPad apps can be made available on Apple silicon Macs. Apps will run natively and use the same frameworks, resources, and runtime environment as they do on iOS and iPadOS.
+    - link "Learn More":
+      - /url: https://developer.apple.com/go/?id=app-store-connect-ios-mac
+  - generic: Apple Silicon Mac Availability
+  - paragraph:
+    - text: Select the checkbox below if you want this app to be available on the Mac App Store. Apple will automatically pick the minimum macOS version required for compatibility, but you can choose a different one.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-of-iphone-and-ipad-apps-on-macs-with-apple-silicon
+  - checkbox "Make this app available" [checked]
+  - text: Make this app available
+  - combobox:
+    - option "Automatic (macOS 14.0)" [selected]
+    - option "macOS 26.5"
+    - option "macOS 26.4"
+    - option "macOS 26.3"
+    - option "macOS 26.2"
+    - option "macOS 26.1"
+    - option "macOS 26.0"
+    - option "macOS 15.7"
+    - option "macOS 15.6"
+    - option "macOS 15.5"
+    - option "macOS 15.4"
+    - option "macOS 15.3"
+    - option "macOS 15.2"
+    - option "macOS 15.1"
+    - option "macOS 15.0"
+    - option "macOS 14.7"
+    - option "macOS 14.6"
+    - option "macOS 14.5"
+    - option "macOS 14.4"
+    - option "macOS 14.3"
+    - option "macOS 14.2"
+    - option "macOS 14.1"
+    - option "macOS 14.0"
+    - option "macOS 13.6"
+    - option "macOS 13.5"
+    - option "macOS 13.4"
+    - option "macOS 13.3"
+    - option "macOS 13.2"
+    - option "macOS 13.1"
+    - option "macOS 13.0"
+    - option "macOS 12.5"
+    - option "macOS 12.4"
+    - option "macOS 12.3"
+    - option "macOS 12.2"
+    - option "macOS 12.1"
+    - option "macOS 12.0"
+    - option "macOS 11.5"
+    - option "macOS 11.4"
+    - option "macOS 11.3"
+    - option "macOS 11.0"
+  - generic: Compatibility with Apple Silicon Macs
+  - paragraph: This app's compatibility with Apple silicon Macs hasn't been verified yet. If you've tested your app on an Apple silicon Mac, and it functions as intended, verify its compatibility to let users know they'll receive a great experience on macOS.
+  - paragraph:
+    - button "Verify Compatibility"
+  - list:
+    - listitem: Version 1.0 is compatible.
+  - separator
+  - heading "iPhone and iPad Apps on Apple Vision Pro" [level=3]
+  - paragraph:
+    - text: Compatible iPhone and iPad apps can be made available on Apple Vision Pro. Apps will run natively and use the same frameworks, resources, and runtime environment as they do on iOS.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-of-iphone-and-ipad-apps-on-apple-vision-pro
+  - paragraph: Apple Vision Pro Availability
+  - checkbox "Make this app available on Apple Vision Pro" [checked]
+  - text: Make this app available on Apple Vision Pro
+  - generic: Compatibility
+  - list:
+    - listitem: Version 1.0 is compatible
+  - separator
+  - heading "App Distribution Methods" [level=3]
+  - paragraph:
+    - text: Select how you want your app distributed to users. Once your app is approved, the distribution method cannot be changed.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/set-distribution-methods
+  - radio "Public — Discoverable by anyone on the App Store (default) More information Offer a reduced price on the Apple School Manager for volume purchases More information" [checked]
+  - generic: Public — Discoverable by anyone on the App Store (default)
+  - button "More information": "?"
+  - checkbox "Offer a reduced price on the Apple School Manager for volume purchases More information" [checked]
+  - generic: Offer a reduced price on the Apple School Manager for volume purchases
+  - button "More information": "?"
+  - radio "Private — Available as a custom app on Apple Business or Apple School Manager More information"
+  - generic: Private — Available as a custom app on Apple Business or Apple School Manager
+  - button "More information": "?"
+  - separator
+  - button " Last-Compatible Version Settings":
+    - text: 
+    - heading "Last-Compatible Version Settings" [level=3]
+  - separator
+  - button "Remove App From Sale" [disabled]
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

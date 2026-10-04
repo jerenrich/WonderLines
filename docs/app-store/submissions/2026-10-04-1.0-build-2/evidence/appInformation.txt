@@ -1,0 +1,292 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information" [active]:
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - generic: 
+  - heading "App Information" [level=2]
+  - paragraph: This information is used for all platforms of this app. Any changes will be released with your next app version.
+  - button "Save"
+  - generic: 
+  - heading "Localizable Information" [level=3]
+  - button "English (U.S.)" [disabled]
+  - button "?"
+  - generic: Name
+  - button "More information": "?"
+  - textbox "Name": Wonder Lines
+  - status "Characters remaining": "18"
+  - generic: Subtitle
+  - button "More information": "?"
+  - textbox "Subtitle": Dream it. Print it. Color it.
+  - status "Characters remaining": "1"
+  - heading "General Information" [level=3]
+  - generic: Bundle ID
+  - button "More information": "?"
+  - paragraph: com.jordan.family.ColoringSheets
+  - generic: SKU
+  - button "More information": "?"
+  - paragraph: wonderlines-ios
+  - generic: Apple ID
+  - button "More information": "?"
+  - paragraph: "6817505650"
+  - generic: Content Rights
+  - button "More information": "?"
+  - button "Edit"
+  - paragraph: No, this app does not contain, show, or access third-party content.
+  - generic: License Agreement
+  - button "More information": "?"
+  - button "Edit"
+  - paragraph:
+    - link "Apple’s Standard License Agreement":
+      - /url: http://www.apple.com/legal/itunes/appstore/dev/stdeula
+  - generic: Primary Language
+  - button "More information": "?"
+  - paragraph: English (U.S.)
+  - generic: Category
+  - button "More information": "?"
+  - combobox "Category":
+    - option "Primary"
+    - option "Books"
+    - option "Business"
+    - option "Developer Tools"
+    - option "Education"
+    - option "Entertainment"
+    - option "Finance"
+    - option "Food & Drink"
+    - option "Games"
+    - option "Graphics & Design" [selected]
+    - option "Health & Fitness"
+    - option "Lifestyle"
+    - option "Magazines & Newspapers"
+    - option "Medical"
+    - option "Music"
+    - option "Navigation"
+    - option "News"
+    - option "Photo & Video"
+    - option "Productivity"
+    - option "Reference"
+    - option "Shopping"
+    - option "Social Networking"
+    - option "Sports"
+    - option "Stickers"
+    - option "Travel"
+    - option "Utilities"
+    - option "Weather"
+  - combobox:
+    - option "Secondary (optional)" [selected]
+    - option "Books"
+    - option "Business"
+    - option "Developer Tools"
+    - option "Education"
+    - option "Entertainment"
+    - option "Finance"
+    - option "Food & Drink"
+    - option "Games"
+    - option "Health & Fitness"
+    - option "Lifestyle"
+    - option "Magazines & Newspapers"
+    - option "Medical"
+    - option "Music"
+    - option "Navigation"
+    - option "News"
+    - option "Photo & Video"
+    - option "Productivity"
+    - option "Reference"
+    - option "Shopping"
+    - option "Social Networking"
+    - option "Sports"
+    - option "Stickers"
+    - option "Travel"
+    - option "Utilities"
+    - option "Weather"
+  - separator
+  - heading "Age Ratings" [level=3]
+  - paragraph: App Age Ratings
+  - button "Edit"
+  - button "View Details"
+  - paragraph: Users will only see the age rating that applies to their country or region on the App Store.
+  - list:
+    - paragraph:
+      - generic: 9+
+    - paragraph: 172 countries or regions
+    - paragraph:
+      - generic: 12+
+    - paragraph: Vietnam
+    - paragraph: Brazil
+    - paragraph:
+      - generic: All
+    - paragraph: Korea, Republic of
+  - generic: Age Suitability URL
+  - button "More information": "?"
+  - paragraph: –
+  - paragraph: Operating Systems Earlier than Version 26
+  - paragraph: Global rating of 9+ with regional exceptions
+  - button "View Details"
+  - separator
+  - heading "App Encryption Documentation" [level=3]
+  - button "Upload":
+  - paragraph:
+    - text: Specify your use of encryption in Xcode by adding the
+    - strong: App Uses Non-Exempt Encryption
+    - text: key to your app's Info.plist file with a Boolean value that indicates whether your app uses encryption.
+    - link "Learn More":
+      - /url: https://developer.apple.com/documentation/security/complying_with_encryption_export_regulations
+  - paragraph: "You're required to provide documentation if your app contains any of the following:"
+  - list:
+    - listitem: Encryption algorithms that are proprietary or not accepted as standard by international standard bodies (IEEE, IETF, ITU, etc.)
+    - listitem: Standard encryption algorithms instead of, or in addition to, using or accessing the encryption within Apple's operating system
+  - paragraph: You can provide your documentation before you submit a build.
+  - button "Upload"
+  - heading "App Store Regulations & Permits" [level=3]
+  - heading "Digital Services Act" [level=6]
+  - paragraph:
+    - text: Under the Digital Services Act, you must provide and verify information regarding your account. If you don't, there may be payment delays or your content may be removed from sale in certain countries or regions.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-eu-digital-services-act-compliance-information
+  - paragraph:
+    - link "Set Up":
+      - /url: /business
+  - heading "Vietnam Game License" [level=3]
+  - paragraph:
+    - text: If your game is available on the App Store in Vietnam, you can add a game license as required by Vietnamese regulators.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/reference/app-information
+  - button "Add"
+  - heading "Regulated Medical Devices" [level=6]
+  - paragraph:
+    - text: If your app is in the Medical or Health and Fitness categories, or if you selected “frequent” for “Medical or Treatment Information” in the App Store Connect age rating questionnaire, you need to declare whether it functions as a regulated medical device to keep distributing on the App Store in certain regions.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/manage-app-information/declare-regulated-medical-device-status
+  - paragraph:
+    - button "Declare Regulated Medical Device"
+  - separator
+  - heading "App Store Server Notifications" [level=3]
+  - paragraph:
+    - text: App Store server notifications provide information about key events related to your in-app purchases. To test notifications before implementing them in production, you can set up a separate sandbox server URL.
+    - link "Learn More":
+      - /url: https://developer.apple.com/help/app-store-connect/configure-in-app-purchase-settings/enter-server-urls-for-app-store-server-notifications
+  - generic: Production Server URL
+  - paragraph:
+    - button "Set Up URL"
+  - generic: Sandbox Server URL
+  - paragraph:
+    - button "Set Up URL"
+  - heading "App-Specific Shared Secret" [level=3]
+  - paragraph: The app-specific shared secret is a unique code to receive receipts for only this app’s auto-renewable subscriptions. You may want to use an app-specific shared secret if you’re transferring this app to another developer, or if you want to keep your primary shared secret private.
+  - paragraph:
+    - button "Manage"
+  - separator
+  - heading "Additional Information" [level=3]
+  - paragraph:
+    - button "View on App Store"
+  - paragraph:
+    - button "Edit User Access"
+  - paragraph:
+    - button "Remove App"
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

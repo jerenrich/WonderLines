@@ -1,0 +1,184 @@
+Captured from the visible App Store Connect UI on 2026-10-04.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - navigation "Distribution":
+    - list:
+      - heading "iOS App" [level=2]
+      - list:
+        - link "1.0 Waiting for Review":
+          - /url: /apps/6817505650/distribution/ios/version/inflight
+          - text: 1.0 Waiting for Review
+      - button "Add Platform"
+      - separator
+      - heading "General" [level=2]
+      - list:
+        - link "App Information":
+          - /url: /apps/6817505650/distribution/info
+          - generic: App Information
+        - link "App Review":
+          - /url: /apps/6817505650/distribution/reviewsubmissions
+          - generic: App Review
+        - link "History":
+          - /url: /apps/6817505650/distribution/activity/ios/versions
+          - generic: History
+      - separator
+      - heading "App Store" [level=2]
+      - heading "Trust & Safety" [level=3]
+      - list:
+        - link "App Privacy":
+          - /url: /apps/6817505650/distribution/privacy
+          - generic: App Privacy
+        - link "App Accessibility":
+          - /url: /apps/6817505650/distribution/accessibility
+          - generic: App Accessibility
+        - link "Ratings and Reviews":
+          - /url: /apps/6817505650/distribution/ratings/ios
+          - generic: Ratings and Reviews
+      - heading "Growth & Marketing" [level=3]
+      - list:
+        - link "In-App Events":
+          - /url: /apps/6817505650/distribution/events
+          - generic: In-App Events
+        - link "Custom Product Pages":
+          - /url: /apps/6817505650/distribution/productpages
+          - generic: Custom Product Pages
+        - link "Product Page Optimization":
+          - /url: /apps/6817505650/distribution/optimization
+          - generic: Product Page Optimization
+        - link "Promo Codes":
+          - /url: /apps/6817505650/distribution/promo_codes/generate
+          - generic: Promo Codes
+        - link "Game Center":
+          - /url: /apps/6817505650/distribution/gamecenter
+          - generic: Game Center
+      - heading "Monetization" [level=3]
+      - list:
+        - link "Pricing and Availability":
+          - /url: /apps/6817505650/distribution/pricing
+          - generic: Pricing and Availability
+        - link "In-App Purchases":
+          - /url: /apps/6817505650/distribution/iaps
+          - generic: In-App Purchases
+        - link "Subscriptions":
+          - /url: /apps/6817505650/distribution/subscriptions
+          - generic: Subscriptions
+      - heading "Featuring" [level=3]
+      - list:
+        - link "Nominations":
+          - /url: /apps/6817505650/distribution/nominations
+          - generic: Nominations
+  - heading "App Privacy" [level=2]
+  - paragraph: Published 25 minutes ago by Jordan Erenrich
+  - separator
+  - heading "Privacy Policy" [level=3]
+  - button "Edit"
+  - button "English (U.S.)" [disabled]
+  - button "?"
+  - generic: Privacy Policy URL
+  - button "More information": "?"
+  - paragraph: https://jerenrich.github.io/WonderLines/privacy.html
+  - generic: User Privacy Choices URL
+  - paragraph: (Optional)
+  - button "More information": "?"
+  - paragraph: –
+  - separator
+  - heading "Product Page Preview" [level=3]
+  - button "See Details"
+  - paragraph: Data Linked to You
+  - paragraph: "The following data may be collected and linked to your identity:"
+  - paragraph: Diagnostics
+  - paragraph: Usage Data
+  - paragraph: Identifiers
+  - paragraph: User Content
+  - separator
+  - heading "Data Types" [level=3]
+  - button "Edit"
+  - list:
+    - listitem: "6 data types collected from this app: Performance Data, Product Interaction, Other Diagnostic Data, Device ID, Other User Content, User ID"
+  - separator
+  - paragraph: User Content
+  - paragraph: Other User Content
+  - button "More information": "?"
+  - button "Edit"
+  - list:
+    - listitem: Used for App Functionality
+    - listitem: Linked to the user's identity
+  - separator
+  - paragraph: Identifiers
+  - paragraph: User ID
+  - button "More information": "?"
+  - button "Edit"
+  - list:
+    - listitem: Used for App Functionality
+    - listitem: Linked to the user's identity
+  - paragraph: Device ID
+  - button "More information": "?"
+  - button "Edit"
+  - list:
+    - listitem: Used for App Functionality
+    - listitem: Linked to the user's identity
+  - separator
+  - paragraph: Usage Data
+  - paragraph: Product Interaction
+  - button "More information": "?"
+  - button "Edit"
+  - list:
+    - listitem: Used for App Functionality
+    - listitem: Linked to the user's identity
+  - separator
+  - paragraph: Diagnostics
+  - paragraph: Performance Data
+  - button "More information": "?"
+  - button "Edit"
+  - list:
+    - listitem: Used for App Functionality
+    - listitem: Linked to the user's identity
+  - paragraph: Other Diagnostic Data
+  - button "More information": "?"
+  - button "Edit"
+  - list:
+    - listitem: Used for App Functionality
+    - listitem: Linked to the user's identity
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us

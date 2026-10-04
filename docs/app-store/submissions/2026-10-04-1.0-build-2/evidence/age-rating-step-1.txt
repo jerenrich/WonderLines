@@ -1,0 +1,232 @@
+Existing saved choices inspected without changing or saving answers.
+
+- banner "App Store Connect":
+  - heading "App Store Connect" [level=1]:
+    - link "App Store Connect":
+      - /url: /
+  - navigation "Global":
+    - list:
+      - link "Apps":
+        - /url: /apps
+      - link "Xcode Cloud":
+        - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+      - link "Trends":
+        - /url: /trends
+      - link "Reports":
+        - /url: /itc/payments_and_financial_reports
+  - button "Jordan Erenrich Jordan Erenrich Account name menu":
+    - generic: Jordan Erenrich
+    - generic: Jordan Erenrich
+- button "Apps menu, Wonder Lines, selected":
+  - generic "Wonder Lines":
+    - img "Wonder Lines"
+  - generic: Wonder Lines
+- navigation "Apps":
+  - list:
+    - link "Distribution":
+      - /url: /apps/6817505650/distribution
+    - link "Analytics":
+      - /url: /apps/6817505650/analytics
+    - link "TestFlight":
+      - /url: /teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+- main:
+  - link "App Information":
+    - /url: /apps/6817505650/distribution/info
+    - text: App Information
+  - heading "Age Ratings" [level=2]
+  - paragraph:
+    - paragraph:
+      - text: Your app's age ratings are below. Users will only see the age rating that applies to their country or region on the App Store. If the content of your app changes, you can edit your age ratings.
+      - button "Edit Age Ratings"
+  - grid "App Age Ratings":
+    - rowgroup:
+      - row "Age Rating Countries or Regions":
+        - columnheader "Age Rating":
+          - generic: Age Rating
+        - columnheader "Countries or Regions":
+          - generic: Countries or Regions
+    - rowgroup:
+      - row "9+ Age 9+":
+        - rowheader "9+ Age 9+":
+          - button "9+ Age 9+" [expanded]:
+            - paragraph:
+              - generic: 9+
+            - text: Age 9+
+        - gridcell "172 Countries or Regions Afghanistan Bahrain Brunei Albania Barbados Bulgaria Algeria Belarus Burkina Faso Angola Belgium Cambodia Anguilla Belize Cameroon Antigua and Barbuda Benin Canada Argentina Bermuda Cape Verde Armenia Bhutan Cayman Islands Australia Bolivia Chad Austria Bosnia and Herzegovina Chile Azerbaijan Botswana China mainland Bahamas British Virgin Islands Colombia Show More":
+          - paragraph: 172 Countries or Regions
+          - region:
+            - separator
+            - paragraph: Afghanistan
+            - paragraph: Bahrain
+            - paragraph: Brunei
+            - paragraph: Albania
+            - paragraph: Barbados
+            - paragraph: Bulgaria
+            - paragraph: Algeria
+            - paragraph: Belarus
+            - paragraph: Burkina Faso
+            - paragraph: Angola
+            - paragraph: Belgium
+            - paragraph: Cambodia
+            - paragraph: Anguilla
+            - paragraph: Belize
+            - paragraph: Cameroon
+            - paragraph: Antigua and Barbuda
+            - paragraph: Benin
+            - paragraph: Canada
+            - paragraph: Argentina
+            - paragraph: Bermuda
+            - paragraph: Cape Verde
+            - paragraph: Armenia
+            - paragraph: Bhutan
+            - paragraph: Cayman Islands
+            - paragraph: Australia
+            - paragraph: Bolivia
+            - paragraph: Chad
+            - paragraph: Austria
+            - paragraph: Bosnia and Herzegovina
+            - paragraph: Chile
+            - paragraph: Azerbaijan
+            - paragraph: Botswana
+            - paragraph: China mainland
+            - paragraph: Bahamas
+            - paragraph: British Virgin Islands
+            - paragraph: Colombia
+            - paragraph:
+              - button "Show More"
+      - row "12+ Age 12+":
+        - rowheader "12+ Age 12+":
+          - paragraph:
+            - generic: 12+
+          - text: Age 12+
+        - gridcell "Vietnam":
+          - paragraph: Vietnam
+      - row "Age 10+":
+        - rowheader "Age 10+":
+          - text: Age 10+
+        - gridcell "Brazil":
+          - paragraph: Brazil
+      - row "All All Ages":
+        - rowheader "All All Ages":
+          - paragraph:
+            - generic: All
+          - text: All Ages
+        - gridcell "Korea, Republic of":
+          - paragraph: Korea, Republic of
+- 'dialog "Age Ratings Step 1: Features" [active]':
+  - document:
+    - 'heading "Age Ratings Step 1: Features" [level=2]':
+      - text: Age Ratings
+      - list:
+        - generic: "Step 1: Features"
+        - generic: Step 2
+        - generic: Step 3
+        - generic: Step 4
+        - generic: Step 5
+        - generic: Step 6
+        - generic: Step 7
+    - paragraph: Select whether your app has certain in-app controls, which can be used to limit the content in your app, and capabilities.
+    - table:
+      - rowgroup:
+        - row "In-App Controls No Yes":
+          - columnheader "In-App Controls":
+            - text: In-App Controls
+          - columnheader "No"
+          - columnheader "Yes"
+      - rowgroup:
+        - row "Parental Controls More information Settings or tools that allow parents/guardians to monitor, manage or restrict a child's access to in-app content or features that may not be suitable.":
+          - cell "Parental Controls More information Settings or tools that allow parents/guardians to monitor, manage or restrict a child's access to in-app content or features that may not be suitable.":
+            - paragraph: Parental Controls
+            - button "More information": "?"
+            - paragraph: Settings or tools that allow parents/guardians to monitor, manage or restrict a child's access to in-app content or features that may not be suitable.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "Age Assurance More information Mechanism to confirm an individual's age meets the age requirement for accessing specific content or services.":
+          - cell "Age Assurance More information Mechanism to confirm an individual's age meets the age requirement for accessing specific content or services.":
+            - paragraph: Age Assurance
+            - button "More information": "?"
+            - paragraph: Mechanism to confirm an individual's age meets the age requirement for accessing specific content or services.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+    - table:
+      - rowgroup:
+        - row "Capabilities No Yes":
+          - columnheader "Capabilities":
+            - text: Capabilities
+          - columnheader "No"
+          - columnheader "Yes"
+      - rowgroup:
+        - row "Unrestricted Web Access More information Users can navigate to any webpage within the app or freely browse the web.":
+          - cell "Unrestricted Web Access More information Users can navigate to any webpage within the app or freely browse the web.":
+            - paragraph: Unrestricted Web Access
+            - button "More information": "?"
+            - paragraph: Users can navigate to any webpage within the app or freely browse the web.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "User-Generated Content More information Includes the broad distribution of content created by users as a component of the app's intended user experience.":
+          - cell "User-Generated Content More information Includes the broad distribution of content created by users as a component of the app's intended user experience.":
+            - paragraph: User-Generated Content
+            - button "More information": "?"
+            - paragraph: Includes the broad distribution of content created by users as a component of the app's intended user experience.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "Social Media More information Redistribution, amplification, or interaction with user-generated content through a social feed or similar discovery method that visibly spreads content to many users.":
+          - cell "Social Media More information Redistribution, amplification, or interaction with user-generated content through a social feed or similar discovery method that visibly spreads content to many users.":
+            - paragraph: Social Media
+            - button "More information": "?"
+            - paragraph: Redistribution, amplification, or interaction with user-generated content through a social feed or similar discovery method that visibly spreads content to many users.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "Social Media Disabled for Users Under 13 More information Users under 13 don’t have access to social media capabilities. At a minimum, the Declared Age Range API is called to check users’ age ranges before enabling social media features. Only age-appropriate UGC is delivered.":
+          - cell "Social Media Disabled for Users Under 13 More information Users under 13 don’t have access to social media capabilities. At a minimum, the Declared Age Range API is called to check users’ age ranges before enabling social media features. Only age-appropriate UGC is delivered.":
+            - paragraph: Social Media Disabled for Users Under 13
+            - button "More information": "?"
+            - paragraph: Users under 13 don’t have access to social media capabilities. At a minimum, the Declared Age Range API is called to check users’ age ranges before enabling social media features. Only age-appropriate UGC is delivered.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "Messaging and Chat More information Users can directly communicate with one another through features within the app.":
+          - cell "Messaging and Chat More information Users can directly communicate with one another through features within the app.":
+            - paragraph: Messaging and Chat
+            - button "More information": "?"
+            - paragraph: Users can directly communicate with one another through features within the app.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+        - row "Advertising More information Paid promotion of products or services within the app.":
+          - cell "Advertising More information Paid promotion of products or services within the app.":
+            - paragraph: Advertising
+            - button "More information": "?"
+            - paragraph: Paid promotion of products or services within the app.
+          - cell:
+            - radio [checked]
+          - cell:
+            - radio
+    - button "Cancel"
+    - button "Next"
+- contentinfo:
+  - list:
+    - link "App Store Connect":
+      - /url: /apps
+  - list:
+    - listitem: Copyright © 2026 Apple Inc. All rights reserved. |
+    - link "Terms of Service":
+      - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+    - text: "|"
+    - link "Privacy Policy":
+      - /url: https://www.apple.com/legal/privacy
+    - text: "|"
+    - link "Contact Us":
+      - /url: /contact-us
