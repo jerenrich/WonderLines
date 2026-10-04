@@ -82,7 +82,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers/coloring-sheets-api
           wranglerVersion: '4.136.3'
-          command: deploy --keep-vars --var AI_GATEWAY_ID:coloring-sheets --var MODERATION_GATEWAY_ID:coloring-sheets --var MODERATION_MODEL:clef-flash --message "GitHub main ${{ steps.revision.outputs.sha }}"
+          command: deploy --keep-vars --var AI_GATEWAY_ID:coloring-sheets --var MODERATION_GATEWAY_ID:coloring-sheets --var MODERATION_MODEL:clef --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
       - name: Summarize deployment
         if: github.event_name != 'pull_request'

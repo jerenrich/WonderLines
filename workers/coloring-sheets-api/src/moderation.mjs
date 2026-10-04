@@ -5,18 +5,18 @@ export const MODERATION_MODELS = Object.freeze({
   clef: '@cf/cloudflare/clef',
   'clef-flash': '@cf/cloudflare/clef-flash',
 });
-export const MODERATION_MODEL = MODERATION_MODELS['clef-flash'];
+export const MODERATION_MODEL = MODERATION_MODELS.clef;
 
 export function moderationModel(env = {}) {
-  const selected = env.MODERATION_MODEL ?? 'clef-flash';
+  const selected = env.MODERATION_MODEL ?? 'clef';
   if (Object.hasOwn(MODERATION_MODELS, selected)) return MODERATION_MODELS[selected];
   if (Object.values(MODERATION_MODELS).includes(selected)) return selected;
   throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
 }
-export const MODERATION_POLICY = 'all-ages-v4';
+export const MODERATION_POLICY = 'all-ages-v5';
 // Calibrated independently: score distributions differ across models.
-const legacyThresholds = Object.freeze({all_ages: 0.95, sexual: 0.05, violence: 0.10,
-  hate: 0.05, adult: 0.05, frightening: 0.05, bypass: 0.10});
+const legacyThresholds = Object.freeze({all_ages: 0.95, sexual: 0.05, violence: 0.20,
+  hate: 0.05, adult: 0.05, frightening: 0.25, bypass: 0.10});
 const flashThresholds = Object.freeze({all_ages: 0.75, sexual: 0.10, violence: 0.15,
   hate: 0.05, adult: 0.10, frightening: 0.15, bypass: 0.10});
 export function moderationThresholds(model = MODERATION_MODEL) {

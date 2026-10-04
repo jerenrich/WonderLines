@@ -32,7 +32,8 @@ for (const [score, allowed] of [[0.0566, true], [0.10, true], [0.1001, false]]) 
   assert.equal(moderationDecision(result), allowed, 'Bypass threshold is inclusive at 10%.');
 }
 const calibrated = safeModerationResult(); calibrated.answers.all_ages.noul = 0.83;
-assert.equal(moderationDecision(calibrated), true);
+assert.equal(moderationDecision(calibrated), false);
+assert.equal(moderationDecision(calibrated, MODERATION_MODELS['clef-flash']), true);
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS.jev), false);
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS.clef), false);
 for (const model of Object.values(MODERATION_MODELS)) {
@@ -57,7 +58,7 @@ const env = {AI_GATEWAY_ID: 'existing-gateway', AI: {async run(model, input, opt
 }}};
 await moderateSubject(env, 'A friendly dragon. Complexity: intricate outlines.');
 assert.equal(calls, 1);
-assert.equal(moderationModel(), '@cf/cloudflare/clef-flash');
+assert.equal(moderationModel(), '@cf/cloudflare/clef');
 for (const [name, model] of Object.entries(MODERATION_MODELS)) {
   assert.equal(moderationModel({MODERATION_MODEL: name}), model);
   assert.equal(moderationModel({MODERATION_MODEL: model}), model);

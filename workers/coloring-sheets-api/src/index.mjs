@@ -146,7 +146,7 @@ export class Account {
   }
   async moderateBatch({batchID, description}) {
     if (!isUUID(batchID) || typeof description !== 'string' || !description.trim() || description.length > 500) return fail('invalid_request', 'Invalid batch.', 400);
-    const fingerprint = await digest(JSON.stringify({batchID, description, policy: MODERATION_POLICY, model: this.env.MODERATION_MODEL ?? 'clef-flash'}));
+    const fingerprint = await digest(JSON.stringify({batchID, description, policy: MODERATION_POLICY, model: this.env.MODERATION_MODEL ?? 'clef'}));
     const name = 'moderation:' + batchID;
     const previous = await this.state.storage.get(name);
     if (previous && previous.expires > Date.now()) {

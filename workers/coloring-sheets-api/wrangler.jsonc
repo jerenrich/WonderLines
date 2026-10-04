@@ -7,7 +7,7 @@
   "images": { "binding": "IMAGES" },
   "ai": { "binding": "AI" },
   "vars": {
-    "MODERATION_MODEL": "clef-flash",
+    "MODERATION_MODEL": "clef",
     "FREE_DAILY_ALLOWANCE": "100",
     "AI_GATEWAY_ID": "coloring-sheets",
     "MODERATION_GATEWAY_ID": "coloring-sheets"
