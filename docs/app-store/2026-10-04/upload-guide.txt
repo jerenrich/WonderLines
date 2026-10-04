@@ -1,0 +1,42 @@
+Wonder Lines screenshot upload guide
+Prepared 4 October 2026
+
+Upload the PNG files inside each device folder, in filename order:
+
+iphone-6.9-inch
+1. Dinosaur gallery
+2. Describe your idea
+3. Age and generation settings
+4. Save, share, and print
+All four files are 1320 x 2868 pixels, portrait.
+
+ipad-13-inch
+1. Dinosaur gallery
+2. Describe your idea
+3. Age and generation settings
+4. Portrait gallery (optional alternative orientation)
+The first three files are 2752 x 2064 pixels, landscape.
+The fourth is 2064 x 2752 pixels, portrait.
+For a consistent landscape listing, upload the first three only.
+
+In App Store Connect, open the version's iOS Previews and Screenshots section, select the corresponding iPhone or iPad tab, and drag in the PNG files. Use View All Sizes in Media Manager if necessary to select the 6.9-inch iPhone and 13-inch iPad slots. Start with 01-dinosaur-gallery.png.
+
+Copy the named fields in app-store-copy.txt into App Store Connect. metadata.json contains the same text in structured form. The app name, subtitle, promotional text, description, and keyword fields were checked against Apple's limits.
+
+Complete the support URL, privacy-policy URL, app-review contact, and feedback email placeholders before submission. Marketing URL points to the existing project page. App privacy answers and age rating must reflect the shipping app; this package does not supply those declarations.
+
+Screenshots are genuine captures of the current app interface, using one locally supplied dinosaur illustration in a separate simulator-only build. Artwork was created with the built-in imagegen tool from the previous dinosaur-on-the-moon demo as a reference. No live image-generation service requests were made. Capture runs passed on iPhone 18 Pro Max and iPad Pro 13-inch (M5), running iOS 27.0. Landscape image orientation is baked into the pixels; all upload images are RGB PNG without transparency. The sample artwork is not an additional screenshot to upload.
+
+The temporary capture app is under .build/app-store-capture/project. It replaces the generation service only in that isolated copy. The shipping app's source, signing configuration, and Xcode Cloud configuration were not changed for these screenshots. The sample must not be included in the release build.
+
+Reproduce from this repository with:
+python3 Scripts/capture_app_store.py --device C873E193-B5E7-47C9-9AFB-B92F75609EEC --family iphone
+python3 Scripts/capture_app_store.py --reuse --device 99327D35-04AF-4E07-8B5F-B2B61CD04483 --family ipad
+If the staging project already exists, use --reuse on the first command as well. Capture results get a new numbered xcresult bundle each run. Reuse retains the staged application source snapshot; prepare a new staging project after changing the shipping interface.
+
+Apple specifications:
+https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/
+Apple upload instructions:
+https://developer.apple.com/help/app-store-connect/manage-app-information/upload-app-previews-and-screenshots/
+Apple metadata field limits:
+https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information/

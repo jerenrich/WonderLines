@@ -1,65 +1,512 @@
 // !$*UTF8*$!
-{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
-124ACEF8E02E61D6F5EF40B9 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "ColoringSheets/Assets.xcassets"; sourceTree = SOURCE_ROOT;};
-4797CFFC18656521A4816F89 = {isa = PBXBuildFile; fileRef = 124ACEF8E02E61D6F5EF40B9;};
-AC1DA45BD55B6609C6C2EB58 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (4797CFFC18656521A4816F89,); runOnlyForDeploymentPostprocessing = 0;};
-E73A45605D2478280B988BDF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/ColoringSheetsApp.swift"; sourceTree = SOURCE_ROOT;};
-4C8469AF6033054DA96F60F5 = {isa = PBXBuildFile; fileRef = E73A45605D2478280B988BDF;};
-30818E5BF8D57D0606E2B873 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/Access.swift"; sourceTree = SOURCE_ROOT;};
-57F3D37F009DEA7734C2ADCD = {isa = PBXBuildFile; fileRef = 30818E5BF8D57D0606E2B873;};
-07474CE30051E30149A5BD88 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/AnonymousIdentity.swift"; sourceTree = SOURCE_ROOT;};
-7F66144D149B6D5216964892 = {isa = PBXBuildFile; fileRef = 07474CE30051E30149A5BD88;};
-5B4ABD0D5627E87C3FD5B88A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/AppAttest.swift"; sourceTree = SOURCE_ROOT;};
-B0CE226D330DC145CFB556C7 = {isa = PBXBuildFile; fileRef = 5B4ABD0D5627E87C3FD5B88A;};
-C8A1BE42B68EE23C74368C87 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/AppConfiguration.swift"; sourceTree = SOURCE_ROOT;};
-8E5AB6EAEF8748830116B4A4 = {isa = PBXBuildFile; fileRef = C8A1BE42B68EE23C74368C87;};
-AE64419EB4B7810F5BC41327 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/ColoringViewModel.swift"; sourceTree = SOURCE_ROOT;};
-4745AF3D8D1D68BAE70D2665 = {isa = PBXBuildFile; fileRef = AE64419EB4B7810F5BC41327;};
-DF2BA347D7F82CF6A4C3B779 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/DiagnosticLog.swift"; sourceTree = SOURCE_ROOT;};
-E9403EC2CB846D4B1A3E3661 = {isa = PBXBuildFile; fileRef = DF2BA347D7F82CF6A4C3B779;};
-9FCEC97A66D3402FBD8B7C66 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/Generation.swift"; sourceTree = SOURCE_ROOT;};
-34F0050865CE96C18861E04F = {isa = PBXBuildFile; fileRef = 9FCEC97A66D3402FBD8B7C66;};
-190CFE358EB9D73705D232A4 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Core/MockGenerator.swift"; sourceTree = SOURCE_ROOT;};
-4D085280A87298AE25608935 = {isa = PBXBuildFile; fileRef = 190CFE358EB9D73705D232A4;};
-AE93CC12396D861716D0D4C9 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Views/ContentView.swift"; sourceTree = SOURCE_ROOT;};
-A887B9AC13D7ABBB1D59C167 = {isa = PBXBuildFile; fileRef = AE93CC12396D861716D0D4C9;};
-E130DB2C8A00C95281CE1782 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheets/Views/ExportViews.swift"; sourceTree = SOURCE_ROOT;};
-705AFE98613B3145D65E689F = {isa = PBXBuildFile; fileRef = E130DB2C8A00C95281CE1782;};
-FC4A695F02A8A53A129DCB9A = {isa = PBXGroup; name = App; children = (E73A45605D2478280B988BDF, 30818E5BF8D57D0606E2B873, 07474CE30051E30149A5BD88, 5B4ABD0D5627E87C3FD5B88A, C8A1BE42B68EE23C74368C87, AE64419EB4B7810F5BC41327, DF2BA347D7F82CF6A4C3B779, 9FCEC97A66D3402FBD8B7C66, 190CFE358EB9D73705D232A4, AE93CC12396D861716D0D4C9, E130DB2C8A00C95281CE1782, 124ACEF8E02E61D6F5EF40B9,); sourceTree = "<group>";};
-04D687DD49DEA6F33518F80D = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (4C8469AF6033054DA96F60F5, 57F3D37F009DEA7734C2ADCD, 7F66144D149B6D5216964892, B0CE226D330DC145CFB556C7, 8E5AB6EAEF8748830116B4A4, 4745AF3D8D1D68BAE70D2665, E9403EC2CB846D4B1A3E3661, 34F0050865CE96C18861E04F, 4D085280A87298AE25608935, A887B9AC13D7ABBB1D59C167, 705AFE98613B3145D65E689F,); runOnlyForDeploymentPostprocessing = 0;};
-A0AD59174D4042554A2F0EA9 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheetsTests/GenerationTests.swift"; sourceTree = SOURCE_ROOT;};
-14707FD167A7E3150897B7F0 = {isa = PBXBuildFile; fileRef = A0AD59174D4042554A2F0EA9;};
-36AAA570CFE4A619ADEB2F92 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheetsTests/LiveIntegrationTests.swift"; sourceTree = SOURCE_ROOT;};
-541622F42BA1EDDA4E7F8A5A = {isa = PBXBuildFile; fileRef = 36AAA570CFE4A619ADEB2F92;};
-39FDEC1194D94212B871A28B = {isa = PBXGroup; name = Tests; children = (A0AD59174D4042554A2F0EA9, 36AAA570CFE4A619ADEB2F92,); sourceTree = "<group>";};
-2251F79CE8CE79DDA18CF73E = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (14707FD167A7E3150897B7F0, 541622F42BA1EDDA4E7F8A5A,); runOnlyForDeploymentPostprocessing = 0;};
-773C2FF6CDFDB18292BF81F0 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ColoringSheetsUITests/GalleryUITests.swift"; sourceTree = SOURCE_ROOT;};
-49C6863AF7621A430769557F = {isa = PBXBuildFile; fileRef = 773C2FF6CDFDB18292BF81F0;};
-8D5093D2C263EEDEAE2010BE = {isa = PBXGroup; name = UITests; children = (773C2FF6CDFDB18292BF81F0,); sourceTree = "<group>";};
-11884804E635D0B2EFEF31CD = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (49C6863AF7621A430769557F,); runOnlyForDeploymentPostprocessing = 0;};
-8BCD5BC4CDFDF0918087C782 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = ColoringSheets.app; sourceTree = BUILT_PRODUCTS_DIR;};
-F219C0274590DA45E4BEF1EA = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ColoringSheetsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
-709F2E47840969CE27FCADEB = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ColoringSheetsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
-FBDC4F23F93125BBEEAE800C = {isa = PBXGroup; name = Products; children = (8BCD5BC4CDFDF0918087C782, F219C0274590DA45E4BEF1EA, 709F2E47840969CE27FCADEB,); sourceTree = "<group>";};
-55618DC462BE5B86D1D74772 = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = SOURCE_ROOT;};
-B28B7AF69320201D1CF206EB = {isa = PBXGroup; children = (FC4A695F02A8A53A129DCB9A, 39FDEC1194D94212B871A28B, 8D5093D2C263EEDEAE2010BE, 55618DC462BE5B86D1D74772, FBDC4F23F93125BBEEAE800C,); sourceTree = "<group>";};
-313F14B9209047EC26948B0C = {isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; alwaysOutOfDate = 1; files = (); inputPaths = (); outputPaths = (); name = "Bundle local service configuration"; runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "set -eu\n/usr/bin/python3 \"$SRCROOT/Scripts/build_configuration.py\"\n"; showEnvVarsInLog = 0;};
-BFD315016DE16320F7E2120C = {isa = XCBuildConfiguration; baseConfigurationReference = 55618DC462BE5B86D1D74772; buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";ENABLE_TESTABILITY = "YES";ONLY_ACTIVE_ARCH = "YES";SWIFT_OPTIMIZATION_LEVEL = "-Onone";SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG";GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1 $(inherited)";}; name = Debug;};
-1D8C0C6B1D22EA8C7669B263 = {isa = XCBuildConfiguration; baseConfigurationReference = 55618DC462BE5B86D1D74772; buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";SWIFT_COMPILATION_MODE = "wholemodule";SWIFT_OPTIMIZATION_LEVEL = "-O";}; name = Release;};
-128D1971520EF7E0088A5374 = {isa = XCConfigurationList; buildConfigurations = (BFD315016DE16320F7E2120C, 1D8C0C6B1D22EA8C7669B263,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
-3A77CD648711364E9A877D62 = {isa = XCBuildConfiguration;  buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";ENABLE_TESTABILITY = "YES";ONLY_ACTIVE_ARCH = "YES";SWIFT_OPTIMIZATION_LEVEL = "-Onone";SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG";GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1 $(inherited)";PRODUCT_BUNDLE_IDENTIFIER = "com.jordan.family.ColoringSheets";PRODUCT_NAME = "ColoringSheets";GENERATE_INFOPLIST_FILE = "YES";INFOPLIST_KEY_CFBundleDisplayName = "Wonder Lines";INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save coloring sheets to your Photos library.";INFOPLIST_KEY_UILaunchScreen_Generation = "YES";INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES";INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";CODE_SIGN_STYLE = "Automatic";CODE_SIGN_ENTITLEMENTS = "ColoringSheets/ColoringSheets.entitlements";MARKETING_VERSION = "1.0";CURRENT_PROJECT_VERSION = "2";SUPPORTS_MACCATALYST = "NO";SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = "NO";ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon";}; name = Debug;};
-066776A1C212750E8BE506A2 = {isa = XCBuildConfiguration;  buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";SWIFT_COMPILATION_MODE = "wholemodule";SWIFT_OPTIMIZATION_LEVEL = "-O";PRODUCT_BUNDLE_IDENTIFIER = "com.jordan.family.ColoringSheets";PRODUCT_NAME = "ColoringSheets";GENERATE_INFOPLIST_FILE = "YES";INFOPLIST_KEY_CFBundleDisplayName = "Wonder Lines";INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save coloring sheets to your Photos library.";INFOPLIST_KEY_UILaunchScreen_Generation = "YES";INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES";INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";CODE_SIGN_STYLE = "Automatic";CODE_SIGN_ENTITLEMENTS = "ColoringSheets/ColoringSheets.entitlements";MARKETING_VERSION = "1.0";CURRENT_PROJECT_VERSION = "2";SUPPORTS_MACCATALYST = "NO";SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = "NO";ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon";COLORING_MODE = "live";}; name = Release;};
-046283114E769766CD918828 = {isa = XCConfigurationList; buildConfigurations = (3A77CD648711364E9A877D62, 066776A1C212750E8BE506A2,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
-34BE6D4215B8B1C254345416 = {isa = XCBuildConfiguration;  buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";ENABLE_TESTABILITY = "YES";ONLY_ACTIVE_ARCH = "YES";SWIFT_OPTIMIZATION_LEVEL = "-Onone";SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG";GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1 $(inherited)";PRODUCT_BUNDLE_IDENTIFIER = "com.jordan.family.ColoringSheetsTests";PRODUCT_NAME = "$(TARGET_NAME)";GENERATE_INFOPLIST_FILE = "YES";TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ColoringSheets.app/ColoringSheets";BUNDLE_LOADER = "$(TEST_HOST)";CODE_SIGN_STYLE = "Automatic";}; name = Debug;};
-FADCA9E4220DCCB4910052B3 = {isa = XCBuildConfiguration;  buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";SWIFT_COMPILATION_MODE = "wholemodule";SWIFT_OPTIMIZATION_LEVEL = "-O";PRODUCT_BUNDLE_IDENTIFIER = "com.jordan.family.ColoringSheetsTests";PRODUCT_NAME = "$(TARGET_NAME)";GENERATE_INFOPLIST_FILE = "YES";TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ColoringSheets.app/ColoringSheets";BUNDLE_LOADER = "$(TEST_HOST)";CODE_SIGN_STYLE = "Automatic";}; name = Release;};
-6CA5BF8403D548C411DAAF4A = {isa = XCConfigurationList; buildConfigurations = (34BE6D4215B8B1C254345416, FADCA9E4220DCCB4910052B3,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
-3211EEA1644E9AAFA648AB61 = {isa = XCBuildConfiguration;  buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";ENABLE_TESTABILITY = "YES";ONLY_ACTIVE_ARCH = "YES";SWIFT_OPTIMIZATION_LEVEL = "-Onone";SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG";GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1 $(inherited)";PRODUCT_BUNDLE_IDENTIFIER = "com.jordan.family.ColoringSheetsUITests";PRODUCT_NAME = "$(TARGET_NAME)";GENERATE_INFOPLIST_FILE = "YES";TEST_TARGET_NAME = "ColoringSheets";CODE_SIGN_STYLE = "Automatic";}; name = Debug;};
-3C29AA6C120D4EC323A661C6 = {isa = XCBuildConfiguration;  buildSettings = {SWIFT_VERSION = "5.0";IPHONEOS_DEPLOYMENT_TARGET = "17.0";SDKROOT = "iphoneos";TARGETED_DEVICE_FAMILY = "1,2";CLANG_ENABLE_MODULES = "YES";ENABLE_USER_SCRIPT_SANDBOXING = "NO";SWIFT_COMPILATION_MODE = "wholemodule";SWIFT_OPTIMIZATION_LEVEL = "-O";PRODUCT_BUNDLE_IDENTIFIER = "com.jordan.family.ColoringSheetsUITests";PRODUCT_NAME = "$(TARGET_NAME)";GENERATE_INFOPLIST_FILE = "YES";TEST_TARGET_NAME = "ColoringSheets";CODE_SIGN_STYLE = "Automatic";}; name = Release;};
-20D1A3A291381DE4E77213E2 = {isa = XCConfigurationList; buildConfigurations = (3211EEA1644E9AAFA648AB61, 3C29AA6C120D4EC323A661C6,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
-D799BAE6088A90139B415FCC = {isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = C13732C8E715C9BEE4FA51C9; remoteInfo = ColoringSheets;};
-DE58E2B17C19600779694943 = {isa = PBXTargetDependency; target = C13732C8E715C9BEE4FA51C9; targetProxy = D799BAE6088A90139B415FCC;};
-C13732C8E715C9BEE4FA51C9 = {isa = PBXNativeTarget; buildConfigurationList = 046283114E769766CD918828; buildPhases = (04D687DD49DEA6F33518F80D, AC1DA45BD55B6609C6C2EB58, 313F14B9209047EC26948B0C,); buildRules = (); dependencies = (); name = ColoringSheets; productName = ColoringSheets; productReference = 8BCD5BC4CDFDF0918087C782; productType = "com.apple.product-type.application";};
-64BCB755386F844C96A2A5B0 = {isa = PBXNativeTarget; buildConfigurationList = 6CA5BF8403D548C411DAAF4A; buildPhases = (2251F79CE8CE79DDA18CF73E,); buildRules = (); dependencies = (DE58E2B17C19600779694943,); name = ColoringSheetsTests; productName = ColoringSheetsTests; productReference = F219C0274590DA45E4BEF1EA; productType = "com.apple.product-type.bundle.unit-test";};
-D75D01E5FD65F1CE576FC5B6 = {isa = PBXNativeTarget; buildConfigurationList = 20D1A3A291381DE4E77213E2; buildPhases = (11884804E635D0B2EFEF31CD,); buildRules = (); dependencies = (DE58E2B17C19600779694943,); name = ColoringSheetsUITests; productName = ColoringSheetsUITests; productReference = 709F2E47840969CE27FCADEB; productType = "com.apple.product-type.bundle.ui-testing";};
-98F54143AB4E86B28C3AFEE0 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 2700;}; buildConfigurationList = 128D1971520EF7E0088A5374; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; knownRegions = (en, Base); mainGroup = B28B7AF69320201D1CF206EB; productRefGroup = FBDC4F23F93125BBEEAE800C; projectDirPath = ""; projectRoot = ""; targets = (C13732C8E715C9BEE4FA51C9, 64BCB755386F844C96A2A5B0, D75D01E5FD65F1CE576FC5B6,);};
-}; rootObject = 98F54143AB4E86B28C3AFEE0;}
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14707FD167A7E3150897B7F0 /* ColoringSheetsTests/GenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AD59174D4042554A2F0EA9 /* ColoringSheetsTests/GenerationTests.swift */; };
+		34F0050865CE96C18861E04F /* ColoringSheets/Core/Generation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCEC97A66D3402FBD8B7C66 /* ColoringSheets/Core/Generation.swift */; };
+		4745AF3D8D1D68BAE70D2665 /* ColoringSheets/Core/ColoringViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE64419EB4B7810F5BC41327 /* ColoringSheets/Core/ColoringViewModel.swift */; };
+		4797CFFC18656521A4816F89 /* ColoringSheets/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 124ACEF8E02E61D6F5EF40B9 /* ColoringSheets/Assets.xcassets */; };
+		49C6863AF7621A430769557F /* ColoringSheetsUITests/GalleryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 773C2FF6CDFDB18292BF81F0 /* ColoringSheetsUITests/GalleryUITests.swift */; };
+		4C8469AF6033054DA96F60F5 /* ColoringSheets/ColoringSheetsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E73A45605D2478280B988BDF /* ColoringSheets/ColoringSheetsApp.swift */; };
+		4D085280A87298AE25608935 /* ColoringSheets/Core/MockGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190CFE358EB9D73705D232A4 /* ColoringSheets/Core/MockGenerator.swift */; };
+		541622F42BA1EDDA4E7F8A5A /* ColoringSheetsTests/LiveIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36AAA570CFE4A619ADEB2F92 /* ColoringSheetsTests/LiveIntegrationTests.swift */; };
+		57F3D37F009DEA7734C2ADCD /* ColoringSheets/Core/Access.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30818E5BF8D57D0606E2B873 /* ColoringSheets/Core/Access.swift */; };
+		705AFE98613B3145D65E689F /* ColoringSheets/Views/ExportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130DB2C8A00C95281CE1782 /* ColoringSheets/Views/ExportViews.swift */; };
+		7F66144D149B6D5216964892 /* ColoringSheets/Core/AnonymousIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07474CE30051E30149A5BD88 /* ColoringSheets/Core/AnonymousIdentity.swift */; };
+		8E5AB6EAEF8748830116B4A4 /* ColoringSheets/Core/AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A1BE42B68EE23C74368C87 /* ColoringSheets/Core/AppConfiguration.swift */; };
+		A887B9AC13D7ABBB1D59C167 /* ColoringSheets/Views/ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE93CC12396D861716D0D4C9 /* ColoringSheets/Views/ContentView.swift */; };
+		B0CE226D330DC145CFB556C7 /* ColoringSheets/Core/AppAttest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B4ABD0D5627E87C3FD5B88A /* ColoringSheets/Core/AppAttest.swift */; };
+		E9403EC2CB846D4B1A3E3661 /* ColoringSheets/Core/DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2BA347D7F82CF6A4C3B779 /* ColoringSheets/Core/DiagnosticLog.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D799BAE6088A90139B415FCC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C13732C8E715C9BEE4FA51C9;
+			remoteInfo = ColoringSheets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		07474CE30051E30149A5BD88 /* ColoringSheets/Core/AnonymousIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/AnonymousIdentity.swift; sourceTree = SOURCE_ROOT; };
+		124ACEF8E02E61D6F5EF40B9 /* ColoringSheets/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = ColoringSheets/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		190CFE358EB9D73705D232A4 /* ColoringSheets/Core/MockGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/MockGenerator.swift; sourceTree = SOURCE_ROOT; };
+		30818E5BF8D57D0606E2B873 /* ColoringSheets/Core/Access.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/Access.swift; sourceTree = SOURCE_ROOT; };
+		36AAA570CFE4A619ADEB2F92 /* ColoringSheetsTests/LiveIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheetsTests/LiveIntegrationTests.swift; sourceTree = SOURCE_ROOT; };
+		55618DC462BE5B86D1D74772 /* Config/Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = SOURCE_ROOT; };
+		5B4ABD0D5627E87C3FD5B88A /* ColoringSheets/Core/AppAttest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/AppAttest.swift; sourceTree = SOURCE_ROOT; };
+		709F2E47840969CE27FCADEB /* ColoringSheetsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ColoringSheetsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		773C2FF6CDFDB18292BF81F0 /* ColoringSheetsUITests/GalleryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheetsUITests/GalleryUITests.swift; sourceTree = SOURCE_ROOT; };
+		8BCD5BC4CDFDF0918087C782 /* ColoringSheets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = ColoringSheets.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9FCEC97A66D3402FBD8B7C66 /* ColoringSheets/Core/Generation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/Generation.swift; sourceTree = SOURCE_ROOT; };
+		A0AD59174D4042554A2F0EA9 /* ColoringSheetsTests/GenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheetsTests/GenerationTests.swift; sourceTree = SOURCE_ROOT; };
+		AE64419EB4B7810F5BC41327 /* ColoringSheets/Core/ColoringViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/ColoringViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AE93CC12396D861716D0D4C9 /* ColoringSheets/Views/ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Views/ContentView.swift; sourceTree = SOURCE_ROOT; };
+		C8A1BE42B68EE23C74368C87 /* ColoringSheets/Core/AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/AppConfiguration.swift; sourceTree = SOURCE_ROOT; };
+		DF2BA347D7F82CF6A4C3B779 /* ColoringSheets/Core/DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Core/DiagnosticLog.swift; sourceTree = SOURCE_ROOT; };
+		E130DB2C8A00C95281CE1782 /* ColoringSheets/Views/ExportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/Views/ExportViews.swift; sourceTree = SOURCE_ROOT; };
+		E73A45605D2478280B988BDF /* ColoringSheets/ColoringSheetsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoringSheets/ColoringSheetsApp.swift; sourceTree = SOURCE_ROOT; };
+		F219C0274590DA45E4BEF1EA /* ColoringSheetsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ColoringSheetsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		39FDEC1194D94212B871A28B /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				A0AD59174D4042554A2F0EA9 /* ColoringSheetsTests/GenerationTests.swift */,
+				36AAA570CFE4A619ADEB2F92 /* ColoringSheetsTests/LiveIntegrationTests.swift */,
+			);
+			name = Tests;
+			sourceTree = "<group>";
+		};
+		8D5093D2C263EEDEAE2010BE /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				773C2FF6CDFDB18292BF81F0 /* ColoringSheetsUITests/GalleryUITests.swift */,
+			);
+			name = UITests;
+			sourceTree = "<group>";
+		};
+		B28B7AF69320201D1CF206EB = {
+			isa = PBXGroup;
+			children = (
+				FC4A695F02A8A53A129DCB9A /* App */,
+				39FDEC1194D94212B871A28B /* Tests */,
+				8D5093D2C263EEDEAE2010BE /* UITests */,
+				55618DC462BE5B86D1D74772 /* Config/Base.xcconfig */,
+				FBDC4F23F93125BBEEAE800C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FBDC4F23F93125BBEEAE800C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8BCD5BC4CDFDF0918087C782 /* ColoringSheets.app */,
+				F219C0274590DA45E4BEF1EA /* ColoringSheetsTests.xctest */,
+				709F2E47840969CE27FCADEB /* ColoringSheetsUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FC4A695F02A8A53A129DCB9A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				E73A45605D2478280B988BDF /* ColoringSheets/ColoringSheetsApp.swift */,
+				30818E5BF8D57D0606E2B873 /* ColoringSheets/Core/Access.swift */,
+				07474CE30051E30149A5BD88 /* ColoringSheets/Core/AnonymousIdentity.swift */,
+				5B4ABD0D5627E87C3FD5B88A /* ColoringSheets/Core/AppAttest.swift */,
+				C8A1BE42B68EE23C74368C87 /* ColoringSheets/Core/AppConfiguration.swift */,
+				AE64419EB4B7810F5BC41327 /* ColoringSheets/Core/ColoringViewModel.swift */,
+				DF2BA347D7F82CF6A4C3B779 /* ColoringSheets/Core/DiagnosticLog.swift */,
+				9FCEC97A66D3402FBD8B7C66 /* ColoringSheets/Core/Generation.swift */,
+				190CFE358EB9D73705D232A4 /* ColoringSheets/Core/MockGenerator.swift */,
+				AE93CC12396D861716D0D4C9 /* ColoringSheets/Views/ContentView.swift */,
+				E130DB2C8A00C95281CE1782 /* ColoringSheets/Views/ExportViews.swift */,
+				124ACEF8E02E61D6F5EF40B9 /* ColoringSheets/Assets.xcassets */,
+			);
+			name = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		64BCB755386F844C96A2A5B0 /* ColoringSheetsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6CA5BF8403D548C411DAAF4A /* Build configuration list for PBXNativeTarget "ColoringSheetsTests" */;
+			buildPhases = (
+				2251F79CE8CE79DDA18CF73E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE58E2B17C19600779694943 /* PBXTargetDependency */,
+			);
+			name = ColoringSheetsTests;
+			productName = ColoringSheetsTests;
+			productReference = F219C0274590DA45E4BEF1EA /* ColoringSheetsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C13732C8E715C9BEE4FA51C9 /* ColoringSheets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 046283114E769766CD918828 /* Build configuration list for PBXNativeTarget "ColoringSheets" */;
+			buildPhases = (
+				04D687DD49DEA6F33518F80D /* Sources */,
+				AC1DA45BD55B6609C6C2EB58 /* Resources */,
+				313F14B9209047EC26948B0C /* Bundle local service configuration */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ColoringSheets;
+			productName = ColoringSheets;
+			productReference = 8BCD5BC4CDFDF0918087C782 /* ColoringSheets.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D75D01E5FD65F1CE576FC5B6 /* ColoringSheetsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 20D1A3A291381DE4E77213E2 /* Build configuration list for PBXNativeTarget "ColoringSheetsUITests" */;
+			buildPhases = (
+				11884804E635D0B2EFEF31CD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE58E2B17C19600779694943 /* PBXTargetDependency */,
+			);
+			name = ColoringSheetsUITests;
+			productName = ColoringSheetsUITests;
+			productReference = 709F2E47840969CE27FCADEB /* ColoringSheetsUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+			};
+			buildConfigurationList = 128D1971520EF7E0088A5374 /* Build configuration list for PBXProject "ColoringSheets" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B28B7AF69320201D1CF206EB;
+			productRefGroup = FBDC4F23F93125BBEEAE800C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C13732C8E715C9BEE4FA51C9 /* ColoringSheets */,
+				64BCB755386F844C96A2A5B0 /* ColoringSheetsTests */,
+				D75D01E5FD65F1CE576FC5B6 /* ColoringSheetsUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AC1DA45BD55B6609C6C2EB58 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4797CFFC18656521A4816F89 /* ColoringSheets/Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		313F14B9209047EC26948B0C /* Bundle local service configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle local service configuration";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n/usr/bin/python3 \"$SRCROOT/Scripts/build_configuration.py\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		04D687DD49DEA6F33518F80D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C8469AF6033054DA96F60F5 /* ColoringSheets/ColoringSheetsApp.swift in Sources */,
+				57F3D37F009DEA7734C2ADCD /* ColoringSheets/Core/Access.swift in Sources */,
+				7F66144D149B6D5216964892 /* ColoringSheets/Core/AnonymousIdentity.swift in Sources */,
+				B0CE226D330DC145CFB556C7 /* ColoringSheets/Core/AppAttest.swift in Sources */,
+				8E5AB6EAEF8748830116B4A4 /* ColoringSheets/Core/AppConfiguration.swift in Sources */,
+				4745AF3D8D1D68BAE70D2665 /* ColoringSheets/Core/ColoringViewModel.swift in Sources */,
+				E9403EC2CB846D4B1A3E3661 /* ColoringSheets/Core/DiagnosticLog.swift in Sources */,
+				34F0050865CE96C18861E04F /* ColoringSheets/Core/Generation.swift in Sources */,
+				4D085280A87298AE25608935 /* ColoringSheets/Core/MockGenerator.swift in Sources */,
+				A887B9AC13D7ABBB1D59C167 /* ColoringSheets/Views/ContentView.swift in Sources */,
+				705AFE98613B3145D65E689F /* ColoringSheets/Views/ExportViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		11884804E635D0B2EFEF31CD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				49C6863AF7621A430769557F /* ColoringSheetsUITests/GalleryUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2251F79CE8CE79DDA18CF73E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14707FD167A7E3150897B7F0 /* ColoringSheetsTests/GenerationTests.swift in Sources */,
+				541622F42BA1EDDA4E7F8A5A /* ColoringSheetsTests/LiveIntegrationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DE58E2B17C19600779694943 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C13732C8E715C9BEE4FA51C9 /* ColoringSheets */;
+			targetProxy = D799BAE6088A90139B415FCC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		066776A1C212750E8BE506A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ColoringSheets/ColoringSheets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COLORING_MODE = live;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 9PG633BF3R;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Wonder Lines";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save coloring sheets to your Photos library.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordan.family.ColoringSheets;
+				PRODUCT_NAME = ColoringSheets;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1D8C0C6B1D22EA8C7669B263 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 55618DC462BE5B86D1D74772 /* Config/Base.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3211EEA1644E9AAFA648AB61 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordan.family.ColoringSheetsUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ColoringSheets;
+			};
+			name = Debug;
+		};
+		34BE6D4215B8B1C254345416 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordan.family.ColoringSheetsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ColoringSheets.app/ColoringSheets";
+			};
+			name = Debug;
+		};
+		3A77CD648711364E9A877D62 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ColoringSheets/ColoringSheets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 9PG633BF3R;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Wonder Lines";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save coloring sheets to your Photos library.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordan.family.ColoringSheets;
+				PRODUCT_NAME = ColoringSheets;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3C29AA6C120D4EC323A661C6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordan.family.ColoringSheetsUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ColoringSheets;
+			};
+			name = Release;
+		};
+		BFD315016DE16320F7E2120C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 55618DC462BE5B86D1D74772 /* Config/Base.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FADCA9E4220DCCB4910052B3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordan.family.ColoringSheetsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ColoringSheets.app/ColoringSheets";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		046283114E769766CD918828 /* Build configuration list for PBXNativeTarget "ColoringSheets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A77CD648711364E9A877D62 /* Debug */,
+				066776A1C212750E8BE506A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		128D1971520EF7E0088A5374 /* Build configuration list for PBXProject "ColoringSheets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BFD315016DE16320F7E2120C /* Debug */,
+				1D8C0C6B1D22EA8C7669B263 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		20D1A3A291381DE4E77213E2 /* Build configuration list for PBXNativeTarget "ColoringSheetsUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3211EEA1644E9AAFA648AB61 /* Debug */,
+				3C29AA6C120D4EC323A661C6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6CA5BF8403D548C411DAAF4A /* Build configuration list for PBXNativeTarget "ColoringSheetsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				34BE6D4215B8B1C254345416 /* Debug */,
+				FADCA9E4220DCCB4910052B3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+}

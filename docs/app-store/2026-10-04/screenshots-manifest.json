@@ -1,0 +1,68 @@
+{
+  "prepared_date": "2026-10-04",
+  "source_commit": "56eb506d8a47b6f501bc76a4d6fece9ffb69591c",
+  "sample_content": "AI-created local dinosaur illustration; simulator captures of the current UI",
+  "shipping_app_source_modified": false,
+  "captures_passed": [
+    "iPhone 18 Pro Max / iOS 27.0",
+    "iPad Pro 13-inch (M5) / iOS 27.0"
+  ],
+  "images": [
+    {
+      "file": "iphone-6.9-inch/01-dinosaur-gallery.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "37379d06265cfbbbcfc36ef5986242cedcc14655af87b46bde5a1be329cfc880"
+    },
+    {
+      "file": "iphone-6.9-inch/02-describe-your-idea.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "779c5392956150114e5b08f8aec79df2d81048be1e0cb80d729b3dc577645f10"
+    },
+    {
+      "file": "iphone-6.9-inch/03-age-and-generation-settings.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "8d4bd076671e9c3021e46866260e8560aef48de07315bef8d3b10fa3cfa7deaf"
+    },
+    {
+      "file": "iphone-6.9-inch/04-save-share-and-print.png",
+      "width": 1320,
+      "height": 2868,
+      "format": "RGB PNG; no alpha",
+      "sha256": "2a9495da72f7d1605cc37a7a9d7e036306b325da61c18e456c279e94a866ed28"
+    },
+    {
+      "file": "ipad-13-inch/01-dinosaur-gallery.png",
+      "width": 2752,
+      "height": 2064,
+      "format": "RGB PNG; no alpha",
+      "sha256": "62011fc60571c70e69be4a31f8bbcd6cac511bb880f9807eda823727c0f416ec"
+    },
+    {
+      "file": "ipad-13-inch/02-describe-your-idea.png",
+      "width": 2752,
+      "height": 2064,
+      "format": "RGB PNG; no alpha",
+      "sha256": "4ccd14c230861db6ce8858c764467333bd29df08e2b598d486d3a5fc1c0551da"
+    },
+    {
+      "file": "ipad-13-inch/03-age-and-generation-settings.png",
+      "width": 2752,
+      "height": 2064,
+      "format": "RGB PNG; no alpha",
+      "sha256": "5ff68026e269ff918c6ae5965bba1fb464a37c615e26ee78f588512cf5720a45"
+    },
+    {
+      "file": "ipad-13-inch/04-portrait-gallery.png",
+      "width": 2064,
+      "height": 2752,
+      "format": "RGB PNG; no alpha",
+      "sha256": "f1248e0a91bd1cbff96e392132f51640e27ea50418a42bf70f84a387a3f7c89d"
+    }
+  ]
+}
