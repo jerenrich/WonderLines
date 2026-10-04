@@ -69,7 +69,9 @@ export class ModerationError extends Error {
 }
 
 export async function moderateSubject(env, subject) {
-  const gatewayID = env.MODERATION_GATEWAY_ID ?? env.AI_GATEWAY_ID;
+  // Share the image gateway; tolerate the legacy moderation-only setting when
+  // no shared gateway is configured. A stale override must not split traffic.
+  const gatewayID = env.AI_GATEWAY_ID ?? env.MODERATION_GATEWAY_ID;
   if (typeof env.AI?.run !== 'function' || typeof gatewayID !== 'string' ||
       !/^[A-Za-z0-9_-]{1,64}$/.test(gatewayID)) {
     throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
