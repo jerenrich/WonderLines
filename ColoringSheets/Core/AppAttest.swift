@@ -28,6 +28,7 @@ actor AppAttestClient {
     private let service = DCAppAttestService.shared
     private let keychainService = "com.jordan.family.ColoringSheets.app-attest"
     private var enrollment: Task<Saved, Error>?
+    private static let assertionQueue = AppleAssertionQueue()
 
     func proof(accountID: UUID, token: String, serviceURL: URL, session: URLSession,
                idempotencyKey: String, body: Data) async throws -> [String: String]? {
@@ -36,17 +37,23 @@ actor AppAttestClient {
             return nil
         }
         let saved = try await enrolled(accountID: accountID, token: token, serviceURL: serviceURL, session: session)
-        let challenge = try await issueChallenge(purpose: "assertion", token: token, serviceURL: serviceURL, session: session)
+        let generationID = UUID(uuidString: idempotencyKey)
+        let challenge = try await issueChallenge(purpose: "assertion", token: token, serviceURL: serviceURL, session: session, generationID: generationID)
         let clientData = try JSONEncoder().encode(ClientData(
             challenge: challenge, method: "POST", path: "/v1/generations", idempotencyKey: idempotencyKey,
             bodySHA256: Self.base64url(Data(SHA256.hash(data: body)))))
-        let assertion: Data
-        do { assertion = try await service.generateAssertion(saved.keyID, clientDataHash: Data(SHA256.hash(data: clientData))) }
-        catch {
-            await DiagnosticLog.shared.record("Apple assertion", "failed", error: error)
-            throw error
+        let assertion = try await Self.assertionQueue.run { [service] in
+            let started = ContinuousClock.now
+            await DiagnosticLog.shared.record("Apple assertion", "started; inFlight=1", generationID: generationID)
+            do {
+                let assertion = try await service.generateAssertion(saved.keyID, clientDataHash: Data(SHA256.hash(data: clientData)))
+                await DiagnosticLog.shared.record("Apple assertion", "ready; inFlightAtStart=1; elapsedMs=\(Self.elapsedMilliseconds(since: started))", generationID: generationID)
+                return assertion
+            } catch {
+                await DiagnosticLog.shared.record("Apple assertion", "failed; inFlightAtStart=1; elapsedMs=\(Self.elapsedMilliseconds(since: started))", generationID: generationID, error: error)
+                throw error
+            }
         }
-        await DiagnosticLog.shared.record("Apple assertion", "ready")
         return ["X-App-Attest-Client-Data": Self.base64url(clientData),
                 "X-App-Attest-Assertion": Self.base64url(assertion)]
     }
@@ -136,7 +143,7 @@ actor AppAttestClient {
     }
 
     private func issueChallenge(purpose: String, token: String, serviceURL: URL,
-                                session: URLSession) async throws -> String {
+                                session: URLSession, generationID: UUID? = nil) async throws -> String {
         var request = URLRequest(url: serviceURL.appending(path: "/v1/app-attest/challenge"))
         request.httpMethod = "POST"
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
@@ -146,10 +153,10 @@ actor AppAttestClient {
         let response: URLResponse
         do { (data, response) = try await session.data(for: request) }
         catch {
-            await DiagnosticLog.shared.record("\(purpose) challenge", "transport failed", error: error)
+            await DiagnosticLog.shared.record("\(purpose) challenge", "transport failed", generationID: generationID, error: error)
             throw error
         }
-        await DiagnosticLog.shared.record("\(purpose) challenge", "response",
+        await DiagnosticLog.shared.record("\(purpose) challenge", "response", generationID: generationID,
                                           httpStatus: (response as? HTTPURLResponse)?.statusCode,
                                           workerCode: (response as? HTTPURLResponse)
                                               .flatMap { WorkerClient.workerErrorCode(data, response: $0) })
@@ -157,6 +164,11 @@ actor AppAttestClient {
               let challenge = try? JSONDecoder().decode(Challenge.self, from: data).challenge,
               !challenge.isEmpty else { throw GenerationError.configuration }
         return challenge
+    }
+
+    private static func elapsedMilliseconds(since started: ContinuousClock.Instant) -> Int64 {
+        let duration = started.duration(to: .now).components
+        return duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000
     }
 
     private static func base64url(_ data: Data) -> String {
@@ -189,5 +201,27 @@ actor AppAttestClient {
         item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { throw GenerationError.configuration }
+    }
+}
+
+/// An actor alone permits reentrancy across awaits. Hold an explicit permit
+/// until the Apple callback completes, across all AppAttestClient instances.
+actor AppleAssertionQueue {
+    private var busy = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func run(_ operation: @Sendable () async throws -> Data) async throws -> Data {
+        if busy {
+            await withCheckedContinuation { waiters.append($0) }
+        } else {
+            busy = true
+        }
+        defer {
+            if waiters.isEmpty { busy = false }
+            else { waiters.removeFirst().resume() }
+        }
+        // A cancelled waiter releases its permit without asking Apple to sign.
+        try Task.checkCancellation()
+        return try await operation()
     }
 }

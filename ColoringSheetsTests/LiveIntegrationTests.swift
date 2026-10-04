@@ -3,6 +3,63 @@ import XCTest
 
 /// Opt-in only. Standard test runs skip this test and never send paid requests.
 final class LiveIntegrationTests: XCTestCase {
+    func testExplicitAppAttestConcurrencyWithoutGeneration() async throws {
+        guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_ATTEST_CHECK"] == "compare-concurrency" else {
+            throw XCTSkip("Real-device assertion comparison requires explicit opt-in.")
+        }
+        let configuration = AppConfiguration.load()
+        guard !configuration.mock else { throw XCTSkip("Requires live configuration.") }
+        let saved = await AnonymousIdentityStore().session()
+        let identity = try XCTUnwrap(saved, "Requires an existing app account.")
+        guard identity.isUsable else { throw XCTSkip("Requires a usable saved token.") }
+        let client = AppAttestClient()
+        let session = URLSession(configuration: .ephemeral, delegate: NoRedirectDelegate(), delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+
+        // {} fails input validation before any image reservation. Each request
+        // has a fresh challenge and ID, including unsuccessful signing attempts.
+        func check(_ mode: String) async -> Bool {
+            let id = UUID()
+            do {
+                let body = Data("{}".utf8)
+                let headers = try await client.proof(accountID: identity.accountID,
+                    token: identity.accessToken, serviceURL: configuration.serviceURL,
+                    session: session, idempotencyKey: id.uuidString.lowercased(), body: body)
+                guard let headers else { return false }
+                var request = URLRequest(url: configuration.serviceURL.appending(path: "/v1/generations"))
+                request.httpMethod = "POST"
+                request.httpBody = body
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.setValue("Bearer " + identity.accessToken, forHTTPHeaderField: "Authorization")
+                request.setValue(id.uuidString.lowercased(), forHTTPHeaderField: "Idempotency-Key")
+                for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+                let (data, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse else { return false }
+                let code = WorkerClient.workerErrorCode(data, response: http)
+                await DiagnosticLog.shared.record("Assertion comparison", mode,
+                    generationID: id, httpStatus: http.statusCode, workerCode: code)
+                return http.statusCode == 400 && code == "invalid_request"
+            } catch {
+                await DiagnosticLog.shared.record("Assertion comparison", mode + " failed",
+                    generationID: id, error: error)
+                return false
+            }
+        }
+        var sequential = 0
+        for _ in 0..<3 { if await check("sequential before") { sequential += 1 } }
+        let concurrent = await withTaskGroup(of: Bool.self, returning: Int.self) { group in
+            for _ in 0..<3 { group.addTask { await check("concurrent") } }
+            var successes = 0
+            for await passed in group { if passed { successes += 1 } }
+            return successes
+        }
+        for _ in 0..<3 { if await check("sequential after") { sequential += 1 } }
+        await DiagnosticLog.shared.record("Assertion comparison summary",
+            "sequential=\(sequential)/6; concurrent=\(concurrent)/3")
+        XCTAssertEqual(sequential, 6, "Both sequential controls must pass for the comparison to be meaningful.")
+        XCTAssertEqual(concurrent, 3, "Concurrent callers must all pass with serialized Apple signing.")
+    }
+
     func testExplicitAppAttestCheckWithoutGeneration() async throws {
         guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_ATTEST_CHECK"] == "verify-only" else {
             throw XCTSkip("Real-device App Attest check requires explicit opt-in.")

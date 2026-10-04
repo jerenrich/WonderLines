@@ -62,7 +62,7 @@ final class DiagnosticLog: ObservableObject {
 
     var report: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-        return (["Wonder Lines \(version) diagnostics", "Times are local to this iPad."] +
+        return (["Wonder Lines \(version) diagnostics", "Times are local to this device."] +
                 events.reversed().map { "\($0.date.formatted(date: .numeric, time: .standard)) · \($0.text)" })
             .joined(separator: "\n")
     }
