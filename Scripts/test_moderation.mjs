@@ -87,4 +87,13 @@ for (const [ai, failure, upstreamCode] of [[undefined, 'configuration'], [{run: 
   });
 }
 
+const overlapping = safeModerationResult();
+overlapping.answers.sexual.noul = 0.6; overlapping.answers.violence.noul = 0.7; overlapping.answers.adult.noul = 0.99;
+assert.deepEqual(moderationAssessment(overlapping).reasonCodes, ['adult', 'violence', 'sexual']);
+await assert.rejects(moderateSubject({...env, AI: {run: async () => overlapping}}, 'private input'), error => {
+  assert.deepEqual(error.reasonCodes, ['adult', 'violence', 'sexual']);
+  assert.match(error.message, /possible adult themes, violence or weapons/);
+  assert.ok(!error.message.includes('sexual content'), 'User copy leads with two strongest flags; diagnostics retain all categories.');
+  return true;
+});
 console.log('Moderation protocol tests passed (synthetic responses; no model calls).');
