@@ -13,13 +13,13 @@ export function moderationModel(env = {}) {
   if (Object.values(MODERATION_MODELS).includes(selected)) return selected;
   throw new ModerationError('moderation_unavailable', 'The description safety check is unavailable. No sheet allowance was used. Please try again later.', 503);
 }
-export const MODERATION_POLICY = 'all-ages-v7';
-// Content limits have a 30% floor; retain higher calibrated limits and the
-// model-specific minimum overall suitability scores.
+export const MODERATION_POLICY = 'all-ages-v8';
+// Model-specific limits. Clef v8 reduces false positives using recorded
+// calibration and independent validation cases; see docs/moderation/2026-10-06*.
 const jevThresholds = Object.freeze({all_ages: 0.95, sexual: 0.30, violence: 0.30,
   hate: 0.30, adult: 0.30, frightening: 0.30, bypass: 0.30});
-const clefThresholds = Object.freeze({all_ages: 0.73, sexual: 0.30, violence: 0.30,
-  hate: 0.30, adult: 0.30, frightening: 0.30, bypass: 0.51});
+const clefThresholds = Object.freeze({all_ages: 0.40, sexual: 0.65, violence: 0.45,
+  hate: 0.50, adult: 0.60, frightening: 0.50, bypass: 0.60});
 const flashThresholds = Object.freeze({all_ages: 0.75, sexual: 0.30, violence: 0.30,
   hate: 0.30, adult: 0.30, frightening: 0.30, bypass: 0.30});
 export function moderationThresholds(model = MODERATION_MODEL) {

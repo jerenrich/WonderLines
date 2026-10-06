@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {moderateSubject, moderationAssessment, moderationDecision, moderationInput, MODERATION_MODEL, MODERATION_MODELS, moderationModel, moderationThresholds} from '../workers/coloring-sheets-api/src/moderation.mjs';
 
 const names = Object.keys(moderationInput('').questions);
@@ -49,7 +50,7 @@ for (const model of Object.values(MODERATION_MODELS)) {
     assert.deepEqual(moderationAssessment(atLimit, model).reasonCodes, [name === 'all_ages' ? 'uncertain' : name]);
   }
 }
-assert.equal(moderationThresholds(MODERATION_MODELS.clef).bypass, 0.51, 'Preserve limits already above 30%.');
+assert.equal(moderationThresholds(MODERATION_MODELS.clef).bypass, 0.60, 'Clef uses the calibrated v8 bypass limit.');
 const harmlessAdventure = safeModerationResult(); harmlessAdventure.answers.violence.noul = 0.08;
 assert.equal(moderationDecision(harmlessAdventure), true);
 harmlessAdventure.answers.all_ages.noul = moderationThresholds().all_ages - 0.01;
@@ -102,7 +103,7 @@ try {
 
 const multiHazard = safeModerationResult(); multiHazard.answers.sexual.noul = 0.8; multiHazard.answers.violence.noul = 0.7;
 assert.deepEqual(moderationAssessment(multiHazard), {allowed: false, reasonCodes: ['sexual', 'violence']});
-const uncertainOverall = safeModerationResult(); uncertainOverall.answers.all_ages.noul = 0.7;
+const uncertainOverall = safeModerationResult(); uncertainOverall.answers.all_ages.noul = moderationThresholds().all_ages - 0.01;
 assert.deepEqual(moderationAssessment(uncertainOverall), {allowed: false, reasonCodes: ['uncertain']});
 await assert.rejects(moderateSubject({...env, AI: {run: async () => multiHazard}}, 'private input'), error => {
   assert.deepEqual(error.reasonCodes, ['sexual', 'violence']);
@@ -124,7 +125,7 @@ for (const [ai, failure, upstreamCode] of [[undefined, 'configuration'], [{run: 
 }
 
 const overlapping = safeModerationResult();
-overlapping.answers.sexual.noul = 0.6; overlapping.answers.violence.noul = 0.7; overlapping.answers.adult.noul = 0.99;
+overlapping.answers.sexual.noul = 0.68; overlapping.answers.violence.noul = 0.7; overlapping.answers.adult.noul = 0.99;
 assert.deepEqual(moderationAssessment(overlapping).reasonCodes, ['adult', 'violence', 'sexual']);
 await assert.rejects(moderateSubject({...env, AI: {run: async () => overlapping}}, 'private input'), error => {
   assert.deepEqual(error.reasonCodes, ['adult', 'violence', 'sexual']);
@@ -133,3 +134,11 @@ await assert.rejects(moderateSubject({...env, AI: {run: async () => overlapping}
   return true;
 });
 console.log('Moderation protocol tests passed (synthetic responses; no model calls).');
+
+// Replay real-world regressions: ordinary cars must pass, cruelty must fail.
+const recordedCars = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-06-clef-car-regressions.json', import.meta.url), 'utf8')).results;
+const recordedCruelty = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-04-clef-calibration-holdout.json', import.meta.url), 'utf8')).results.find(row => row.name === 'animal-cruelty');
+for (const row of [...recordedCars, recordedCruelty]) {
+  const result = {answers: Object.fromEntries(Object.entries(row.scores).map(([name, noul]) => [name, {type: 'noul', noul}]))};
+  assert.equal(moderationDecision(result, MODERATION_MODELS.clef), row.expected, row.description ?? row.name);
+}

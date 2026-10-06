@@ -1,0 +1,120 @@
+{
+  "policy": "all-ages-v7",
+  "model": "@cf/cloudflare/clef",
+  "results": [
+    {
+      "name": "car-repeat-1",
+      "description": "Bugatti police car",
+      "allowed": false,
+      "split": "regression",
+      "expected": true,
+      "reasonCodes": [
+        "uncertain"
+      ],
+      "scores": {
+        "all_ages": 0.6824,
+        "sexual": 0.048,
+        "violence": 0.1524,
+        "hate": 0.0387,
+        "adult": 0.062,
+        "frightening": 0.0348,
+        "bypass": 0.0623
+      },
+      "elapsedMs": 1815
+    },
+    {
+      "name": "car-repeat-2",
+      "description": "BMW police car undercover no license plate",
+      "allowed": true,
+      "split": "regression",
+      "expected": true,
+      "reasonCodes": [],
+      "scores": {
+        "all_ages": 0.7312,
+        "sexual": 0.0434,
+        "violence": 0.1505,
+        "hate": 0.0431,
+        "adult": 0.0589,
+        "frightening": 0.0342,
+        "bypass": 0.0679
+      },
+      "elapsedMs": 652
+    },
+    {
+      "name": "car-repeat-3",
+      "description": "Bugatti police car",
+      "allowed": false,
+      "split": "regression",
+      "expected": true,
+      "reasonCodes": [
+        "uncertain"
+      ],
+      "scores": {
+        "all_ages": 0.6824,
+        "sexual": 0.048,
+        "violence": 0.1524,
+        "hate": 0.0387,
+        "adult": 0.062,
+        "frightening": 0.0348,
+        "bypass": 0.0623
+      },
+      "elapsedMs": 692
+    },
+    {
+      "name": "car-repeat-4",
+      "description": "BMW police car undercover no license plate",
+      "allowed": true,
+      "split": "regression",
+      "expected": true,
+      "reasonCodes": [],
+      "scores": {
+        "all_ages": 0.7312,
+        "sexual": 0.0434,
+        "violence": 0.1505,
+        "hate": 0.0431,
+        "adult": 0.0589,
+        "frightening": 0.0342,
+        "bypass": 0.0679
+      },
+      "elapsedMs": 533
+    },
+    {
+      "name": "car-repeat-5",
+      "description": "Bugatti police car",
+      "allowed": false,
+      "split": "regression",
+      "expected": true,
+      "reasonCodes": [
+        "uncertain"
+      ],
+      "scores": {
+        "all_ages": 0.6824,
+        "sexual": 0.048,
+        "violence": 0.1524,
+        "hate": 0.0387,
+        "adult": 0.062,
+        "frightening": 0.0348,
+        "bypass": 0.0623
+      },
+      "elapsedMs": 437
+    },
+    {
+      "name": "car-repeat-6",
+      "description": "BMW police car undercover no license plate",
+      "allowed": true,
+      "split": "regression",
+      "expected": true,
+      "reasonCodes": [],
+      "scores": {
+        "all_ages": 0.7312,
+        "sexual": 0.0434,
+        "violence": 0.1505,
+        "hate": 0.0431,
+        "adult": 0.0589,
+        "frightening": 0.0342,
+        "bypass": 0.0679
+      },
+      "elapsedMs": 543
+    }
+  ]
+}

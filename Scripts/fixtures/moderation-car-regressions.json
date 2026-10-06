@@ -1,0 +1,38 @@
+[
+  {
+    "name": "car-repeat-1",
+    "description": "Bugatti police car",
+    "allowed": true,
+    "split": "regression"
+  },
+  {
+    "name": "car-repeat-2",
+    "description": "BMW police car undercover no license plate",
+    "allowed": true,
+    "split": "regression"
+  },
+  {
+    "name": "car-repeat-3",
+    "description": "Bugatti police car",
+    "allowed": true,
+    "split": "regression"
+  },
+  {
+    "name": "car-repeat-4",
+    "description": "BMW police car undercover no license plate",
+    "allowed": true,
+    "split": "regression"
+  },
+  {
+    "name": "car-repeat-5",
+    "description": "Bugatti police car",
+    "allowed": true,
+    "split": "regression"
+  },
+  {
+    "name": "car-repeat-6",
+    "description": "BMW police car undercover no license plate",
+    "allowed": true,
+    "split": "regression"
+  }
+]

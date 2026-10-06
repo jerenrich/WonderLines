@@ -27,7 +27,7 @@ const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-secre
     await new Promise(resolve => setTimeout(resolve, 5));
     if (unavailable) throw Error('private upstream text');
     const result = safeModerationResult();
-    if (reject) result.answers.all_ages.noul = 0.5;
+    if (reject) result.answers.all_ages.noul = 0.2;
     return result;
   }}};
 env.ACCOUNTS = new Namespace(Account, env); env.BUDGET = new Namespace(Budget, env);
@@ -80,7 +80,7 @@ try {
   assert.equal(rejectionAudit.gateway, 'test');
   assert.deepEqual(rejectionAudit.reasonCodes, ['uncertain']);
   assert.equal(logs.filter(log => log.batchID === rejectedBatch && log.event === 'moderation_gate').length, 3);
-  assert.equal(logs.find(log => log.batchID === rejectedBatch).scores.all_ages, 0.5);
+  assert.equal(logs.find(log => log.batchID === rejectedBatch).scores.all_ages, 0.2);
   assert.equal(logs.find(log => log.batchID === rejectedBatch).description, description);
   assert.ok(!JSON.stringify([...object.state.storage.values]).includes('scores'));
   unavailable = true;
