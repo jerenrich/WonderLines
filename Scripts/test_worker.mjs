@@ -228,12 +228,16 @@ try {
   let falAccount = falEnv.ACCOUNTS.objects.get(falIdentity.accountId);
   let submitted = 0, reads = 0, downloaded = 0, falState = 'IN_QUEUE', badSubmission = false, nsfw = false;
   let billingReported = false, billingReads = 0;
+  let billingGate = null, billingStarted = null;
+  let billingRequestsStarted = 0;
   let imageURL = 'https://fal.media/files/example/test.png', downloadFailure = false, unexpectedRedirect = false;
   const falPNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
   globalThis.fetch = async (url, init) => {
     assert.equal(init.redirect, 'manual');
     assert.ok(init.signal instanceof AbortSignal);
     if (url.startsWith('https://api.fal.ai/')) {
+      billingRequestsStarted++;
+      if (billingGate) { billingStarted?.(); await billingGate; }
       assert.equal(new Headers(init.headers).get('Authorization'), 'Key synthetic-fal-key');
       assert.equal(init.method, undefined);
       if (url.includes('/pricing?')) return Response.json({prices: [{endpoint_id: 'fal-ai/lora', unit_price: 0.001, unit: 'compute second', currency: 'USD'}]});
@@ -292,7 +296,31 @@ try {
   await falAccount.alarm(); assert.equal((await falGet(falID)).status, 202);
   falState = 'COMPLETED'; downloadFailure = true;
   await falAccount.alarm(); assert.equal((await falGet(falID)).status, 202);
-  downloadFailure = false; await falAccount.alarm();
+  downloadFailure = false;
+  // A completed image must be downloadable while optional billing requests hang.
+  let releaseBilling;
+  const billingBegan = new Promise(resolve => { billingStarted = resolve; });
+  billingGate = new Promise(resolve => { releaseBilling = resolve; });
+  const billingStartsBeforeCompletion = billingRequestsStarted;
+  const completing = falAccount.alarm();
+  await billingBegan;
+  let concurrentUsage;
+  try {
+    assert.equal((await falGet(falID)).status, 200, 'Billing must not hold an already saved image in processing.');
+    const ready = await falAccount.state.storage.get('job:' + falID);
+    assert.equal(ready.state, 'completed');
+    assert.equal(ready.fal.request.payload, undefined, 'The early completed record must not retain the prompt.');
+    assert.equal(submitted, 1, 'Reading during billing never generates another image.');
+    concurrentUsage = falAccount.usage({generationId: falID});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(billingRequestsStarted, billingStartsBeforeCompletion + 2,
+      'Concurrent completion and usage reads must share one pricing/billing lookup pair.');
+  } finally { releaseBilling(); }
+  await completing;
+  const concurrentMetrics = (await (await concurrentUsage).json()).metrics;
+  assert.deepEqual(concurrentMetrics, (await falAccount.state.storage.get('job:' + falID)).metrics,
+    'The usage response and persisted completion must retain the same enriched metrics.');
+  billingGate = null; billingStarted = null;
   response = await falGet(falID); assert.equal(response.status, 200);
   const falMetrics = JSON.parse(decodeURIComponent(response.headers.get('X-Generation-Metrics')));
   assert.equal(falMetrics.seed, 123); assert.equal(falMetrics.size, '1x1');
@@ -839,5 +867,77 @@ try {
   globalThis.fetch = async () => new Response('', {status: 403});
   const restricted = await falCostData({FAL_KEY: 'synthetic'}, 'test-job', 12.5);
   assert.equal(restricted.billingLookupStatus, 'http_403'); assert.equal(restricted.billableUnits, 12.5);
+  // v2 generation survives disappearance of the POST caller: only alarms invoke providers.
+  const durableEnv = {...nativeEnv, FREE_DAILY_ALLOWANCE: '100', IMAGE_MODEL_ROUTES: undefined, IMAGE_DEFAULT_MODEL: undefined};
+  durableEnv.ACCOUNTS = new Accounts(durableEnv);
+  durableEnv.BUDGET = new BudgetNamespace(durableEnv);
+  durableEnv.GENERATIONS = new Images();
+  const durableIdentity = await (await worker.fetch(new Request('https://example.test/v1/installations', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+  }), durableEnv)).json();
+  const durableAuth = {'Authorization': 'Bearer ' + durableIdentity.accessToken};
+  const durablePost = (id, model = 'gpt-image-2.5-sunburst') => worker.fetch(new Request('https://example.test/v1/generations', {
+    method: 'POST', headers: {...durableAuth, 'Content-Type': 'application/json', 'Idempotency-Key': id, 'X-Coloring-API-Version': '2'},
+    body: JSON.stringify({subject: 'Synthetic durable flower', model, width: 1456, height: 1024})
+  }), durableEnv);
+  const durableGet = id => worker.fetch(new Request('https://example.test/v1/generations/' + id, {headers: durableAuth}), durableEnv);
+  const durableAccount = durableEnv.ACCOUNTS.objects.get(durableIdentity.accountId);
+  let durableCalls = 0;
+  globalThis.fetch = async (_url, options) => {
+    durableCalls++;
+    if (String(_url).includes('workers-ai/flux')) assert.ok(options.body instanceof FormData);
+    return options.headers['Content-Type'] === 'application/json' && String(_url).includes('openai')
+      ? Response.json({data: [{b64_json: png}], usage: {input_tokens: 1, output_tokens: 2}})
+      : new Response(Buffer.from(png, 'base64'), {headers: {'Content-Type': 'image/png'}});
+  };
+  const durableIDs = Array.from({length: 3}, () => crypto.randomUUID());
+  assert.deepEqual((await Promise.all(durableIDs.map(id => durablePost(id)))).map(r => r.status), [202, 202, 202]);
+  assert.equal(durableCalls, 0, 'The POST must reserve only, independently of provider completion.');
+  assert.ok(durableAccount.state.storage.alarm);
+  const serializedQueue = JSON.stringify([...durableAccount.state.storage.values]);
+  assert.ok(!serializedQueue.includes('Authorization') && !serializedQueue.includes('synthetic-gateway-token'), 'Do not persist provider credentials.');
+  assert.equal((await durablePost(durableIDs[0])).status, 202);
+  assert.equal(durableCalls, 0, 'Repeated queued IDs cannot start extra images.');
+  const restarted = new Account(durableAccount.state, durableEnv);
+  durableEnv.ACCOUNTS.objects.set(durableIdentity.accountId, restarted);
+  await restarted.alarm();
+  assert.equal(durableCalls, 3, 'An alarm after restart completes all three disconnected jobs.');
+  for (const id of durableIDs) {
+    assert.equal((await durableGet(id)).status, 200);
+    assert.equal((await durablePost(id)).status, 200);
+    assert.equal((await restarted.state.storage.get('job:' + id)).imageTask, undefined, 'Remove terminal prompts.');
+  }
+  assert.equal(durableCalls, 3);
+  assert.equal((await restarted.access()).freeGenerationsRemaining, 97);
+  // Multipart Workers AI requests are reconstructed from the stored route without serializing FormData.
+  const nativeQueuedID = crypto.randomUUID();
+  assert.equal((await durablePost(nativeQueuedID, 'flux-2-klein-4b')).status, 202);
+  await restarted.alarm();
+  assert.equal((await durableGet(nativeQueuedID)).status, 200);
+  // A restarted alarm must not repeat a request which may already have been charged.
+  const ambiguousID = crypto.randomUUID(); await durablePost(ambiguousID);
+  const ambiguousJob = await restarted.state.storage.get('job:' + ambiguousID);
+  ambiguousJob.imageTask.stage = 'submitting';
+  await restarted.state.storage.put('job:' + ambiguousID, ambiguousJob);
+  const beforeAmbiguous = durableCalls;
+  await restarted.alarm();
+  assert.equal((await durableGet(ambiguousID)).status, 502);
+  assert.equal(durableCalls, beforeAmbiguous);
+  // Recover the image if R2 committed before the completion record did.
+  const savedBeforeCrashID = crypto.randomUUID(); await durablePost(savedBeforeCrashID);
+  const savingJob = await restarted.state.storage.get('job:' + savedBeforeCrashID);
+  savingJob.imageTask.stage = 'saving'; savingJob.metrics = {requestedModel: 'gpt-image-2.5-sunburst'};
+  await restarted.state.storage.put('job:' + savedBeforeCrashID, savingJob);
+  await durableEnv.GENERATIONS.put(durableIdentity.accountId + '/' + savedBeforeCrashID + '.png', Buffer.from(png, 'base64'));
+  await restarted.alarm();
+  assert.equal((await durableGet(savedBeforeCrashID)).status, 200);
+  assert.equal(durableCalls, beforeAmbiguous);
+  // Interrupted legacy jobs stop reporting processing forever.
+  const legacyID = crypto.randomUUID();
+  await restarted.state.storage.put('job:' + legacyID, {id: legacyID, state: 'processing', createdAt: Date.now() - 700000});
+  assert.equal((await durableGet(legacyID)).status, 502);
+  assert.equal((await (await durableGet(legacyID)).json()).error.code, 'provider_timeout');
+  assert.equal((await durableGet(crypto.randomUUID())).status, 404);
+  console.log('PASS: durable v2 alarms, disconnected batches, restart recovery, native multipart reconstruction, no credential persistence, no repeated paid requests, saved R2 handoff recovery, and terminal legacy jobs; no network.');
 } finally { globalThis.fetch = originalFetch; console.info = originalInfo; }
 console.log('PASS: registration/renewal, expiry/revocation, retained accounts and jobs, generation, concurrent reservations, idempotency, service/personal budgets, AI Gateway BYOK modes, model routing, Gemini PNG/metrics, all nine Workers AI routes, multipart/JSON inputs, binary/base64 PNG conversion, size fitting, terminal provider failures, fal queue alarms, restart recovery, three-sheet batches, daily rollover and hard 100-image caps, uncertain submissions, CDN validation and trial limits; no network.');

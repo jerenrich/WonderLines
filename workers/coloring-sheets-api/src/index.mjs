@@ -104,7 +104,7 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); }
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); }
   async fetch(request) {
     const input = await request.json().catch(() => null), path = new URL(request.url).pathname;
     if (!input || request.method !== 'POST') return fail('invalid_request', 'Send JSON.', 400);
@@ -217,7 +217,7 @@ export class Account {
     const usage = await this.state.storage.get('usage'), credits = (await this.state.storage.get('credits')) ?? 0;
     return {features: [], generationCredits: credits, freeGenerationsRemaining: Math.max(0, allowance - (usage?.day === day ? usage.used : 0)), allowanceResetsAt: new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString()};
   }
-  async reserve({generationId, fingerprint, falTask}) {
+  async reserve({generationId, fingerprint, falTask, imageTask}) {
     if (!/^[0-9a-f-]{36}$/.test(generationId) || typeof fingerprint !== 'string') return fail('invalid_request', 'Invalid generation.', 400);
     const jobKey = 'job:' + generationId, existing = await this.state.storage.get(jobKey);
     if (existing) return existing.fingerprint === fingerprint ? reply({job: existing, access: await this.access()}) : fail('idempotency_conflict', 'Generation ID was already used.', 409);
@@ -231,12 +231,13 @@ export class Account {
     await this.state.storage.put('usage', {day, used: used + 1});
     if (used >= allowance) await this.state.storage.put('credits', --credits);
     const job = {id: generationId, fingerprint, state: 'processing', createdAt: Date.now(),
-      ...(falTask ? {fal: {...falTask, stage: 'queued'}} : {})};
-    if (falTask) {
+      ...(falTask ? {fal: {...falTask, stage: 'queued'}} : {}),
+      ...(imageTask ? {imageTask: {...imageTask, stage: 'queued'}} : {})};
+    if (falTask || imageTask) {
       // Job and alarm commit together; a disconnected POST cannot strand a queue submission.
       await this.state.storage.transaction(async storage => {
         await storage.put(jobKey, job);
-        await storage.put('fal:' + generationId, generationId);
+        await storage.put((falTask ? 'fal:' : 'image:') + generationId, generationId);
         await storage.setAlarm(Date.now() + 1000);
       });
     } else await this.state.storage.put(jobKey, job);
@@ -244,13 +245,69 @@ export class Account {
   }
   async alarm() {
     const pending = await this.state.storage.list({prefix: 'fal:', limit: 5});
-    if (!pending.size) return;
+    const images = await this.state.storage.list({prefix: 'image:', limit: 3});
+    if (!pending.size && !images.size) return;
     // Schedule a watchdog before network IO. Alarm retries only poll recorded IDs;
     // they must never repeat an ambiguous submission after a crash.
     await this.state.storage.setAlarm(Date.now() + 30000);
-    await Promise.all([...pending.values()].map(id => this.advanceFal(id)));
-    if ((await this.state.storage.list({prefix: 'fal:', limit: 1})).size) {
+    const outcomes = await Promise.allSettled([
+      ...[...pending.values()].map(id => this.advanceFal(id)),
+      ...[...images.values()].map(id => this.advanceImage(id))
+    ]);
+    if (outcomes.some(result => result.status === 'rejected')) throw new Error('Queued generation persistence failed');
+    if ((await this.state.storage.list({prefix: 'fal:', limit: 1})).size ||
+        (await this.state.storage.list({prefix: 'image:', limit: 1})).size) {
       await this.state.storage.setAlarm(Date.now() + 5000);
+    }
+  }
+  async advanceImage(id) {
+    const job = await this.state.storage.get('job:' + id);
+    if (!job || job.state !== 'processing') { await this.state.storage.delete('image:' + id); return; }
+    const account = await this.state.storage.get('account');
+    const objectKey = account.id + '/' + id + '.png';
+    const finishFailure = async (code, message) => {
+      await this.complete({generationId: id, result: {state: 'failed', errorCode: code, message}});
+      await this.state.storage.delete('image:' + id);
+    };
+    if (job.imageTask.stage !== 'queued') {
+      // An alarm can run again after eviction/crash. Recover an already saved PNG,
+      // but never repeat an ambiguous paid request.
+      if (job.imageTask.stage === 'saving' && await this.env.GENERATIONS.get(objectKey)) {
+        await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics: job.metrics}});
+        await this.state.storage.delete('image:' + id);
+      } else {
+        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. Generation may have been charged; check usage before generating again.');
+      }
+      return;
+    }
+    let request;
+    try { request = imageRequest(this.env, job.imageTask.route, job.imageTask.subject, job.imageTask.size); }
+    catch {
+      await finishFailure('provider_unavailable', 'Image provider configuration changed before the queued sheet could start. No provider request was sent.');
+      return;
+    }
+    job.imageTask.stage = 'submitting';
+    await this.state.storage.put('job:' + id, job);
+    try {
+      const result = await runImageRequest(request);
+      const metrics = {requestedModel: job.imageTask.publicModel, provider: request.provider, upstreamModel: request.model,
+        viaGateway: request.viaGateway, requestedSize: job.imageTask.size.width + 'x' + job.imageTask.size.height,
+        size: result.size, inputTokens: result.inputTokens, textInputTokens: result.textInputTokens ?? null,
+        imageInputTokens: result.imageInputTokens ?? null, outputTokens: result.outputTokens, totalTokens: result.totalTokens,
+        elapsedMs: Date.now() - job.createdAt, ...imageCost(request, result)};
+      job.imageTask.stage = 'saving';
+      job.metrics = metrics;
+      await this.state.storage.put('job:' + id, job);
+      await this.env.GENERATIONS.put(objectKey, result.image, {httpMetadata: {contentType: 'image/png'}});
+      await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics}});
+      await this.state.storage.delete('image:' + id);
+    } catch (error) {
+      if (job.imageTask.stage === 'saving') {
+        // Keep the watchdog alive to check whether the R2 write committed.
+        throw error;
+      }
+      await finishFailure(error instanceof ImageProviderError ? error.code : 'result_save_failed',
+        error instanceof ImageProviderError ? error.message : 'The generated image could not be saved. Generation may have been charged.');
     }
   }
   async advanceFal(id) {
@@ -307,7 +364,16 @@ export class Account {
       }
     }
   }
-  async job({generationId}) { const job = await this.state.storage.get('job:' + generationId); return job ? reply({job, access: await this.access()}) : fail('not_found', 'Generation not found.', 404); }
+  async job({generationId}) {
+    let job = await this.state.storage.get('job:' + generationId);
+    if (job?.state === 'processing' && !job.fal && !job.imageTask && Date.now() - job.createdAt > 600000) {
+      // Old synchronous requests cannot finish indefinitely after disconnection.
+      await this.complete({generationId, result: {state: 'failed', errorCode: 'provider_timeout',
+        message: 'This earlier request was interrupted before its image was saved. Generation may have been charged; check usage before generating again.'}});
+      job = await this.state.storage.get('job:' + generationId);
+    }
+    return job ? reply({job, access: await this.access()}) : fail('not_found', 'Generation not found.', 404);
+  }
   async recordFalUsage(job) {
     const request = job.fal.request;
     const costData = await falCostData(this.env, job.fal.requestID, job.metrics?.billableUnits, job.createdAt);
@@ -326,27 +392,48 @@ export class Account {
     console.info(JSON.stringify(audit));
   }
   async usage({generationId}) {
-    const job = await this.state.storage.get('job:' + generationId);
+    let job = await this.state.storage.get('job:' + generationId);
     if (!job) return fail('not_found', 'Generation not found.', 404);
     if (job.fal && job.state !== 'processing' && job.metrics?.costStatus !== 'reported' &&
         (!job.metrics?.costCheckedAt || Date.now() - Date.parse(job.metrics.costCheckedAt) > 60000)) {
-      if (job.state === 'completed' && job.metrics?.billableUnits == null) {
+      job = await this.updateFalUsage(job, true);
+    }
+    return reply({generationId, status: job.state, metrics: job.metrics ?? null});
+  }
+  async updateFalUsage(job, refreshBillableUnits = false) {
+    const existing = this.usageUpdates.get(job.id);
+    if (existing) return existing;
+    const update = (async () => {
+      if (refreshBillableUnits && job.state === 'completed' && job.metrics?.billableUnits == null) {
         job.metrics = {...job.metrics, billableUnits: await falBillableUnits(this.env, job.fal.requestID)};
       }
       await this.recordFalUsage(job);
-      await this.state.storage.put('job:' + generationId, job);
-    }
-    return reply({generationId, status: job.state, metrics: job.metrics ?? null});
+      delete job.fal.request.payload;
+      await this.state.storage.put('job:' + job.id, job);
+      return job;
+    })();
+    this.usageUpdates.set(job.id, update);
+    try { return await update; }
+    finally { this.usageUpdates.delete(job.id); }
   }
   async complete({generationId, result}) {
     const k = 'job:' + generationId, job = await this.state.storage.get(k);
     if (!job || job.state !== 'processing') return fail('not_found', 'Generation not found.', 404);
     Object.assign(job, result, {completedAt: Date.now()});
-    if (job.fal?.request) {
-      await this.recordFalUsage(job);
-      delete job.fal.request.payload;
+    // Publish the saved image before optional billing network lookups. Readers
+    // must not keep receiving "processing" while pricing/billing services stall.
+    const ready = structuredClone(job);
+    if (ready.fal?.request) {
+      ready.metrics = {...ready.metrics,
+        imageCount: ready.fal.request.payload?.num_images ?? ready.metrics?.imageCount ?? 1,
+        inferenceSteps: ready.fal.request.payload?.num_inference_steps ?? ready.metrics?.inferenceSteps ?? 30};
+      delete ready.fal.request.payload;
     }
-    await this.state.storage.put(k, job);
+    if (ready.imageTask) delete ready.imageTask;
+    await this.state.storage.put(k, ready);
+    // Completion and concurrent usage reads share one update, so a slow lookup
+    // cannot overwrite newer billing metadata or duplicate external requests.
+    if (ready.fal?.request) await this.updateFalUsage(ready);
     return reply({access: await this.access()});
   }
 }
@@ -401,11 +488,13 @@ async function generate(request, env, account) {
   }
   const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint,
     ...(upstreamRequest.provider === 'fal' ? {falTask: {request: upstreamRequest, publicModel: model,
-      requestedSize: size.width + 'x' + size.height}} : {})});
+      requestedSize: size.width + 'x' + size.height}} :
+      request.headers.get('X-Coloring-API-Version') === '2'
+        ? {imageTask: {route: catalog.routes[model], subject, size, publicModel: model}} : {})});
   if (reservation.status === 429) return reply(reservation.value, 429);
   if (reservation.status >= 400) return fail('generation_unavailable', 'Could not start generation.', reservation.status);
   if (reservation.status === 200 || reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
-  if (upstreamRequest.provider === 'fal') return saved(env, reservation.value.job, reservation.value.access);
+  if (upstreamRequest.provider === 'fal' || reservation.value.job.imageTask) return saved(env, reservation.value.job, reservation.value.access);
   try {
     const started = Date.now(), result = await runImageRequest(upstreamRequest);
     const {image, size: actualSize, inputTokens, textInputTokens, imageInputTokens, outputTokens, totalTokens} = result;

@@ -66,10 +66,10 @@ struct ContentView: View {
             startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea())
         .tint(accent)
         .preferredColorScheme(.light)
-        .task { await store.refreshUnfinishedSheets() }
+        .task { await store.enteredForeground() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { store.enteredBackground() }
-            if phase == .active { Task { await store.refreshUnfinishedSheets() } }
+            if phase == .active { Task { await store.enteredForeground() } }
         }
         .sheet(item: $export, onDismiss: cleanExport) { item in
             switch item.kind {
@@ -372,7 +372,7 @@ struct ContentView: View {
                     // the keyboard collapse its canvas. Keep the selection while editing.
                     TabView(selection: Binding(
                         get: { store.selectedResultID },
-                        set: { if !descriptionFocused { store.selectedResultID = $0 } })) {
+                        set: { if !descriptionFocused { store.selectResult(id: $0) } })) {
                         ForEach(Array(store.results.enumerated()), id: \.element.id) { index, result in
                             Image(uiImage: result.image).resizable().scaledToFit()
                                 .frame(width: page.width, height: page.height)
