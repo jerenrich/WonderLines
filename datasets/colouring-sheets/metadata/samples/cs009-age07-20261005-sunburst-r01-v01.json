@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "cs009-age07-20261005-sunburst-r01-v01",
+  "collection_id": "wonderlines-colouring-sheets-v1",
+  "description_id": "cs009",
+  "age_target": 7,
+  "age_band": "ages-06-08",
+  "composition": "side",
+  "variant": 1,
+  "run_id": "20261005-sunburst-r01",
+  "status": "generated",
+  "created_at": "2026-10-05T22:10:45.688Z",
+  "generated_at": "2026-10-05T22:25:55.854Z",
+  "provider": "openai",
+  "model_id": "gpt-image-2.5-sunburst",
+  "model_revision": null,
+  "guidance_version": "app-2026-10-05-v1",
+  "description": "Whale swimming through a coral reef",
+  "complexity_guidance": "simple clear outlines, large enclosed coloring areas, several objects, light background detail.",
+  "subject_prompt": "Whale swimming through a coral reef\n\nComplexity: simple clear outlines, large enclosed coloring areas, several objects, light background detail.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "effective_prompt": "Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: Whale swimming through a coral reef\n\nComplexity: simple clear outlines, large enclosed coloring areas, several objects, light background detail.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "negative_prompt": null,
+  "requested_parameters": {
+    "width": 1456,
+    "height": 1024,
+    "seed": null,
+    "quality": "low",
+    "output_format": "png",
+    "n": 1
+  },
+  "reported_parameters": {
+    "requested_model": "gpt-image-2.5-sunburst",
+    "upstream_model": "gpt-image-2.5-sunburst",
+    "via_gateway": true
+  },
+  "image": {
+    "raw_path": "images/raw/20261005-sunburst-r01/age-07/cs009-age07-20261005-sunburst-r01-v01.png",
+    "curated_path": null,
+    "sha256": "e3ac37b5e91c67b30a66db91102dd6a94b2871e41b44f6e0720b3a8111de1ac6",
+    "width": 1456,
+    "height": 1024,
+    "media_type": "image/png"
+  },
+  "failure_reason": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "checks": {
+      "prompt_adherence": "pending",
+      "enclosed_colouring_areas": "pending",
+      "no_unwanted_shading_or_text": "pending",
+      "age_complexity": "pending",
+      "print_quality": "pending"
+    },
+    "notes": [],
+    "caption": null
+  },
+  "split": "unassigned",
+  "worker": {
+    "service_url": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+    "account_index": 1,
+    "generation_id": "d17121a5-9657-47e3-a9db-2177a6333894",
+    "batch_id": "d203dc2c-cd73-4e3c-b26c-b4952d947df4",
+    "submitted_at": "2026-10-05T22:25:42.452Z",
+    "http_status": 200,
+    "error_code": null,
+    "metrics": {
+      "requestedModel": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "upstreamModel": "gpt-image-2.5-sunburst",
+      "viaGateway": true,
+      "requestedSize": "1456x1024",
+      "size": "1456x1024",
+      "inputTokens": 116,
+      "textInputTokens": 116,
+      "imageInputTokens": 0,
+      "outputTokens": 154,
+      "totalTokens": 270,
+      "elapsedMs": 12465,
+      "estimatedInputUsd": 0.00058,
+      "estimatedOutputUsd": 0.00462,
+      "estimatedTotalUsd": 0.0052,
+      "ratesChecked": "2026-09-23",
+      "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+    },
+    "effective_prompt_source": "Reconstructed from hashed local Worker source; API does not echo the provider prompt."
+  }
+}

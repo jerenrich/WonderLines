@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "cs008-age16-20261005-sunburst-r01-v01",
+  "collection_id": "wonderlines-colouring-sheets-v1",
+  "description_id": "cs008",
+  "age_target": 16,
+  "age_band": "ages-13-18",
+  "composition": "side",
+  "variant": 1,
+  "run_id": "20261005-sunburst-r01",
+  "status": "generated",
+  "created_at": "2026-10-05T22:10:45.688Z",
+  "generated_at": "2026-10-05T22:34:24.816Z",
+  "provider": "openai",
+  "model_id": "gpt-image-2.5-sunburst",
+  "model_revision": null,
+  "guidance_version": "app-2026-10-05-v1",
+  "description": "Squirrel having tea in a treehouse",
+  "complexity_guidance": "intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene.",
+  "subject_prompt": "Squirrel having tea in a treehouse\n\nComplexity: intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "effective_prompt": "Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: Squirrel having tea in a treehouse\n\nComplexity: intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "negative_prompt": null,
+  "requested_parameters": {
+    "width": 1456,
+    "height": 1024,
+    "seed": null,
+    "quality": "low",
+    "output_format": "png",
+    "n": 1
+  },
+  "reported_parameters": {
+    "requested_model": "gpt-image-2.5-sunburst",
+    "upstream_model": "gpt-image-2.5-sunburst",
+    "via_gateway": true
+  },
+  "image": {
+    "raw_path": "images/raw/20261005-sunburst-r01/age-16/cs008-age16-20261005-sunburst-r01-v01.png",
+    "curated_path": null,
+    "sha256": "20e2c8617469c1904468c64dd898fbc0fc4535946eea3ff1a00cc6eb374d39ff",
+    "width": 1456,
+    "height": 1024,
+    "media_type": "image/png"
+  },
+  "failure_reason": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "checks": {
+      "prompt_adherence": "pending",
+      "enclosed_colouring_areas": "pending",
+      "no_unwanted_shading_or_text": "pending",
+      "age_complexity": "pending",
+      "print_quality": "pending"
+    },
+    "notes": [],
+    "caption": null
+  },
+  "split": "unassigned",
+  "worker": {
+    "service_url": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+    "account_index": 3,
+    "generation_id": "5914de8f-b136-482a-a5bd-57d128593000",
+    "batch_id": "e0b73a3e-81fb-45ac-8166-bd6cbc6e22cf",
+    "submitted_at": "2026-10-05T22:34:09.558Z",
+    "http_status": 200,
+    "error_code": null,
+    "metrics": {
+      "requestedModel": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "upstreamModel": "gpt-image-2.5-sunburst",
+      "viaGateway": true,
+      "requestedSize": "1456x1024",
+      "size": "1456x1024",
+      "inputTokens": 120,
+      "textInputTokens": 120,
+      "imageInputTokens": 0,
+      "outputTokens": 154,
+      "totalTokens": 274,
+      "elapsedMs": 14189,
+      "estimatedInputUsd": 0.0006,
+      "estimatedOutputUsd": 0.00462,
+      "estimatedTotalUsd": 0.00522,
+      "ratesChecked": "2026-09-23",
+      "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+    },
+    "effective_prompt_source": "Reconstructed from hashed local Worker source; API does not echo the provider prompt."
+  }
+}

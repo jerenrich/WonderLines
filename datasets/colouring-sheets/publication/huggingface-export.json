@@ -1,0 +1,28 @@
+{
+  "export_id": "20261005-sunburst-r01-huggingface-v1",
+  "run_id": "20261005-sunburst-r01",
+  "split_seed": "wonderlines-subject-splits-v1",
+  "validation_subjects": 3,
+  "test_subjects": 2,
+  "balanced_samples_per_subject_band": 3,
+  "expected_samples": 400,
+  "expected_subjects": 25,
+  "expected_age_targets": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  "expected_age_band_counts": {
+    "ages-03-05": 75,
+    "ages-06-08": 75,
+    "ages-09-12": 100,
+    "ages-13-18": 150
+  },
+  "include_pending_review": true,
+  "license": "cc-by-4.0",
+  "attribution_name": "WonderLines",
+  "creator_name": "Jordan Erenrich",
+  "repository_id": "jerenrich/wonderlines-colouring-sheets",
+  "project_url": "https://jerenrich.github.io/WonderLines/",
+  "source_repository_url": "https://github.com/jerenrich/WonderLines",
+  "preview": {
+    "source_path": "previews/20261005-sunburst-r01/band-overview.jpg",
+    "export_path": "assets/band-overview.jpg"
+  }
+}

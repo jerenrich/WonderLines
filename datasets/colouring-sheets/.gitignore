@@ -1,0 +1,11 @@
+# Raw generations and packaged exports can be large. Keep the placeholders.
+/images/raw/*
+!/images/raw/.gitkeep
+/exports/*
+!/exports/.gitkeep
+
+# Store local generation credentials outside the tracked records.
+/private/
+
+# Local Python tooling caches.
+__pycache__/

@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "cs005-age16-20261005-sunburst-r01-v01",
+  "collection_id": "wonderlines-colouring-sheets-v1",
+  "description_id": "cs005",
+  "age_target": 16,
+  "age_band": "ages-13-18",
+  "composition": "side",
+  "variant": 1,
+  "run_id": "20261005-sunburst-r01",
+  "status": "generated",
+  "created_at": "2026-10-05T22:10:45.688Z",
+  "generated_at": "2026-10-05T22:34:09.476Z",
+  "provider": "openai",
+  "model_id": "gpt-image-2.5-sunburst",
+  "model_revision": null,
+  "guidance_version": "app-2026-10-05-v1",
+  "description": "Octopus playing the drums",
+  "complexity_guidance": "intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene.",
+  "subject_prompt": "Octopus playing the drums\n\nComplexity: intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "effective_prompt": "Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: Octopus playing the drums\n\nComplexity: intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "negative_prompt": null,
+  "requested_parameters": {
+    "width": 1456,
+    "height": 1024,
+    "seed": null,
+    "quality": "low",
+    "output_format": "png",
+    "n": 1
+  },
+  "reported_parameters": {
+    "requested_model": "gpt-image-2.5-sunburst",
+    "upstream_model": "gpt-image-2.5-sunburst",
+    "via_gateway": true
+  },
+  "image": {
+    "raw_path": "images/raw/20261005-sunburst-r01/age-16/cs005-age16-20261005-sunburst-r01-v01.png",
+    "curated_path": null,
+    "sha256": "352e346e246c4870083766ffaa0170d5e72b6dfd675a34014d005c7ab350413a",
+    "width": 1456,
+    "height": 1024,
+    "media_type": "image/png"
+  },
+  "failure_reason": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "checks": {
+      "prompt_adherence": "pending",
+      "enclosed_colouring_areas": "pending",
+      "no_unwanted_shading_or_text": "pending",
+      "age_complexity": "pending",
+      "print_quality": "pending"
+    },
+    "notes": [],
+    "caption": null
+  },
+  "split": "unassigned",
+  "worker": {
+    "service_url": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+    "account_index": 3,
+    "generation_id": "73f0624f-0107-495a-83d4-a8adcdb48002",
+    "batch_id": "00e4af11-788d-4ef9-85b3-85ad6743a696",
+    "submitted_at": "2026-10-05T22:33:53.302Z",
+    "http_status": 200,
+    "error_code": null,
+    "metrics": {
+      "requestedModel": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "upstreamModel": "gpt-image-2.5-sunburst",
+      "viaGateway": true,
+      "requestedSize": "1456x1024",
+      "size": "1456x1024",
+      "inputTokens": 117,
+      "textInputTokens": 117,
+      "imageInputTokens": 0,
+      "outputTokens": 154,
+      "totalTokens": 271,
+      "elapsedMs": 14202,
+      "estimatedInputUsd": 0.000585,
+      "estimatedOutputUsd": 0.00462,
+      "estimatedTotalUsd": 0.0052049999999999996,
+      "ratesChecked": "2026-09-23",
+      "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+    },
+    "effective_prompt_source": "Reconstructed from hashed local Worker source; API does not echo the provider prompt."
+  }
+}

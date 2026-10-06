@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WonderLines colouring sheet sample",
+  "description": "One planned, submitted, generated, failed or uncertain image attempt. Null means unknown or not yet applicable. Paths are relative to the collection directory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "sample_id", "collection_id", "description_id", "age_target", "age_band",
+    "composition", "variant", "run_id", "status", "created_at", "generated_at", "provider", "model_id",
+    "model_revision", "guidance_version", "description", "complexity_guidance", "subject_prompt",
+    "effective_prompt", "negative_prompt", "requested_parameters", "reported_parameters", "image",
+    "failure_reason", "review", "split"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "sample_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "collection_id": {"const": "wonderlines-colouring-sheets-v1"},
+    "description_id": {"type": "string", "pattern": "^cs(00[1-9]|01[0-9]|02[0-5])$"},
+    "age_target": {"type": "integer", "minimum": 3, "maximum": 18},
+    "age_band": {"enum": ["ages-03-05", "ages-06-08", "ages-09-12", "ages-13-18"]},
+    "composition": {"enum": ["side", "front", "wide", "close", "elevated"]},
+    "variant": {"type": "integer", "minimum": 1},
+    "run_id": {"$ref": "#/$defs/nullableText"},
+    "status": {"enum": ["planned", "submitted", "generated", "failed", "uncertain"]},
+    "created_at": {"$ref": "#/$defs/nullableTimestamp"},
+    "generated_at": {"$ref": "#/$defs/nullableTimestamp"},
+    "provider": {"$ref": "#/$defs/nullableText"},
+    "model_id": {"$ref": "#/$defs/nullableText"},
+    "model_revision": {"$ref": "#/$defs/nullableText"},
+    "guidance_version": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "complexity_guidance": {"type": "string", "minLength": 1},
+    "subject_prompt": {"type": "string", "minLength": 1},
+    "effective_prompt": {"$ref": "#/$defs/nullableText"},
+    "negative_prompt": {"$ref": "#/$defs/nullableText"},
+    "requested_parameters": {
+      "type": "object",
+      "description": "The parameters actually requested, including any provider-specific controls.",
+      "required": ["width", "height", "seed"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "seed": {"type": ["integer", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "reported_parameters": {"type": "object", "description": "Only parameters actually reported by the provider; omit unknown values."},
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_path", "curated_path", "sha256", "width", "height", "media_type"],
+      "properties": {
+        "raw_path": {"$ref": "#/$defs/nullablePath"},
+        "curated_path": {"$ref": "#/$defs/nullablePath"},
+        "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "width": {"type": ["integer", "null"], "minimum": 1},
+        "height": {"type": ["integer", "null"], "minimum": 1},
+        "media_type": {"enum": ["image/png", "image/jpeg", "image/webp", null]}
+      }
+    },
+    "failure_reason": {"$ref": "#/$defs/nullableText"},
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewed_at", "checks", "notes", "caption"],
+      "properties": {
+        "status": {"enum": ["pending", "accepted", "rejected"]},
+        "reviewed_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prompt_adherence", "enclosed_colouring_areas", "no_unwanted_shading_or_text", "age_complexity", "print_quality"],
+          "properties": {
+            "prompt_adherence": {"$ref": "#/$defs/checkResult"},
+            "enclosed_colouring_areas": {"$ref": "#/$defs/checkResult"},
+            "no_unwanted_shading_or_text": {"$ref": "#/$defs/checkResult"},
+            "age_complexity": {"$ref": "#/$defs/checkResult"},
+            "print_quality": {"$ref": "#/$defs/checkResult"}
+          }
+        },
+        "notes": {"type": "array", "items": {"type": "string"}},
+        "caption": {"$ref": "#/$defs/nullableText"}
+      }
+    },
+    "split": {"enum": ["unassigned", "train", "validation", "test"]},
+    "worker": {
+      "type": "object",
+      "description": "Public Worker request IDs, response status, provenance and usage metrics; no credentials.",
+      "additionalProperties": false,
+      "required": ["service_url", "account_index", "generation_id", "batch_id", "submitted_at", "http_status", "error_code", "metrics", "effective_prompt_source"],
+      "properties": {
+        "service_url": {"type": "string", "format": "uri"},
+        "account_index": {"type": "integer", "minimum": 0, "maximum": 3},
+        "generation_id": {"type": "string", "format": "uuid"},
+        "batch_id": {"type": "string", "format": "uuid"},
+        "submitted_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "http_status": {"type": ["integer", "null"], "minimum": 100, "maximum": 599},
+        "error_code": {"$ref": "#/$defs/nullableText"},
+        "metrics": {"type": ["object", "null"]},
+        "effective_prompt_source": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"age_target": {"maximum": 5}}}, "then": {"properties": {"age_band": {"const": "ages-03-05"}}}},
+    {"if": {"properties": {"age_target": {"minimum": 6, "maximum": 8}}}, "then": {"properties": {"age_band": {"const": "ages-06-08"}}}},
+    {"if": {"properties": {"age_target": {"minimum": 9, "maximum": 12}}}, "then": {"properties": {"age_band": {"const": "ages-09-12"}}}},
+    {"if": {"properties": {"age_target": {"minimum": 13}}}, "then": {"properties": {"age_band": {"const": "ages-13-18"}}}}
+  ],
+  "$defs": {
+    "nullableText": {"type": ["string", "null"], "minLength": 1},
+    "nullableTimestamp": {"type": ["string", "null"], "format": "date-time"},
+    "nullablePath": {"type": ["string", "null"], "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "checkResult": {"enum": ["pending", "pass", "fail"]}
+  }
+}

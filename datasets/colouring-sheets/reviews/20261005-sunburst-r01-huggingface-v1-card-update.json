@@ -1,0 +1,22 @@
+{
+  "repo_id": "jerenrich/wonderlines-colouring-sheets",
+  "url": "https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets",
+  "commit_sha": "a85d6c6b841091259a2de5adb75d959b7c0d4d69",
+  "commit_url": "https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets/commit/a85d6c6b841091259a2de5adb75d959b7c0d4d69",
+  "updated_at": "2026-10-06T06:06:05.998552+00:00",
+  "changed_files": [
+    "README.md",
+    "ATTRIBUTION.md",
+    "export-manifest.json",
+    "assets/band-overview.jpg"
+  ],
+  "creator_name": "Jordan Erenrich",
+  "project_url": "https://jerenrich.github.io/WonderLines/",
+  "source_repository_url": "https://github.com/jerenrich/WonderLines",
+  "preview_path": "assets/band-overview.jpg",
+  "remote_verified": true,
+  "verified_files": 417,
+  "images": 400,
+  "configurations": 5,
+  "visibility": "public"
+}

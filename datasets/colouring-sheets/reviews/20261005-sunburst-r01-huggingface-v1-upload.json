@@ -1,0 +1,15 @@
+{
+  "repo_id": "jerenrich/wonderlines-colouring-sheets",
+  "url": "https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets",
+  "private": true,
+  "export_id": "20261005-sunburst-r01-huggingface-v1",
+  "commit_sha": "c6fd3ac7995b01b28270b928e6ccf094d6a04f44",
+  "commit_url": "https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets/commit/c6fd3ac7995b01b28270b928e6ccf094d6a04f44",
+  "uploaded_at": "2026-10-06T05:54:26.352999+00:00",
+  "images": 400,
+  "files": 416,
+  "license": "cc-by-4.0",
+  "remote_verified": true,
+  "source_export_manifest_sha256": "10930b463fdf04865a4b05f9d633aa8b9ea1eb7861200c839b3bdaa210ff8f27",
+  "verified_files": 416
+}

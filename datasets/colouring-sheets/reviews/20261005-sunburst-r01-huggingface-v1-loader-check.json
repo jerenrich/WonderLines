@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "datasets_version": "5.1.0",
+  "configurations": {
+    "all": {
+      "train": 320,
+      "validation": 48,
+      "test": 32
+    },
+    "ages-03-05": {
+      "train": 60,
+      "validation": 9,
+      "test": 6
+    },
+    "ages-06-08": {
+      "train": 60,
+      "validation": 9,
+      "test": 6
+    },
+    "ages-09-12": {
+      "train": 80,
+      "validation": 12,
+      "test": 8
+    },
+    "ages-13-18": {
+      "train": 120,
+      "validation": 18,
+      "test": 12
+    }
+  },
+  "images_loaded_and_hashed": 400,
+  "balanced_samples": 300,
+  "subject_leakage": false,
+  "caption_status": "prompt-derived-unverified",
+  "training_ready_count": 0,
+  "uploaded": false
+}

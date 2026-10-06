@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "guidance_version": "app-2026-10-05-v1",
+  "source_files": [
+    "ColoringSheets/Views/ContentView.swift",
+    "ColoringSheets/Core/Generation.swift",
+    "workers/coloring-sheets-api/src/composition.mjs",
+    "workers/coloring-sheets-api/src/image-provider.mjs"
+  ],
+  "age_slider": {
+    "minimum": 3,
+    "maximum": 18,
+    "step": 1
+  },
+  "age_bands": [
+    {
+      "id": "ages-03-05",
+      "minimum": 3,
+      "maximum": 5,
+      "complexity": "very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail."
+    },
+    {
+      "id": "ages-06-08",
+      "minimum": 6,
+      "maximum": 8,
+      "complexity": "simple clear outlines, large enclosed coloring areas, several objects, light background detail."
+    },
+    {
+      "id": "ages-09-12",
+      "minimum": 9,
+      "maximum": 12,
+      "complexity": "moderately detailed outlines, varied medium coloring areas, several objects and a detailed background."
+    },
+    {
+      "id": "ages-13-18",
+      "minimum": 13,
+      "maximum": 18,
+      "complexity": "intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene."
+    }
+  ],
+  "composition_views": {
+    "side": "side view, full subject in profile",
+    "front": "front view, subject facing the viewer",
+    "wide": "wide view, smaller subject within its surroundings",
+    "close": "close view, subject filling most of the page, no cropping",
+    "elevated": "elevated view, looking down at the scene"
+  },
+  "subject_template": "{description}\n\nComplexity: {complexity}\n\nComposition preference: {composition_view}. Preserve the subject; explicit user instructions take priority.",
+  "subject_limit_utf16_units": 500,
+  "standard_provider_prefix": "Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: ",
+  "standard_negative_prompt": "color, shading, grayscale, gradients, shadows, photographs, text, letters, watermarks",
+  "provider_note": "This is a snapshot of the standard app guidance, not an API request. Provider-specific adapters may use different wrappers and parameters; record the effective prompt and the negative prompt actually sent for each image."
+}

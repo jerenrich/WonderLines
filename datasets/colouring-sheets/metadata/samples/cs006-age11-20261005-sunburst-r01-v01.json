@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "cs006-age11-20261005-sunburst-r01-v01",
+  "collection_id": "wonderlines-colouring-sheets-v1",
+  "description_id": "cs006",
+  "age_target": 11,
+  "age_band": "ages-09-12",
+  "composition": "side",
+  "variant": 1,
+  "run_id": "20261005-sunburst-r01",
+  "status": "generated",
+  "created_at": "2026-10-05T22:10:45.688Z",
+  "generated_at": "2026-10-05T22:29:31.159Z",
+  "provider": "openai",
+  "model_id": "gpt-image-2.5-sunburst",
+  "model_revision": null,
+  "guidance_version": "app-2026-10-05-v1",
+  "description": "Robot watering flowers",
+  "complexity_guidance": "moderately detailed outlines, varied medium coloring areas, several objects and a detailed background.",
+  "subject_prompt": "Robot watering flowers\n\nComplexity: moderately detailed outlines, varied medium coloring areas, several objects and a detailed background.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "effective_prompt": "Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: Robot watering flowers\n\nComplexity: moderately detailed outlines, varied medium coloring areas, several objects and a detailed background.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "negative_prompt": null,
+  "requested_parameters": {
+    "width": 1456,
+    "height": 1024,
+    "seed": null,
+    "quality": "low",
+    "output_format": "png",
+    "n": 1
+  },
+  "reported_parameters": {
+    "requested_model": "gpt-image-2.5-sunburst",
+    "upstream_model": "gpt-image-2.5-sunburst",
+    "via_gateway": true
+  },
+  "image": {
+    "raw_path": "images/raw/20261005-sunburst-r01/age-11/cs006-age11-20261005-sunburst-r01-v01.png",
+    "curated_path": null,
+    "sha256": "60f4a4f04b621c6d87146d226db6faf5845938d215712d9eedd6b08a96925b54",
+    "width": 1456,
+    "height": 1024,
+    "media_type": "image/png"
+  },
+  "failure_reason": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "checks": {
+      "prompt_adherence": "pending",
+      "enclosed_colouring_areas": "pending",
+      "no_unwanted_shading_or_text": "pending",
+      "age_complexity": "pending",
+      "print_quality": "pending"
+    },
+    "notes": [],
+    "caption": null
+  },
+  "split": "unassigned",
+  "worker": {
+    "service_url": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+    "account_index": 2,
+    "generation_id": "dd2d50e4-0ead-44fc-9053-56fa5cac6033",
+    "batch_id": "1a1f3e53-b891-4b0c-a59e-7c34900e61d6",
+    "submitted_at": "2026-10-05T22:29:17.552Z",
+    "http_status": 200,
+    "error_code": null,
+    "metrics": {
+      "requestedModel": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "upstreamModel": "gpt-image-2.5-sunburst",
+      "viaGateway": true,
+      "requestedSize": "1456x1024",
+      "size": "1456x1024",
+      "inputTokens": 113,
+      "textInputTokens": 113,
+      "imageInputTokens": 0,
+      "outputTokens": 154,
+      "totalTokens": 267,
+      "elapsedMs": 12520,
+      "estimatedInputUsd": 0.000565,
+      "estimatedOutputUsd": 0.00462,
+      "estimatedTotalUsd": 0.005185,
+      "ratesChecked": "2026-09-23",
+      "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+    },
+    "effective_prompt_source": "Reconstructed from hashed local Worker source; API does not echo the provider prompt."
+  }
+}

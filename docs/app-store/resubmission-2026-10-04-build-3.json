@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "build": "3",
+  "source_commit": "78018a3412ea88b8b716e85589ff24af893e5bbb",
+  "release_settings_and_privacy_commit": "cf1a528",
+  "archive": "/private/tmp/WonderLinesResubmit/WonderLines-1.0-3.xcarchive",
+  "configuration": "Release, live service",
+  "tests": {
+    "executed": 49,
+    "skipped": 3,
+    "failures": 0,
+    "worker": "passed",
+    "batch_moderation": "passed",
+    "configuration": "passed"
+  },
+  "privacy_policy": "https://jerenrich.github.io/WonderLines/privacy.html",
+  "privacy_publication": "verified",
+  "upload_status": "succeeded; Xcode reports Upload succeeded and EXPORT SUCCEEDED",
+  "review_submission_status": "Waiting for Review",
+  "original_submission": "76e4aec3-d175-4425-9989-8fd79696755b cancelled to replace build 2",
+  "note": "Resubmission receipt verified against App Store Connect. Archive contains source at 78018a3 with CURRENT_PROJECT_VERSION changed to 3. Existing listing assets and declarations retained; reviewer notes appended to explain build 3 changes. This receipt is not a full metadata baseline.",
+  "upload_completed_at": "2026-10-04T22:09:44+01:00",
+  "upload_log": "/private/tmp/wonder-resubmit-upload.log",
+  "submission_id": "3e4788e0-34da-4282-9ee0-9b6356271868",
+  "submission_url": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/3e4788e0-34da-4282-9ee0-9b6356271868",
+  "submitted_at_displayed": "Oct 4, 2026 at 10:18 PM",
+  "submitted_at_london": "2026-10-04T22:18+01:00",
+  "build_app_store_connect_id": "f24f7c8d-8573-4b5c-a7aa-9da08121b0b2",
+  "encryption_declaration": "None of the algorithms mentioned above; explicitly confirmed by owner before saving",
+  "release_mode": "Automatically release this version",
+  "evidence": [
+    "build-3-submitted.png",
+    "build-3-submission-evidence.txt"
+  ]
+}

@@ -1,0 +1,2897 @@
+{
+  "export_id": "20261005-sunburst-r01-huggingface-v1",
+  "run_id": "20261005-sunburst-r01",
+  "format": "huggingface-imagefolder",
+  "sample_count": 400,
+  "image_bytes": 645235002,
+  "unique_hashes": 400,
+  "age_band_counts": {
+    "ages-03-05": 75,
+    "ages-06-08": 75,
+    "ages-09-12": 100,
+    "ages-13-18": 150
+  },
+  "split_counts": {
+    "test": 32,
+    "train": 320,
+    "validation": 48
+  },
+  "configuration_split_counts": {
+    "ages-03-05": {
+      "test": 6,
+      "train": 60,
+      "validation": 9
+    },
+    "ages-06-08": {
+      "test": 6,
+      "train": 60,
+      "validation": 9
+    },
+    "ages-09-12": {
+      "test": 8,
+      "train": 80,
+      "validation": 12
+    },
+    "ages-13-18": {
+      "test": 12,
+      "train": 120,
+      "validation": 18
+    }
+  },
+  "balanced_count": 300,
+  "balanced_age_band_counts": {
+    "ages-03-05": 75,
+    "ages-06-08": 75,
+    "ages-09-12": 75,
+    "ages-13-18": 75
+  },
+  "balanced_split_counts": {
+    "test": 24,
+    "train": 240,
+    "validation": 36
+  },
+  "subject_split_assignment": {
+    "cs001": "train",
+    "cs002": "train",
+    "cs003": "train",
+    "cs004": "train",
+    "cs005": "train",
+    "cs006": "train",
+    "cs007": "train",
+    "cs008": "train",
+    "cs009": "train",
+    "cs010": "train",
+    "cs011": "train",
+    "cs012": "train",
+    "cs013": "train",
+    "cs014": "test",
+    "cs015": "train",
+    "cs016": "validation",
+    "cs017": "test",
+    "cs018": "train",
+    "cs019": "train",
+    "cs020": "train",
+    "cs021": "validation",
+    "cs022": "validation",
+    "cs023": "train",
+    "cs024": "train",
+    "cs025": "train"
+  },
+  "split_seed": "wonderlines-subject-splits-v1",
+  "training_ready_count": 0,
+  "license": "cc-by-4.0",
+  "attribution_name": "WonderLines",
+  "creator_name": "Jordan Erenrich",
+  "project_url": "https://jerenrich.github.io/WonderLines/",
+  "source_repository_url": "https://github.com/jerenrich/WonderLines",
+  "preview": {
+    "file_name": "assets/band-overview.jpg",
+    "sha256": "0ecc1907ad59a85fd5c16f7674565b42970f2cd57b16a330e5348f81f05d5ae7",
+    "purpose": "dataset-card contact sheet; excluded from dataset configurations"
+  },
+  "license_sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+  "image_processing": "none; byte-identical copies",
+  "source_record_updates": "none",
+  "rows": [
+    {
+      "sample_id": "cs001-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs001-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "92d7c57477049859c532d6af55bed0c05cff697ac0e9aaeae855636c1c1ff11b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs001-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "e9ca2bdb2e82d1fbd64ac5136e21c3c9e935dfa417f4c8b27c0e6c399ccedad7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs001-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "3081aa9dd15501601880a3ece0c8174244dbe6b47786b4af0c140816e44146a5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs001-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "f5db091d55aa383909eb477a4bd06d5af4a1ae1d07b4c179a64b11e357ceb5d5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs001-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "3d0e8b4d17ebe6289a1d73eacd286cd6237542d6d3a1b7f9c8bab4908cf50537",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs001-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "fd764dc31ac528d2800e225933d6a696bb82e974be5cc2d4ea9f35a9c7b66cae",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs001-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "66d7e1415f004b6b5c6477a3bdd6944bc20e2d42acd864f78050cf67a7b73bb4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs001-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "c1d020cd1b6b8f06566aef8d27b0ea6ad1b82378ed571334fb8e91cc74a6934c",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs001-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs001-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "8671e560558dbde92b36da092edfec3138a05fe117bfe338a38889f38f6755d4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs001-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "fc87449f600dcbcce629099444f7bcc1a4e48250f99361671a20b34a06fdffcd",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs001-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "f3db0fbe16325147e115046bca07d8c7f0985568db0f8dc3e4b7a80ddcd30913",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs001-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs001-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "b078d8d40a9ecd12cc30b16e4a94f3e94b1136412ae85e998d22d5ba17b4a466",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs001-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs001-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "68c272fd6f01f2882479a48bbe8623baec9c7268893af23f500d163de2a85996",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs001-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "1e065365c21d7b80e24b3ad39349558cb3b110ce45362b7b9008618eba2f2fe6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs001-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs001-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "562a24fcc7ec41c1e689c140d61fc6f9e2b070a8b97a91e74eec4446eda62712",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs001-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs001-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "1a6c182aeb97e46f7d349084f411234e2592658eca0045fac60f42c0145a9d2b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs002-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "321e090c29c970f1eada620fd41f59950610328a7fbdf3f27d8f28b5cbafb64b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs002-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "b2a30f7e0c5dd93f5b43cbfeda323402a1c2f2aa792716a5b2f7e08f45c6de06",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs002-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "46920cbcdb82696f37f8e74c150fb9fb1f98980e22010de818adf3b793044d9e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs002-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "c6f19003992b5e33f9aa9743c9f06c261ab7184ed5429ba77880eec55b9bbd09",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs002-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "99cad0d222c4fc4ea7f1920f66741b8b6eb85ebdc24ebcfa80877e6d7456a7b1",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs002-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "f59566b0b99a442727401999140ad41ff867fe0bdbf0e642294a63f960bafc61",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs002-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "36029c37d41dc75ff54b5fb18cd37f232f56107455c804463943bccac1fb2845",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs002-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "efe8d8f217cfe330551c59f2e79bbdd7b8e5edecddb0b704895065ca501899c2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs002-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "0eab7e475354263e0c7f1e84943eda6becafcf5d80f90b743e113a37ff3a6177",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs002-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs002-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "350f2aef0589c904be6cc6755469617faeaa93f562cc57d0556b941b19cb5654",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs002-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "82e58365e231f3f0ab02d269686e2b44eb4f0ee6262c4064e667856ea5cdeec7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs002-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "6ad45134bf4d6bff1612b9e7bd3911dda7e3924a82cf32e60964750dea10d439",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs002-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs002-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "2ddffadfdb848eb88f01bd3a15a45fad6e9583b5fbd0da4cacb70c773e35204d",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs002-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs002-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "cc97ecaca5b5563a67d3f5d7002faa57d3b7e79ed02d97edc97f33dfbb269833",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs002-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs002-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "48ad2a229e6d1146601ea78277c173e532f586cd395e246d2f3ad33fa9406f63",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs002-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs002-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "c04df7483df70fd33916f976fe77190224a37e442d3f9dddece07fdc1baa8503",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs003-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "2e2520d680abea9f4b2615a3efdff7ea6b562b8b9eb94138022ca5b0352f2d4f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs003-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "4ce15b17cbf8f91aa28ba8e70f3ae2a2b1646e9dc14ff85b50c8e5b75bef8f10",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs003-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "234e4c8b8b546d4a0f88bdeec04f5202c500c1bea7941559a5980f9675fa703b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs003-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "8781f5af10971968fedd7b7b5d45dd8edb3e46b408e470e2834c71d342dbdcb8",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs003-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "d7c5c785c14248f44fd251760f9ca998d6be91c92a566720179ac233e2aa8965",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs003-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "03f2176d97c7b6240bdaaddb0d292181a6ebd34b9f9e50dfa757fc9ad532915a",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs003-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "4bbb5401cdfba30c7bcc6dffa825aec471741b4ae783777b110ff55bddcf933f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs003-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "8d0e0417d6b799ec6bd787c740cfa55a22fc6b498ed7a11ff0e3baef7e5b844d",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs003-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "64d16bcfeb7bf3f9ea9ad9d566a982ddc552efe5db517d7de8e1811ea4cf9bfa",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs003-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "7778f269985a21d1526f26266839909df5744e232855ea0296f78bd72ce202e8",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs003-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs003-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "5aee83fd4307d1af905cdd057132ba9673655b3f98fbdf97ffdbf4406bf35dcf",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs003-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs003-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "f2ddf8a166d2fb26d7b33cd0091a0a4a49a72d9d8e287c6fd72973d4b6c13746",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs003-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "b71ae1bb3c561695a3c4bfe4a6c6839ec248b50e82b4f13ed0cc459011d58d0e",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs003-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs003-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "8a3c5f82b73dfdb57b87065e942bb09364b7c1274176cdd7a304109193387982",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs003-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs003-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "ffbf82ed41177893ef0c94382636accf40f1eec308e00cf1c984f292b16cf05e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs003-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs003-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "3074d76f143e6ceee704149f43d88ff5436fe589c4b29bd16324e739229490ac",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs004-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "99adc4104e54ee3694ab61269ccad11348eecd3be0d228629f70bbd8bf938841",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs004-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "7452b9845e9011c6d70b9c0a97ae670b2f3d9813f83044ed29a4f4fa3f8f3b68",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs004-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "61cf1c7beeed278f040054b74010b00adc21bdfcee21ac2c131e3a3ccc718ce0",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs004-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "c35d7fe41095f0d4ac156aec4699fe57fc02588b3a2947dd3c576c5143fffd7c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs004-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "9e116c12b7080430608f4dc39cc9a9a5e7e7d23d8bf8574491402f78a2f61102",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs004-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "09c9ee5d070060dc6a0a1d57fe934e2da0b97e5da040c80a495b0cc50fb9cbb7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs004-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "06dac4f75d9db9ceebdcb4d0b236894751b2d1c1428406fa69dbe5681cee07ee",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs004-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "abad13585257d8c0e7666e1235886e4814b9f9d93217e4ee81d73dd19f3fe089",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs004-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs004-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "4955817fbbf1de4b97392d6fffd38a6ac78b98f3217b6d6addb7674b923d87b3",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs004-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "de76a270fa1a25ddc10b1d8bb3279c5ac4d5b34ddc61bf5b06c1c229a3e7f3ff",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs004-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "eb8339be1151504822f0f4c5e6ea7a5dc3bc3142d3df64f330688c3f8296f84f",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs004-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs004-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "542b844ff86cce6f844a3cbcbefa169e96912c0af52e2daec678f9a961754592",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs004-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs004-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "21d987dbef2fc65d020a653aaf16e8300918df0532a1b7343c78579271179370",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs004-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "dc18eb5c5639e05efb71bed1a151935e02a639a5c610add9a049ccdfe72e4366",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs004-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "535fb1b0a3a53877f06b3b2793753694013e8952fc881db0869f357edf8c90f2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs004-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs004-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "01e451cf3a0059f43802e4b500964ac1e2ee5c4511f79f5fa2eb106f226d890f",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs005-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs005-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "3d704325d61629631e63b09e50485a984c47af91ef0de96b26b61c3b4b2254af",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs005-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "bb3b6f24021dc734278fdbf30ddb27a1a285dd336d67b017e27f400409ba9cd0",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs005-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "c414547443da01080714ad5b9f66a5e123d44d096b617c4435a5de5a480ead1b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs005-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "077554c8f9ba22909d5503311a7d6892308dc6ebf1ee9e9d0e43b01079edd0f5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs005-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "9513e0cbf2ead11a1e91685251d616fc9e5d4509c4f218d9c1bb2aa046cec5c4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs005-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "fb60dc40d93d0744adfc3c8eb4c89d61b34b6b13ed86117350ad242a1a71ae54",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs005-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "9358615c83f6f59c99a174cd28877b52250ed276830c337f76f0a36e80c93224",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs005-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "97e14ee42d80ec7bed1cca2ebd7e185e3c5b59cf5c0472f064b56a6739ecf468",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs005-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "964278da17c50d45265e762ee036ad76e262fef4dce78d5589eead11adb6df9d",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs005-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs005-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "6eee70ab40ef647fc85197ff09cff4bae4b54840c69af6bdf566b7623f75fa67",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs005-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "67da06ce42e6ef94cb2c06b79bbe5f0661e9fdaa4046cb660d1f0b4f90f29eff",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs005-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs005-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "b918dbd8a6de05a204be4b1a452ece6d9aad41f5141485f7c5cc3cf17ccda7e7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs005-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "4a4dbffaeceee1de013d94e5f9238c7f46e60988156ef9c89f6c11c577fe0d56",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs005-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs005-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "352e346e246c4870083766ffaa0170d5e72b6dfd675a34014d005c7ab350413a",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs005-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs005-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "1ff610be3d8660796c89cfe3d7284ccf7de9aece92178f4ca06aa8e653dbc4dd",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs005-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs005-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "c94e576062355c30207e00d549de588dc9f6d5df194138b147f28ab85e47f7cd",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs006-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "443f07d65b4201cd99759f7338de3d58c9797038cac342cc999a5af4f91a6a2b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs006-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "9d1d3f9e96f948981572849014d913870297d50725538a83fd9c6830e36aef90",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs006-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "cd2023508f197dd446eaea477eabc31c71824973324288277464108d959ceb09",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs006-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "816dbd7687a3b63cc6a1097a40300b4c7ef1cddca43b210a07be664e47f883a5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs006-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "90a7f7983469183f7e5a302ae750c174684d3bc081aa2d95ad31414b7a58958b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs006-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "3eb848c1e422bc65ba549f448617390a8312127fe692853ee86b71ed47f3d6a1",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs006-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "e3b12fdf52d13acceb60748fa4c9a67d90c5565cd9f878c9a8fa493254e922c6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs006-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "4aad9bb345a12900d583249ec446f091f17168a700c29a70b3210a658943ac6a",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs006-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs006-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "60f4a4f04b621c6d87146d226db6faf5845938d215712d9eedd6b08a96925b54",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs006-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "99f1b34edb11a1ad73c87e0ef5522b9c1868f15d41777acca9ccbb5c3ee36f37",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs006-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "aa78e0fd2cf18a0fe35e5b04ffc24134613a102a34bba6502a6379807473ff8e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs006-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "f43fb6ecc51d8d9775785a49f1c224616118f689f78856ed1a8ac76b7545e2a2",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs006-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs006-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "590f04352dd373f3c896af70beb46fc449f14d08b4b464230a32b1e456ceac9c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs006-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "31a1db308c9856173917bb7c79e72ac420c8b14c167d311f200782e88c898891",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs006-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs006-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "da1cecdd6a535e1d45a0877a9360b85ba01cffc74ae30405ef21824bd3c594cd",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs006-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs006-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "77a627ef097fb07927867fd1d3e82743c48612f66471c6bfe2a02ba91b79b8da",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs007-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs007-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "a3ed343de5d73e1185cbc4a8235a55095ee5e4a6e82a394e1af18c197b4182e8",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs007-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "b03f4147b18d5bcbd2bf005fc121f56fa851c7154b1ff3dad8cd553e56a37dc5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs007-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "baae0aefd589839c9acd523abade4f3caf1169173e8783744d9565ebc52f6ad6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs007-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "936174eab35e1c16cce1bfe9a4f3b5a22dba74b1cd6df2e4b507b5d69fa827dd",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs007-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "6d26bd80ec99e97b5a8c5fc796ea43832bb33301f7a57fb2ddb07edffdc04535",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs007-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "c63a6ac95ba7b5f4004a16430ba8b315e6cec7fbe9904a47347e4c6c30c3b461",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs007-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "50e23042d6a49517d118f579727f00557639061b2222f089e81df371731a9d89",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs007-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "48e861e0496b22160b0b32e8e2db55f2d2a93cea3979285e90d29b0609b8284f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs007-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "8db894daaddb44d5dcd29adbec50d7e069680129d54118ca21aa57608e829374",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs007-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "4fa66f75e69775700d928ce271a101d64003fcbb3435c8965b20c7db6984b7a5",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs007-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs007-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "114f1459eac644116c3c47af715e366846abf9235f9077a6c47e1c6427541787",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs007-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs007-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "8309f31866035cc758d34521ee18868c9c10832e61be7ff5470c60a800e64f07",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs007-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs007-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "3f683c45e36ae0746dd9f3c7297f86145b278ecfdea3bc191dd5b0aa4b46976c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs007-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "a45670cb3b0f954147397d3491d2e4173f5cf287d30d374bd03b5ef4f8b384b0",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs007-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "67e41db165fe43e35756470f7005a3a4789794baa076318d30d9f9ebe901b07c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs007-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs007-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "d8e8cf961a7181fc8787b6b3cb2e0ed4a3f0bb6e5f9a43cfd39cba5dd8715df9",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs008-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs008-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "e073a6c68cc808083746e4e0f647d623230507e2ffac40fa1db7c3cd3bdeb965",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs008-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "cb85b19168945ebf17285dbfd302e2927fc30c1234708df41c39f2f772035c1f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs008-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "3c2ea89e1bcbfb4063bda19f44c4d5729eb109013f8cd8dcb1f020f45333d417",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs008-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "cc275d9c07382fdc58102faea15ea8b27ffaa9d743b6945e2aa7fb38e6203f42",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs008-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "5219a1744b10e631e309b169d826dacd806bda92b385859e03df728420d8ac6d",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs008-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "7c397f6b1c223762fe56b3e8c77efeb73823a989e1f0b8019f186cd47c3c15c9",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs008-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "986dde1139d411f6ba00e9061c343b10c9b63f9032a1384dfa3ea937c09ab96c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs008-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "1cfc839b34b8cae89db6102c6c8d2ab345aa905e51bdf2cbde072ddd5e122587",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs008-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "53e547cef5b0bf0e4c6c59ad62476a882c605d0ae0910477765b6689b82f50a9",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs008-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "99fa65836047637a423d75ad03cc3ed74a204aca8b6482db3a110e9a9d53f4e2",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs008-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs008-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "a8aaf479cc155148fe61089a0204bb85c1ac919da3752ec99348f8a3608fe9ed",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs008-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "6f29b370af806f55e762d9df17e857c3d899a37bd5eb744cd7036a43e90e5c59",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs008-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs008-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "deaa115735f8ecf3e329f9c4305f4b5ca3fa4ce4a3e3ca21dc4ed5dbeda17bf2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs008-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "20e2c8617469c1904468c64dd898fbc0fc4535946eea3ff1a00cc6eb374d39ff",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs008-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs008-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "ef5e3928e40e6b098bb7e248552f49f9e5a73c68e8baccd91d5ce8c0197a08e4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs008-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs008-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "829789282e81563672528b03edcf2ca5ec2d7cd2e157d0b19d06de0d04225eed",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs009-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs009-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "d891624051812467fb8b3e6b63974106b5bdaa557ed3db22f8a531f702c8e06f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs009-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "0a9d27e5bdbd128b4e1f450b5b7a96da6875c4be9cecc64269375258ea6a21db",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs009-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "e6423b1f8ac1308f5cbfacb9ddad42dd30610b9062042b61325a42fd0a1a1b0a",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs009-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "61b43d50bf74a213a5407536509ee8128b353587737a9a8b750d3c5df7985107",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs009-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "e3ac37b5e91c67b30a66db91102dd6a94b2871e41b44f6e0720b3a8111de1ac6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs009-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "c6b963696ddcfe703c3d43acba2fbaca44bf34276ebba2ce74a7536addab1127",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs009-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "c49c3adccccaa20b92d82f33f61bd17cdee443e28a56de2987e4fe858630bf14",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs009-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "c787d38c2bcecb427286d59d75190e4fb57148d7147776266f99766282336c00",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs009-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "a72533a2adb8e78a377e30b1f97a99e74217ae2e83a407594d1e89a63460cd36",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs009-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "a4bc20850b3602e8e50903ccadcc253367adb7ed69c5201dc5df0ff0acb60be0",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs009-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs009-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "aba4eb266b345b85aa24a494d0712aa09c5c626111438680502d70a1f91be68a",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs009-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "08d81d647290d7bdea9f2d67cab9fc89dd189464a2ad5f85ab4a3566bd6e4d3a",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs009-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs009-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "9fe2fab9116253031f4f66d0ef7a6f7ab93678bd891214065c872193b6f08957",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs009-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "114d583c1e994588e0f7a0afdfb7c7ce5aa04d863e8c1ce915b423bb7633dcb1",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs009-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs009-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "c1a6e055d056ce15c07b56daf7571e6dcd31d855dd3a34821f927f4e8f953cd2",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs009-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs009-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "de5392fe2291f273fc27f94f5e0a285d8c78c3b39f476311b42df9986283eac3",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs010-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs010-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "e3d5f90dec541b0f13442f54e9d28f4967db416fcd21e81a626aafb0edfe1989",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs010-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "1552a83867e478e5d3f261665e11e074ccd929191a7ca2d307ef2578ad26208e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs010-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "d5342c7d2d998f249473cf1eddb9f67a7b3989a7bdb0190e440763c539ca6a25",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs010-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "670d5bb3dd63da53e8c564e838fd3055e33763afd6d8c926007e3e9a2a648937",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs010-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "796669b679a07ca52bc0a25332d7ce10acccd8c5738e7336126d49c6404aefc2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs010-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "1b06dfce3ad24a29e1e925ce452415458499d3592e5da7618099aa10634af3d8",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs010-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "fe74fc0767af43a61ef1cdf926d51cedb2708ced06d09e48d46b41d2f2e76eb5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs010-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "568300a928d202c734632c2bcd7602d6aeb6435507b4a7d34b553d2b7ee4012d",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs010-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs010-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "ba8ce2f62dbc3f350b0d6a489848931bb4e3c3c7c536954c3bd6991b8e785779",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs010-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "f80f8a4017354e52ce08a236b468a1895c9472adb14cc4d3c0434b4938722196",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs010-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "085b8bbf79b5005ef9fcd8a632f5fcde54b830fdede84d4e64d59eaf8c9f3e56",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs010-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs010-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "a36e7933c1aed889e504a5405fb884ea4204d7402a851fe38c8b1b1fcbdf80a4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs010-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "de156fd8e4fe00d630a77083965c4def09a9e8d6716d5bb663691cedba9c7fea",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs010-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "3c3d315aa69fd4fc55a482c02da9538037a7176c910b675e8dcf9261f64af5ac",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs010-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs010-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "e72ff2270e5a102f21b5bf3c4a2e343d16e9687b89658c1dcd06aa3325b73e59",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs010-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs010-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "31bd8db5aba6baaf79ab15a0f9e9d9c6b2c04af9df553456478caa25dbd867b0",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs011-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs011-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "21fc24eaf10847d5aa67b0d18d974f0d4afbd07708c25a7feeb9ef3f82ccddfd",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs011-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "e5f4584c3d1eff8627791f53c897a1d5cd98d4aba213bff076008071b7cb21bd",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs011-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "518cdcf6b3dd543efbcb01f6ede2eefd33526eb2a41a164a920d9e71e606b7f4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs011-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "71cfe2ea3058722b0973e07e8dde8f46619f665678185dec12ace8c2b6b91cda",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs011-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "848f448405ecbc72b9b4c83383153f50026dc2915d03d238641761b9289ca047",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs011-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "3ce3bb6990e422d47ad65ab726f81b191f58f36de3f8116d77e3e7d78e2d7ceb",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs011-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "4fbf94516f7f7a579df35c47ee5fa4ffdae3716dcad21f32c09aa1f256834bd5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs011-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "69c9b61287d2f2941aad9cdd4830b9689e000b3130ffa8135a0d60fe80b6d367",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs011-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "60820f876b843ad07c57b1741d9dfdcfcb86d58bf2201713ab98c2931e6e198e",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs011-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs011-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "ea9102be501caf8c80da6d380afe397f5c395b264312fabc0ad664ef008ac00c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs011-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "2bbc5a42fbe8963e4726ef9e6bcd065519dac710d395bc3da3f7ff8d98a0f245",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs011-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs011-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "acb6cf71f26506bd33428a60d101f524a32361269c7b44b9821a11160c013593",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs011-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "424b10165dbe707fe3ec7af8ad2434ec434ba74e06e03ca28770919df8e0e55a",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs011-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs011-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "e2fc6bf6e1cc327661c515c39c3dfc82ccb91ec098db0e8c16bb63fa903828fe",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs011-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs011-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "f61f80d995039c35931568b05f99d542e4501f58acb857ee57d4d1971ac459d0",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs011-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs011-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "88ba6eee9643f4831eaee13c058bd87fa0ab24294cf012ff16bc2e4279df5e6d",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs012-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "3ee59a1aa46a00d97c55087ab29bae69f4fec6120cd45a2bc74643592da4b7e7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs012-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "32334c729506febba00f22511809e45d62774d93715f9866abeaf6d0dbf6566c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs012-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "066aad748996056e9e98e2b8821608a7e2c944b9fdcd3742a65deb1d554168ed",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs012-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "0fd1434d6fff08627ab2f4a932deccb0f2f07ad97f094ea17c75b116f6fcefaa",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs012-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "54095911d2d802cbd28f6a64117c7ed178dbfba2a2faa21186da959c5d7b12ae",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs012-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "06ab5fd29b16ac4dd7479c95e585a9f6486197c311f5fd230475ff6f5318706f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs012-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "a59331b48cec19dc410b8cb9a38521309af033b261a362a83af29e4d0c9ed4d4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs012-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "adbc5f4a921a34fee5d9b0138edb67ad5c18fcae2aa3b32f9ce96456ff5766d4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs012-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "4553d13b5f49d7e1e3c745c7b83f3fc4d0ad8e901bc2e45e8afad5959475b817",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs012-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "34767c074915535d8fd577fb3118f278a6663354b5b638721ba372636e352f61",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs012-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs012-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "c6af5d4d23a0cc1fa7adc05721f77e926f4b61fc23ecb9dae765b63b324232f7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs012-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "5a01ff1a3c6dc6875a00b4ce9a5e6d607425ca880b47a3ace17b705db48d9bbf",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs012-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs012-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "2ae490882fe2fee8f4674dca884ca3a42250c893908aaae701ca7098ec553c91",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs012-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "2fb85694d62f38327287004a6c87193219f0b8c053828b36adf18063badc4836",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs012-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs012-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "a6c8836305376e8e34aa02951612c10591c5eff195d98954cf650a1088f1ef0a",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs012-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs012-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "3e9d3bc576ffc64a969fe18c882df9dafb055675fdbdcc5b9647e67628c55448",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs013-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs013-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "2efedb8902c715bcbc4e2373c5d6e7e490bc264b61b86cc5ef3c11fe184ea34b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs013-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "6cf85c356d5e97674e0c661c8a50f327bd56f1d0b29f49db00e6613ffbb50aa4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs013-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "356711aa3fb1b64983eeba5eb3bcffecf2d3100ad55e2e007fccd598699df604",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs013-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "cfe274d8831a47dbd30a765a4388088bd3d84accac6c5bd52dd780651d400857",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs013-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "e3ed991f018c22c10ec95cf3eda81acab15ec929d5d20fbc45566696c522bfea",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs013-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "ba863f8bf9cb7e67c0176cfe7b087e2bdcb55abfbfabcd855ef868bd2ddd4349",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs013-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "698992f3ee09b6af495d580ea23ba5ce5b9c2cc66bfcc27ed53808c68efc29e0",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs013-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs013-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "7ffafa149b258bcfb15a99c916dd7c975d520959327ee41141fd4625f3507351",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs013-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "fe4743a79ac6b191b20ec9ea1bbc075f03634110fd5af239431249ecd9003fee",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs013-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "0e7e09851da4758a0a4b64c093450c122965e9c12ed040cf27a0221c5e4d959b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs013-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "e95cac4e618b21a7401e19885231fcc04a3dcfb6baedc9a26f7bb074d695e999",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs013-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "7b981945729acec04c1ac0892078399dc029a694dbfcad1b847871ea17052ff1",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs013-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "62e8ba6c74b59a621af6701380e2537890297f8557b32c4f74eb43710bc0eb59",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs013-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs013-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "9e0b250a500a8a307f085ae346c15fd5a7d6224bd363d36e2c69a3d8b703b686",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs013-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs013-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "ff2642a4e5a74d7cab80354e3fc9be27f95628073d1142911b3072552e5f89de",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs013-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs013-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "4dc1dc0e410cab8d0c096a8fea6fd324da66616b1ef02a854445386c2494f1a1",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs014-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/test/cs014-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "be7e26fdc63421f0be3bd8f3291d678f51837c4674cfc50ee45b54809133df6f",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/test/cs014-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "2701c36dac8143f3a9a2a6b353081d83e953701c3551b03eae95004d2315eebc",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/test/cs014-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "dc6d52dde70d34f47d47ac2445196cbdb62ce9e71612fad8790eed5082f3597f",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/test/cs014-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "db1d54bb0f533fe6a37bc57f1dd8c87a63363effdb0a9f183b43d62e0f686eeb",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/test/cs014-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "81d88643458cbca11b3c849f7d77213805d05de7dfcc1ea4b0697e8db8237850",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/test/cs014-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "81cb98d56a97e2d371bff57f1482dc4d6faac16709d5ee89be363038a2a0b32c",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs014-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "8e5249572ab418ecb05755cbd35de1f361d631acfdbaa07e3de55fd460f7de39",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs014-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs014-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "7de866f28d32433fa83746dcc9d317c987abad3dc915f01cbef8c7547e36e7e6",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs014-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "acd19d2b55f01266106530cbff5dcfb22a5c1a84eb2de4488c20ae9181a1ab0c",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs014-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "37c0a23b7d170f4d466f32b1995d1bfe727dc27f6442b9255982a1a51b1e0cbb",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs014-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "58f202d1f152c3114a232846ddec74dc6cd07a6ada616607f9985612328e4801",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs014-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs014-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "743a46ae9af0d13ade64c0f83be63081aeb69ae16057b311342c2d43606192f4",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs014-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs014-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "f5322d444439eaa7847da72b104738ba46d516bd4cffd2848d7e34d3770951b9",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs014-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "f146b2a2d3d8eb20c19fa51f9f6d628898262de714682fb0460bb88a10e8066f",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs014-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "1f8c48a7e7c69c4b2ccd30ba0dfc6e550addb541ea6d51a9ff933112ae6e141d",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs014-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs014-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "29c7ce95d91b5b72b953dd4393f4bc803c82255ba1ea2c9db01b4afa8ff41747",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs015-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs015-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "85e642a7f8041c5b0cb8053445bf52c82d1756cf12622417141eb8b1998e71d8",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs015-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "e9817b5cac2f3362dde759c2eff9919259d9ebeac995e48aecc5c1c23ef29085",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs015-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "aa459a9d9108f071e103874193202e8073cc0eb416f9bc586c3bfc40adf14718",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs015-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "f057a9a52324f2c75e98949caf6c35da108c430f43809a531f78e65c2b37a19e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs015-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "4f9b14b204ec607f83b261d3cded304521e708d9a9de663ae5616b2f31badcdc",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs015-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "6357a9e001a386281dbef1ec9a002cd3381d172790607c9cf702fc2f9af9a828",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs015-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "db01b731d80d10f86ca00952877b1d4e07cd4141a612286439286779af3b6e6b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs015-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "9b5895c62d39fa089d2363cd842c6bb62ba7be7da211682095905f064045c9df",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs015-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "55421a15711ab68ee911dd8753a292692ff014787ce601485032df1bcf91be67",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs015-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "6b0dd1b3bf226a2f3d1e2b09fc5195b5a30e50799dee664cfc64c3239e7e6919",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs015-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs015-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "7a86fae27ba4e77faa00c44f7afc396af48a517de8f4f226c152d4efc9177b2e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs015-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "027a88949c7527fefeddd3a48b8f0254446df1743847b59484201d56b986697f",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs015-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs015-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "d07bea316e51179afcfaaa3b2c8da20d41ac6b85a99d252d8ec65a90d7318cc6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs015-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "2123ada2c5527a1f10dbab720f6b20e9a7a10097103ad86faceec6aa33b230e5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs015-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs015-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "4d3af1e775ca9fcabdc297437647790aa688cd52f71fe30a8d43a1d80372e4d0",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs015-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs015-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "558a9f9d0bdba2af783501662fdb428215f45fbeeefd08955d7fc3040d2e14d6",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs016-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs016-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "e5889480828ad5fffd8f3b7207efddb18eaf4753bc4087f0fe486f4b76490506",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs016-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "fec3adc1e6deafea05652f179937a004075bec7cea6827f72bb409ef2ff7995a",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs016-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "c9dd329cc4e4f03f13151623e7b50143e065fb152daa89d5ec8285c72031c97b",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs016-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "7993131847ab4f930d0e9c2745f3adc47f0c33179925ff4abc73f7accf23e388",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs016-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "cf2f5fed04535b0f8bd09a323c367176b2830d461f86bb0eebd7b00556ff4a4c",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs016-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "1ee7c4c80e5177558f411e589d3abdc729138cf5a692aa2ab1605ee8fabdc0fc",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs016-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "ff3477fa32b9a8ad91089b5a8a2646a858a038485776b75e3eb30d72d549ccb7",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs016-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "72cb46ce873a3539c324b766392034f63a6f825201e7fa592a2dae7a8e91235f",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs016-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "e7dd9c00c0da13d13d3e73fe38dd718f27456c57f43124954de17caa63010500",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs016-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "e087d230e1e66b0f60fbca25df82609ea1afd12461af1c12c4932e977860f580",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs016-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs016-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "cd0ada56868127eacbf11654c50cba81e3e08df9bdc7c637ac395b51b3fba2cb",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs016-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs016-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "eea4d38351fa4fe0d7da9d90534d31a067fff9890d95ddbf4c75b73202309a7e",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs016-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "b5585f7abea9630e5819d5eed9295a254228732ca3494b8faa2025232cc615dc",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs016-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "13041fe3b324ca9b1e0209fa53fef1388d2c1e142f527c47e32567edcfc76c00",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs016-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs016-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "e717038d40e03fdd6592381d18fe0271e883ffbe53a4e4ab056140e7ddf3cb94",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs016-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs016-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "43eb477f73200e273bdfafc1178d1041fb4d1842f604cc9d9f07ab3b4e2c7440",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs017-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/test/cs017-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "c96fb0bd0a9144d5421f372e0182f40e7166ea0f87749f6b935d2cca26fea09c",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/test/cs017-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "8f2220595f5116819b8f181c46ecd480825e54a6c16001c82f81a2ad98daf6e7",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/test/cs017-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "8bdacf8ca29a9e226d04bda29224d7248b9736093af6f2702e8b9347ba9e653a",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/test/cs017-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "d513adaa203067a95a2cb561d6d82dca34653b4d00b6a0730179d25c10b2d95e",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/test/cs017-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "fec39a2e47010cbc08d6993721aa15d1c1198b2398f531a75b51a5b22f959ee7",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/test/cs017-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "855ae2043d3d6a59b74a43d3771b72dd7ce95d19d5f55254a8fc62bd3ef391e9",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs017-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "920ad4bd1b242ddb6be8948ca1d21e202c0a9d5d377c46bdb20416083b835631",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs017-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "5fdca9d5194da2c1510dd1ce19cefb42afdf9c50c7991cec6d3ac9b178b09cf8",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs017-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "8b72f0da66369fa5ef140754218835e0d361e0d01d8510ffffaa15b097a7853d",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/test/cs017-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "dfc4d3735cd2150e8ae821d96d1bb083d57a5b913068f794770d8baa6c262390",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs017-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs017-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "71558c79830804b97b24fa2363241ece47a4bf13aa4f8b27bf6ff32c48dbe1b9",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs017-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "006dcd01327b19ae7dc83829af92654577c5409287dde7ea6c32d9c971f13f43",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs017-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "7f7cf014c65e4cf4d17c97502f1aa4ef9df405d6f364e2a589cd9f56a0ac3052",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs017-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs017-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "e1aab5c3551fd02a98644ffafc4ba121340509474b9b6b7a6510f144cb1b9e29",
+      "split": "test",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs017-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs017-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "c7ca3d6a20e2122fd438aa3fc5b6cc2bb79f985c251ee764b2a8f2d4cf8f2c8e",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs017-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/test/cs017-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "d3077c2f330d96b4d8a6a120fe1a4e445e6751347a7e6247f65677628cb621f7",
+      "split": "test",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs018-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs018-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "aff54151d2bb4ce0dca63612255c7aac7ec2b03add74d46c3040f85f8f68e1f2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs018-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "348e5b44ceae3e74403b1ffc434a4aaee65a4c77cc5836bd994cfd3335182520",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs018-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "00094d21ace538fbb3eb29626092da258288d104a0d05546c3f33bb95665add4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs018-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "17d1087a549f061af1057b98aedcad025808e10e65e1beb588f08dead03850da",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs018-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "4bbc6cb9c25003efe91709f66601d762ba78aeac753efe6db61e0d63711a1555",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs018-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "d2cf4e8e41ad7154ad1ad8cd41969dad12606544bfbca37fa79dcfb089528992",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs018-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "f2c4263189a8dcb74dee3ece196dc41da5bf989af0ba09c32fdbeb60e06a2950",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs018-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "ab8a22f5d240f49b8a09bc7d5eeb989930feda30584bbe66181a058e43c72c89",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs018-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "58d4aa5ab56cee5fb1699f7af8a4d0827b75deb7594705975a3128dc55357f35",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs018-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "4b3f94288a702a3f32b37b763931e05c8d0b370473bb9e0de04c6bbf727e6e97",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs018-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs018-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "0f62275310bf45c34f4c3ad6f0df8596ca2710f469a5857c6a60c906df61f241",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs018-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs018-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "c8f8d2815b4f5b6d1c0db07314b1ee461ded60b5f3ef5f76c0c52b7e289a1481",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs018-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs018-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "df0beeefe6c1c57bf54c4e4504c9d0d0f912e757bf0fdff08ba3e508873eb840",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs018-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs018-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "faf3c3d37aba0223873f2b3b3e6f621e63fc8ebd34f0fcaeb2f683811390b0d6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs018-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "c6180c7441d7e3b17408152b46a3983548aa5f9ab8f4243e04a6a063ea9374ea",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs018-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs018-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "3058aea307ac2280c28ab52266c5b0fd59f0b7066b0ef6925bf2283d853f964f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs019-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "059474cc973fccad0f49efc4c01d8bb1e78a553368c55860cb14f7186244ee5e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs019-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "79a966e90d8371c5833474e0d73d1a52cad74c3541e3358098365be7fe31191c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs019-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "c7bddef2f5a6fab2d5a8ee201d8f3da17affe5a9c777832502536a36862c12d6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs019-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "287b18b026bbdeea0e2d805a8c568b2c1f25f5c4624dfcce356df7c4a31d92cf",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs019-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "157ef5bd79b4356bbac0cfa46c8e07e715686246993e83246178ff0a5f3fccc1",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs019-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "eb14058e73dd7fefd5f7ee7ce20b4e87235eeb6d20cbc78298addb176382053f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs019-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "0a975911c2c13548dcb876e9cd9cb7bfd9fe8cab06063843f1a74d72f9f0115f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs019-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "0124592c6e541ba6c0b664b902d1c6bacb36bcbfb73112d53690a6c6f03c7c0c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs019-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "136edc3fa6d772e80519fe5ea73115614a969af673418743b77e7d3c240799c4",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs019-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "0a94767b19d7bf7037071c683ca17ac0c890d0764383e75039a929f8bf6215ec",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs019-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs019-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "ee873e058329edba52bb3af3f4f9330dc668144a0b766440b925e1ae94446ba3",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs019-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs019-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "54ef865d9d5612ac447ffbda70af2747cce76ee985edd3d0e2a92895bcf6eb1f",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs019-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs019-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "1f73d6aec7bf6373a033b8652fc2cbd308fe14d66b8e09e31ef8179ff530737b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs019-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "d4a33dd98f1e19c08912424a31300c9196c90bf251c25f77356bc7b0b98ffba1",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs019-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs019-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "4fa7e38a3e0cf0994f3ed5cad7a0d7981ec268fefe26aff0ae53e27c8d2171d9",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs019-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs019-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "a070f22fee32bc41a1d48a1d72b286f73683eb80f4c76ee2fc06c563dc9d4ef2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs020-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "4dbc54aa4a6b1e2fea844e3ef8f9a9a43c60df0813a71f630fbcdebf6bb8b293",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs020-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "ee591cf70e5064af2fcf1de516bbe94815bdd00cd97644a0ac222c269637b7cb",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs020-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "6705fa0981bcc3fe6befdfb93593e97be74cda984389ce01baac529ba430160c",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs020-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "93e72ffb609b42a77d1c751eea0d79a965c424dffea84c4166dceb18fd60a9ee",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs020-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "1b422d55890505d67eef1ebb5617227b46935d75185ba516a682aaf2a307efb7",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs020-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "8d5c70c8f33273e7ccce2bd5789c6f4700c89aa3aac95f03940be8b13a0fed28",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs020-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "851cb16361e1e2d20ab5475a5d00a3d763f870bce3ece20cda536f8bcda67bb9",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs020-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "eecc1afe3880ff26ee7503ffdaa8caf1e6131e3b845566ce6cf1a1e11e72a17b",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs020-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs020-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "2beccdc4ce1e91bdda2a24b7a985d545115a09da02670b5d453cfd6a450de2c2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs020-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "d3f1ce84f4a1f1b24c72f47015caf524a04ff6377d057a44330bb533f7e5292e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs020-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "09c57dd0b8f84cf0a27281e4a9498efbc6d31456b1a6922ff5f0176db6a771c0",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs020-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs020-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "13da0e08d4ea8f640ffd4f117ac6299d5fd8c70b5e98181bd574c98ab32ddc28",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs020-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "8490759b618fb1a3417dbaa96f0305d4bce4baa724b8a4097b601e8039b9401a",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs020-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs020-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "81400f7bc5af707ce8f058928859e83753b3119ed0727a9848e1205d1a660045",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs020-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs020-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "1644ccee1c736e16b3c892d36b6439ee3847be95a044881d44212d683854329e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs020-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs020-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "df277216733b1f3e74d71319b8b13d130d55120c5364f3dc8aed8d237ca14a07",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs021-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "bd1833f8ac2861df3b1d0340e73cd84e1b7ed02a5ca3cf15e709452167f42ae7",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs021-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "0880402009a3e9bda4138960a680478013f2b091fdbd98f12f3f8b78fe262d57",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs021-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "82eeea8728d47b325f96d4f16b91f9ef849767bc8d080a071ff244a3402d5660",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs021-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "e818b56a47b2b8b52ea4980a8b826e04f97c40b7982a5ffcc85630f836d25634",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs021-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "9025683ebf8c86dd176b52667c56d082f48f476ae5943602ce06207717f7724e",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs021-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "97fcc1f63dc73ab65771b57213d4b84878034e68edfd697fd92e96a59422ef37",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs021-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "6f3d4ae2b03ccaf47a20f039bb02c4b8cd03fcb7fe1589330f53d226529b6c2d",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs021-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "de42be918e60b84ddca651dfce43ea6032ab915f8de6f2563991ef7d282f84c3",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs021-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "38c444fe983352ef1772f399db000a740fc83450d668d864cc1a01bdb89d6e72",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs021-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs021-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "8804bebc33bb89d3af35b3a97f743515938f844ef51a2c81224aabf37da3fe5b",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs021-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "4312d5ec340d4456eed01273565f332a4921f6e0d8f8df89292e43a4de7cbcb9",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs021-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs021-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "ade45d36c39e6afb8299d2b0596fa4ee1c1fd12e6409546910077526a6c4e6f0",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs021-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs021-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "180c6687b03628fe51556bd1289b3488d81ac8f7103a787fad80eaed8018748b",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs021-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "c921901e85c45e3f4b7c91868dcefd0facf445d0ecef43d6cbe01addccb19cab",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs021-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs021-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "09448a8aaa2df9be27e1a8156cdfdffdd001858b51d05afed9994efd02fd546f",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs021-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs021-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "0cd46df77022fd1ec94d4cd4895091e35b8b8d0476d593cad493f5cfc79cbf7a",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs022-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "6233d5617d0d758d5e971b9b28d82e5b7ebbdd70345af14e1ee78064a55e3816",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs022-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "152d3702169a0433fbe8bbac3e5a06b88491ccc21d26d918d97736c1815e6610",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/validation/cs022-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "1fa688ceae870e1343ed6473f13219faeff83ae522f252a3ec2c552e04d97149",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs022-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "4888a59ade67d99acbaa8be798810924e3710f24e3b2f825e84460dadc3560a9",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs022-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "ba2025ffa7446b5eab69b034655dde7ae7ed7fc2e9b762c1f5933ccc650d9767",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/validation/cs022-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "e544b5563a356d01aa146a073b0c4e01b2cd6a8293db5a9a9d605926a5071fe3",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs022-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "a8de4262380f039483b76fdca89e8465d05dee6702e6eb8c26c1a116e8d00d09",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs022-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs022-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "036fdb5cc939f9477b6d0f01ac6e5b1a326a704583aba3438c244acb825b8319",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs022-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "0c077b38204379732667f3a168a39abe0196b4015c5f00961b277d9b6aa6e370",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/validation/cs022-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "e0ba7c55b9dec48c56114ab795dee995dd09a49a68630d5f9b3b8577d430893e",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs022-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "1cfa8c973055f5175c36756ae4050485998a5669945dd42944dc6caae2a828aa",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs022-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs022-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "91854ba28e78fe914ceb7e75b97dd42c5007c71f90f41490985a42b220a7e76a",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs022-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs022-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "1333a0648a11453c054ab64fcea027fde4011fcda507d617d0dad2d8b20e8c80",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs022-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "67b1b5cb02bbfb14c3dde10d56d5b167b8d870fa871b65fd938808047a4d8d9c",
+      "split": "validation",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs022-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs022-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "dbb5eabebfde471db67ed7293d2d03b82369dd1575ed471898490bdbc1f0a007",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs022-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/validation/cs022-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "ae49a2d1753ff9c238983b5d3a79428153951d853aab4d70c1b29c0f8c116322",
+      "split": "validation",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs023-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "e2558dd9123e7ed7a8ad97a5e24620831faa80f58e01e57e27349f220341d6a2",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs023-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "94ed9a0de22a1ecce9a8d72764fdbf42de0597f7af6bc18e9b58f8ba17e2ce79",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs023-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "b8e155a0b61350ab06e2d5a676534cc4e428edf4da83308e482388502faa8f7e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs023-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "dd0f2c81476164f1f0344fd018566f16ceeb40d9c1ed4dc1d323a71062b5472f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs023-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "aa0b5293b5bcb8b5d885ab99eecbcd515139960efbd34d9a9f67f83e70d84462",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs023-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "3637e7057d79a895e02cde8e76eb4debc8abb75e3ac07fc0174564694f21b782",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs023-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "9288b21654b0950c4db380aa7956b900586f8f1339356b1fe8a60c633d544952",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs023-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "419d2ffc4668f95a19326b86444f6bba71be01e4e37fb620f22f095da802785e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs023-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "f6bf63a1a15a559e37e61ca5d5f61dd3cc7f717ece2201ec5bdab3a978ab02a0",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs023-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "a03ee47d9d2c3221dc56f36b1c8c0f33696335f72f557ff0c132571231b2f2fb",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs023-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs023-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "7be95a7b360d10d3e0dc2f2721d8dddcadfb52a59457676c3a0cd8306c0fea1a",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs023-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs023-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "399c61bbe0a6061d0831b06d11a7a8f10b6cd557115161877905e27a5b0b3109",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs023-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "3e2ffa8014e9957cad2dc0a9b11de8e720e51cbf764d2791faccd8e8c622021b",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs023-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs023-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "4c59a4f1cd7331a350625c13ecfbcb7c2a0e47b0258e60e7fbc2c0b5d4038fd3",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs023-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs023-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "fe7e157082cf634e2d1b7f50852b6710413fc8cbe53aa1cc2c0f751f902dafbc",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs023-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs023-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "8df22f4392ce353bc7d85b14700a973cacb7a3022869ee056b1c2efa98ddde1a",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs024-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "ea8c1712eef43e93bf395165901c9992cefea587eee267afdfdb9909299215f6",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs024-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "bafaaab27da22d6b1de0e117dedc6302bc8529764a08c315bd4b147bb65d564d",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs024-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "ceea101205772ceedd78464f5e21bf0889f50a2beb619ea3ccfa26c319f54314",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs024-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "a132aa54fa123503383eabfe43b716d5caca5db2dc8276c79d4799955b0e2c1f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs024-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "99a8058315dc2c604bcc1a7be1dd09448c27da72d22f561ad645c33d35df008f",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs024-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "8d1a2fa29fce009622cfd4debe970ab5d5d3bef9f4370c647547c7ede2a58f9a",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs024-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "e71e7d1b0bbc77ae6db9708f07dc3782857bb513a14659c65eeb3727bee0a219",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs024-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "94f8d580ee9d8a0be5b5da334574811331bc5a9ac33c0838dbd47ba46fc560b9",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs024-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs024-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "5b5a73551d7f30753a965e3fc23cf0f3b1923ad0c5534bc88f9f59da5e1d5a6e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs024-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "a54c479e9a819368c0a323af9032a34fcdfba5c0d23b2a441bff1af619c51926",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs024-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "c4f834a08687dd2fffec9072c3b997c8cc4ad5748760e1c6e2c11eaf80a06e38",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs024-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "e5bbc65c6c5f678f369ba3b2d2eda9c84b3368a21a74f545d2bda79f4b369a80",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs024-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs024-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "bce281ec39b610a363c2e23615e072f6464054ea6c3742421afdbbbe204b21b5",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs024-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "6cdb63f97894c7f3a5e9ca706337b413e2d831954ceb1ad13f592457a7a81c62",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs024-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs024-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "be7afc988526ccff374a6322a4a3810808fb444f8598ad4ef745e78f1cae6742",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs024-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs024-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "b53431cd1fa11daa543c88d25980a06d5bc213d32fae007b815b17a8a95f6bfa",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs025-age03-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs025-age03-20261005-sunburst-r01-v01.png",
+      "sha256": "5e0f26311e9046a5075040a3e2a6a3895f59cab9fd9b0d52116027ef56eca1a3",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age04-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs025-age04-20261005-sunburst-r01-v01.png",
+      "sha256": "5280c2ab3b7e6331b6b36f47e617534934b5292dfe37144ecc5b4227670dd06e",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age05-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-03-05/train/cs025-age05-20261005-sunburst-r01-v01.png",
+      "sha256": "9f262f391c73f254fa8f8add18baa8347f9660e2117714fda09baae70995d3e0",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age06-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs025-age06-20261005-sunburst-r01-v01.png",
+      "sha256": "ce8fdc860d3125808cc6a6ac6439dffe47a9ca79e52b3c8c4066a6e953eef2ab",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age07-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs025-age07-20261005-sunburst-r01-v01.png",
+      "sha256": "a9da0ba926a9e070f5386f8909c89eb1e565c9eedeb1f55e9c2315ebb8b41668",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age08-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-06-08/train/cs025-age08-20261005-sunburst-r01-v01.png",
+      "sha256": "629578b365030a58d346c1411dbc909bf37ddf577a0304f00ff36fc826ccb81d",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age09-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs025-age09-20261005-sunburst-r01-v01.png",
+      "sha256": "8c25eadf4d4dd5e9301e48b09f245aad473c25bab6b9c1af6e00227d9eea8907",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs025-age10-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs025-age10-20261005-sunburst-r01-v01.png",
+      "sha256": "8ad7a802f29bb81d0fc35eeae96fc5fe0026a3840934fcb9bcb16e6be3b14363",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age11-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs025-age11-20261005-sunburst-r01-v01.png",
+      "sha256": "5589711a38e9c274fff6a493bb677219bd78d0feb0901512c62abfd8dad31772",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age12-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-09-12/train/cs025-age12-20261005-sunburst-r01-v01.png",
+      "sha256": "aca810fa5b8e1e62f894edac60c161583411aaeeb7f2323219cdd895bfdea603",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age13-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs025-age13-20261005-sunburst-r01-v01.png",
+      "sha256": "93eff00640b17c42653dafa8a263b29b02f6e356302a10bcd2656431f2497254",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs025-age14-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs025-age14-20261005-sunburst-r01-v01.png",
+      "sha256": "19a3974fd0c811d6b836741935741ebe28f4735b46e2b37035e4ab39573beffb",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age15-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs025-age15-20261005-sunburst-r01-v01.png",
+      "sha256": "38cdceae1ce3498cab76e2c0f918bbfa2020bdbdc464166676ace71adbde77af",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age16-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs025-age16-20261005-sunburst-r01-v01.png",
+      "sha256": "8f7a51f5466d41c64e5d8812548a40fbd91cbdd0d39fab22d8676c6a62af2f96",
+      "split": "train",
+      "balanced_subset": false
+    },
+    {
+      "sample_id": "cs025-age17-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs025-age17-20261005-sunburst-r01-v01.png",
+      "sha256": "00f0e24817ec481b17fddff3d3191a892aa1d3031c62b899bac157bf06954576",
+      "split": "train",
+      "balanced_subset": true
+    },
+    {
+      "sample_id": "cs025-age18-20261005-sunburst-r01-v01",
+      "file_name": "data/ages-13-18/train/cs025-age18-20261005-sunburst-r01-v01.png",
+      "sha256": "4a69797f2c88720d343e2dc605679cc1397ba74a534450fa1f4e7f0918aeb8e7",
+      "split": "train",
+      "balanced_subset": false
+    }
+  ]
+}

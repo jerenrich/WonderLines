@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "cs001-age03-example-v01",
+  "collection_id": "wonderlines-colouring-sheets-v1",
+  "description_id": "cs001",
+  "age_target": 3,
+  "age_band": "ages-03-05",
+  "composition": "side",
+  "variant": 1,
+  "run_id": null,
+  "status": "planned",
+  "created_at": null,
+  "generated_at": null,
+  "provider": null,
+  "model_id": null,
+  "model_revision": null,
+  "guidance_version": "app-2026-10-05-v1",
+  "description": "Snail carrying a garden",
+  "complexity_guidance": "very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail.",
+  "subject_prompt": "Snail carrying a garden\n\nComplexity: very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "effective_prompt": null,
+  "negative_prompt": null,
+  "requested_parameters": {"width": 1456, "height": 1024, "seed": null},
+  "reported_parameters": {},
+  "image": {
+    "raw_path": null,
+    "curated_path": null,
+    "sha256": null,
+    "width": null,
+    "height": null,
+    "media_type": null
+  },
+  "failure_reason": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "checks": {
+      "prompt_adherence": "pending",
+      "enclosed_colouring_areas": "pending",
+      "no_unwanted_shading_or_text": "pending",
+      "age_complexity": "pending",
+      "print_quality": "pending"
+    },
+    "notes": [],
+    "caption": null
+  },
+  "split": "unassigned"
+}

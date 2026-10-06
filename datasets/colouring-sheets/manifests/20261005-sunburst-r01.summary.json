@@ -1,0 +1,20 @@
+{
+  "run_id": "20261005-sunburst-r01",
+  "updated_at": "2026-10-05T22:37:50.155Z",
+  "planned_samples": 400,
+  "counts": {
+    "generated": 400
+  },
+  "stop_reason": "plan-finished",
+  "latest_access": {
+    "features": [],
+    "generationCredits": 0,
+    "freeGenerationsRemaining": 0,
+    "allowanceResetsAt": "2026-10-06T00:00:00.000Z"
+  },
+  "known_inference_estimate_usd": 2.0808900000000006,
+  "samples_with_cost_estimates": 400,
+  "cost_note": "Worker estimates, not billing receipts; excludes unreported failed-image, moderation, Worker and storage costs.",
+  "raw_image_bytes": 645235002,
+  "review_status": "Pending visual review; outputs are not yet curated."
+}

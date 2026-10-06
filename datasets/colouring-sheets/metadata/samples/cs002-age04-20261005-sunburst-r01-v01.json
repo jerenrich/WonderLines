@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "cs002-age04-20261005-sunburst-r01-v01",
+  "collection_id": "wonderlines-colouring-sheets-v1",
+  "description_id": "cs002",
+  "age_target": 4,
+  "age_band": "ages-03-05",
+  "composition": "side",
+  "variant": 1,
+  "run_id": "20261005-sunburst-r01",
+  "status": "generated",
+  "created_at": "2026-10-05T22:10:45.688Z",
+  "generated_at": "2026-10-05T22:23:34.807Z",
+  "provider": "openai",
+  "model_id": "gpt-image-2.5-sunburst",
+  "model_revision": null,
+  "guidance_version": "app-2026-10-05-v1",
+  "description": "Fox reading in a treehouse",
+  "complexity_guidance": "very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail.",
+  "subject_prompt": "Fox reading in a treehouse\n\nComplexity: very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "effective_prompt": "Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: Fox reading in a treehouse\n\nComplexity: very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail.\n\nComposition preference: side view, full subject in profile. Preserve the subject; explicit user instructions take priority.",
+  "negative_prompt": null,
+  "requested_parameters": {
+    "width": 1456,
+    "height": 1024,
+    "seed": null,
+    "quality": "low",
+    "output_format": "png",
+    "n": 1
+  },
+  "reported_parameters": {
+    "requested_model": "gpt-image-2.5-sunburst",
+    "upstream_model": "gpt-image-2.5-sunburst",
+    "via_gateway": true
+  },
+  "image": {
+    "raw_path": "images/raw/20261005-sunburst-r01/age-04/cs002-age04-20261005-sunburst-r01-v01.png",
+    "curated_path": null,
+    "sha256": "b2a30f7e0c5dd93f5b43cbfeda323402a1c2f2aa792716a5b2f7e08f45c6de06",
+    "width": 1456,
+    "height": 1024,
+    "media_type": "image/png"
+  },
+  "failure_reason": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "checks": {
+      "prompt_adherence": "pending",
+      "enclosed_colouring_areas": "pending",
+      "no_unwanted_shading_or_text": "pending",
+      "age_complexity": "pending",
+      "print_quality": "pending"
+    },
+    "notes": [],
+    "caption": null
+  },
+  "split": "unassigned",
+  "worker": {
+    "service_url": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+    "account_index": 1,
+    "generation_id": "9f1aaf6f-16b4-470a-bacd-e98b76f8a585",
+    "batch_id": "24bf97cc-83a3-4266-93d6-9d0a29c6ab0a",
+    "submitted_at": "2026-10-05T22:23:09.398Z",
+    "http_status": 200,
+    "error_code": null,
+    "metrics": {
+      "requestedModel": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "upstreamModel": "gpt-image-2.5-sunburst",
+      "viaGateway": true,
+      "requestedSize": "1456x1024",
+      "size": "1456x1024",
+      "inputTokens": 118,
+      "textInputTokens": 118,
+      "imageInputTokens": 0,
+      "outputTokens": 154,
+      "totalTokens": 272,
+      "elapsedMs": 12298,
+      "estimatedInputUsd": 0.00059,
+      "estimatedOutputUsd": 0.00462,
+      "estimatedTotalUsd": 0.00521,
+      "ratesChecked": "2026-09-23",
+      "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+    },
+    "effective_prompt_source": "Reconstructed from hashed local Worker source; API does not echo the provider prompt."
+  }
+}

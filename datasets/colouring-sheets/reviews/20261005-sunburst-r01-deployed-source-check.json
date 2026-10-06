@@ -1,0 +1,18 @@
+{
+  "service_environment": "production",
+  "source_modules": [
+    {
+      "name": "index.js",
+      "sha256": "6a7412eadf67ba33e6c6f64e3e4cf3603c984d1ca4131efe7ff0749d1b7ff905"
+    }
+  ],
+  "checks": {
+    "standard_provider_prefix_present": true,
+    "complexity_rules_present": true,
+    "side_composition_present": true,
+    "sunburst_route_present": true,
+    "batch_limit_present": true
+  },
+  "source_sha256": "f3c95f8bae03d69e510002260921ddf5e6d2ad1ff8fdd32bb8953e4bf8580e12",
+  "checked_at": "2026-10-05T22:22:14.119078+00:00"
+}

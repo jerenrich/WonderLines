@@ -18,6 +18,7 @@ ColoringSheetsTests/            App unit and opt-in integration tests
 ColoringSheetsUITests/          Simulator swipe, navigation, and editing tests
 Config/                         Checked-in defaults and ignored local overrides
 Scripts/                        Project, configuration, and offline test tooling
+datasets/colouring-sheets/      Prompt catalogue, image metadata and dataset publication tools
 workers/
   coloring-sheets-api/          Current Cloudflare Worker
     src/index.mjs               Worker entry point
@@ -25,6 +26,8 @@ workers/
 ```
 
 Future Cloudflare Workers should be added as sibling directories under `workers/`, with their own source, Wrangler configuration, tests, and README. See `workers/README.md` for the convention.
+
+The [colouring-sheet dataset workspace](datasets/colouring-sheets/README.md) contains 25 simple subject descriptions, metadata for 400 generated sheets across ages 3–18, contact-sheet previews, review records and reproducible publication tools. The [public Hugging Face dataset](https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets) provides the original images with four age-band configurations under CC BY 4.0. Raw image binaries, built exports and local credentials are ignored by Git.
 
 ## Start with the demo
 
