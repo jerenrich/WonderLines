@@ -1,5 +1,49 @@
 import SwiftUI
 
+// Keep the current gallery and opaque recovery context together in one atomic file.
+// Prompts and credentials are never part of this snapshot.
+struct GallerySnapshot: Codable {
+    struct Sheet: Codable {
+        let id: UUID
+        let data: Data
+        let model: ImageModel
+        let metrics: GenerationMetrics?
+        let access: AccessSnapshot?
+        let generationID: UUID?
+
+        init(_ result: ColoringResult) {
+            id = result.id; data = result.data; model = result.requestedModel
+            metrics = result.metrics; access = result.access; generationID = result.generationID
+        }
+        var result: ColoringResult? {
+            guard let image = UIImage(data: data) else { return nil }
+            return ColoringResult(data: data, image: image, requestedModel: model, metrics: metrics,
+                                  access: access, generationID: generationID, id: id)
+        }
+    }
+    let sheets: [Sheet]
+    let waitingToReveal: [Sheet]
+    let selectedID: UUID?
+    let hasRevealedResults: Bool
+    let generationBatchID: UUID?
+    let recoveringIDs: Set<UUID>?
+    let shouldResume: Bool
+}
+
+final class GalleryStore {
+    let url: URL
+    init(url: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("WonderLines/gallery.json")) { self.url = url }
+    func load() -> GallerySnapshot? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(GallerySnapshot.self, from: data)
+    }
+    func save(_ snapshot: GallerySnapshot) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(snapshot).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+}
+
 @MainActor
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
@@ -19,6 +63,7 @@ final class ColoringViewModel: ObservableObject {
     @Published private(set) var completedCount = 0
     @Published private(set) var failedCount = 0
     @Published private(set) var activeBatchSize = 0
+    @Published private(set) var isRecovering = false
     @Published private(set) var batchMessage: String?
     @Published private(set) var unfinishedSheets: [PendingGeneration] = []
     @Published private(set) var access: AccessSnapshot = .free
@@ -33,16 +78,73 @@ final class ColoringViewModel: ObservableObject {
     private var hasRevealedResults = false
     private var batchStarted = ContinuousClock.now
     private var firstFailure: String?
+    private var resumesAfterBackground = false
+    private var isInBackground = false
+    private var revealsImmediately = false
+    private var generationBatchID: UUID?
+    private var recoveringIDs: Set<UUID>?
+    private let galleryStore: GalleryStore?
+    private var acknowledgedResultIDs: Set<UUID> = []
+    private var localSaveFailed = false
+    private static let saveFailureMessage = "The sheets could not be saved on this device. Keep the app open; received jobs remain available for recovery."
 
-    init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard) {
+    init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard,
+         galleryStore: GalleryStore? = nil) {
         self.service = service; self.isMock = isMock; self.defaults = defaults
         description = defaults.string(forKey: "descriptionDraft") ?? ""
+        self.galleryStore = galleryStore ?? (!isMock && defaults === UserDefaults.standard ? GalleryStore() : nil)
         let stored = defaults.integer(forKey: "childAge")
         age = (3...18).contains(stored) ? stored : 0
         let storedModel = defaults.string(forKey: "generationModel")
         model = ImageModel.selectable.first(where: { $0.rawValue == storedModel }) ?? .sunburst
         let storedCount = defaults.object(forKey: "imageCount") as? Int ?? Self.batchSize
         imageCount = min(max(storedCount, 1), Self.batchSize)
+        if let saved = self.galleryStore?.load() {
+            results = saved.sheets.compactMap(\.result)
+            selectedResultID = results.first(where: { $0.id == saved.selectedID })?.id ?? results.first?.id
+            pendingResults = saved.waitingToReveal.compactMap(\.result)
+            hasRevealedResults = saved.hasRevealedResults
+            generationBatchID = saved.generationBatchID
+            recoveringIDs = saved.recoveringIDs
+            resumesAfterBackground = saved.shouldResume
+            revealsImmediately = saved.shouldResume
+            acknowledgeSavedResults()
+            revealPendingResults()
+            phase = results.isEmpty ? .idle : .result
+        }
+    }
+
+    @discardableResult
+    private func persistState() -> Bool {
+        do {
+            try galleryStore?.save(GallerySnapshot(sheets: results.map(GallerySnapshot.Sheet.init),
+                waitingToReveal: pendingResults.map(GallerySnapshot.Sheet.init), selectedID: selectedResultID,
+                hasRevealedResults: hasRevealedResults, generationBatchID: generationBatchID,
+                recoveringIDs: recoveringIDs, shouldResume: isGenerating || resumesAfterBackground))
+            acknowledgeSavedResults()
+            if localSaveFailed {
+                localSaveFailed = false
+                if batchMessage == Self.saveFailureMessage { batchMessage = nil }
+            }
+            return true
+        } catch {
+            localSaveFailed = true
+            batchMessage = Self.saveFailureMessage
+            DiagnosticLog.shared.record("Gallery", "local save failed; recovery IDs retained", error: error)
+            return false
+        }
+    }
+
+    private func acknowledgeSavedResults() {
+        let savedIDs = Set((results + pendingResults).compactMap(\.generationID))
+        let newIDs = savedIDs.subtracting(acknowledgedResultIDs)
+        guard !newIDs.isEmpty else { return }
+        acknowledgedResultIDs.formUnion(newIDs)
+        // A later successful save may include sheets whose earlier save failed.
+        // Relaunch also closes a termination between saving and acknowledgement.
+        Task { [service] in
+            for id in newIDs { await service.acknowledgeResult(id) }
+        }
     }
 
     var isGenerating: Bool { phase == .generating }
@@ -51,7 +153,7 @@ final class ColoringViewModel: ObservableObject {
     var readyCount: Int { completedCount - failedCount }
     private var activeSheetLabel: String { "\(activeBatchSize) \(activeBatchSize == 1 ? "sheet" : "sheets")" }
     var progressText: String {
-        "Drawing \(activeSheetLabel) · \(readyCount) ready" + (failedCount > 0 ? " · \(failedCount) unavailable" : "")
+        (isRecovering ? "Checking \(activeSheetLabel)" : "Drawing \(activeSheetLabel)") + " · \(readyCount) ready" + (failedCount > 0 ? " · \(failedCount) unavailable" : "")
     }
 
     func setImageCount(_ count: Int) {
@@ -61,6 +163,11 @@ final class ColoringViewModel: ObservableObject {
     func selectResult(at index: Int) {
         guard results.indices.contains(index) else { return }
         selectedResultID = results[index].id
+        persistState()
+    }
+    func selectResult(id: UUID?) {
+        guard let index = results.firstIndex(where: { $0.id == id }) else { return }
+        selectResult(at: index)
     }
     var validationMessage: String? {
         do { _ = try requests(); return nil } catch { return error.localizedDescription }
@@ -85,13 +192,19 @@ final class ColoringViewModel: ObservableObject {
         let requests: [GenerationRequest]
         do { requests = try self.requests(batchID: current) } catch { phase = .error(error.localizedDescription); return }
         phase = .generating
+        isRecovering = false
         activeBatchSize = requests.count
         completedCount = 0; failedCount = 0; batchMessage = nil
         receivedFirstResult = false; firstFailure = nil
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = false
         attempt = current
+        generationBatchID = current
+        recoveringIDs = nil
+        resumesAfterBackground = false
+        revealsImmediately = false
         batchStarted = .now
+        persistState()
         DiagnosticLog.shared.record("Batch", "started; requested=\(activeBatchSize); mode=\(isMock ? "mock" : "live")", batchID: current)
         // Each task starts its own request without waiting for the other requests.
         // Validate and capture every composition before starting any paid request.
@@ -110,6 +223,7 @@ final class ColoringViewModel: ObservableObject {
 
     private func receive(_ outcome: Result<ColoringResult, Error>, attempt current: UUID) {
         guard attempt == current, isGenerating else { return }
+        defer { persistState() }
         completedCount += 1
         switch outcome {
         case .success(let image):
@@ -118,16 +232,18 @@ final class ColoringViewModel: ObservableObject {
             // Start one window at the first success; later arrivals do not reset it.
             if !receivedFirstResult {
                 receivedFirstResult = true
-                revealTask = Task { [weak self] in
-                    do { try await Task.sleep(for: .seconds(5)) }
-                    catch { return }
-                    guard let self, !Task.isCancelled, self.attempt == current, self.isGenerating else { return }
-                    self.revealPendingResults()
-                    self.revealTask = nil
+                if !revealsImmediately {
+                    revealTask = Task { [weak self] in
+                        do { try await Task.sleep(for: .seconds(5)) }
+                        catch { return }
+                        guard let self, !Task.isCancelled, self.attempt == current, self.isGenerating else { return }
+                        self.revealPendingResults()
+                        self.revealTask = nil
+                    }
                 }
             }
-            if hasRevealedResults {
-                revealPendingResults()
+            if hasRevealedResults || revealsImmediately {
+                revealPendingResults(save: false)
             }
         case .failure(let error):
             failedCount += 1
@@ -137,10 +253,13 @@ final class ColoringViewModel: ObservableObject {
         }
         guard completedCount == activeBatchSize else { return }
         logBatchSummary("completed")
-        Task { await refreshUnfinishedSheets() }
+        Task {
+            await refreshUnfinishedSheets()
+            if resumesAfterBackground && !isInBackground { await enteredForeground() }
+        }
         tasks = []
         revealTask?.cancel(); revealTask = nil
-        revealPendingResults()
+        revealPendingResults(save: false)
         if receivedFirstResult {
             if failedCount > 0 {
                 batchMessage = "\(readyCount) of \(activeSheetLabel) are ready. \(failedCount) could not finish. " + (firstFailure ?? "")
@@ -153,7 +272,12 @@ final class ColoringViewModel: ObservableObject {
         }
     }
 
-    private func revealPendingResults() {
+    private func revealPendingResults(save: Bool = true) {
+        var seen = Set(hasRevealedResults ? results.compactMap(\.generationID) : [])
+        pendingResults = pendingResults.filter { image in
+            guard let id = image.generationID else { return true }
+            return seen.insert(id).inserted
+        }
         guard let first = pendingResults.first else { return }
         if hasRevealedResults {
             // Append in arrival order without moving the selected page.
@@ -166,6 +290,7 @@ final class ColoringViewModel: ObservableObject {
             hasRevealedResults = true
         }
         pendingResults = []
+        if save { persistState() }
     }
 
     private func logBatchSummary(_ reason: String) {
@@ -174,7 +299,10 @@ final class ColoringViewModel: ObservableObject {
         DiagnosticLog.shared.record("Batch summary", "\(reason); requested=\(activeBatchSize); succeeded=\(readyCount); failed=\(failedCount); unfinished=\(activeBatchSize - completedCount); elapsedMs=\(elapsed)", batchID: attempt)
     }
 
-    func cancel() { cancel(reason: "user stopped waiting") }
+    func cancel() {
+        resumesAfterBackground = false
+        cancel(reason: "user stopped waiting")
+    }
 
     private func cancel(reason: String) {
         guard isGenerating else { return }
@@ -190,10 +318,55 @@ final class ColoringViewModel: ObservableObject {
         } else {
             phase = .error(message)
         }
+        persistState()
     }
     func enteredBackground() {
-        cancel(reason: "app entered background")
+        isInBackground = true
+        if isGenerating {
+            resumesAfterBackground = true
+            revealsImmediately = true
+            logBatchSummary("app entered background; requests retained")
+            revealTask?.cancel(); revealTask = nil
+            revealPendingResults()
+            persistState()
+        } else if localSaveFailed {
+            // A completed batch has no more arrivals to retry a failed save.
+            persistState()
+        }
         DiagnosticLog.shared.flush()
+    }
+
+    func enteredForeground() async {
+        let returningFromBackground = isInBackground
+        isInBackground = false
+        if localSaveFailed { persistState() }
+        let interruptedAttempt = attempt
+        if returningFromBackground && isGenerating {
+            isRecovering = true
+            revealsImmediately = true
+            revealTask?.cancel(); revealTask = nil
+            revealPendingResults()
+            DiagnosticLog.shared.record("App foreground", "resuming existing checks; requested=\(activeBatchSize); ready=\(readyCount)", batchID: interruptedAttempt)
+            DiagnosticLog.shared.flush()
+            await service.resumePolling()
+        }
+        await refreshUnfinishedSheets()
+        guard attempt == interruptedAttempt, resumesAfterBackground else { return }
+        if isGenerating {
+            // Keep the original upload/poll tasks and counters. Starting a new
+            // recovery here would cancel submissions which are still in flight.
+            persistState()
+            return
+        }
+        resumesAfterBackground = false
+        let pending = unfinishedSheets.filter { entry in
+            if let recoveringIDs { return recoveringIDs.contains(entry.id) }
+            return generationBatchID != nil && entry.batchID == generationBatchID
+        }
+        // Before the first new sheet arrives, the gallery still belongs to the
+        // previous batch. Preserve replacement versus append across every unlock.
+        recover(pending, appending: hasRevealedResults)
+        persistState()
     }
 
     func refreshUsage() async {
@@ -202,24 +375,39 @@ final class ColoringViewModel: ObservableObject {
             guard let metrics = try await service.generationMetrics(generationID),
                   let index = results.firstIndex(where: { $0.id == selected.id }) else { return }
             results[index].metrics = metrics
+            persistState()
         } catch { /* Keep the saved estimate if the read-only billing lookup fails. */ }
     }
 
     func refreshUnfinishedSheets() async {
-        unfinishedSheets = await service.pendingGenerations()
+        let entries = await service.pendingGenerations()
+        let displayed = Set(results.compactMap(\.generationID))
+        unfinishedSheets = entries.filter { !displayed.contains($0.id) }
     }
 
     func recoverUnfinishedSheets() {
-        guard !isGenerating, !unfinishedSheets.isEmpty else { return }
-        let pending = unfinishedSheets
+        resumesAfterBackground = false
+        recover(unfinishedSheets, appending: true)
+    }
+
+    private func recover(_ entries: [PendingGeneration], appending: Bool) {
+        guard !isGenerating else { return }
+        let displayed = Set(appending ? results.compactMap(\.generationID) : [])
+        var seen = displayed
+        let pending = entries.filter { seen.insert($0.id).inserted }
+        guard !pending.isEmpty else { return }
+        recoveringIDs = Set(pending.map(\.id))
         phase = .generating
+        isRecovering = true
+        revealsImmediately = true
         activeBatchSize = pending.count
         completedCount = 0; failedCount = 0; batchMessage = nil
         receivedFirstResult = false; firstFailure = nil
         revealTask?.cancel(); revealTask = nil
-        pendingResults = []; hasRevealedResults = true // Recovery appends to the existing gallery.
+        pendingResults = []; hasRevealedResults = appending
         let current = UUID(); attempt = current
         batchStarted = .now
+        persistState()
         DiagnosticLog.shared.record("Batch", "recovery started; requested=\(activeBatchSize); mode=\(isMock ? "mock" : "live")", batchID: current)
         tasks = pending.map { entry in
             Task { [weak self, service] in

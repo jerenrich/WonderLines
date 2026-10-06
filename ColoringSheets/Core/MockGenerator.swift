@@ -3,10 +3,12 @@ import UIKit
 @MainActor
 final class MockGenerator: GenerationServing {
     private var nextVariation = 0
+    private let delay: Duration
+    init(delay: Duration = .zero) { self.delay = delay }
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
         let variation = nextVariation % ColoringViewModel.batchSize
         nextVariation += 1
-        try await Task.sleep(for: .milliseconds(700 + variation * 180))
+        try await Task.sleep(for: delay + .milliseconds(700 + variation * 180))
         try Task.checkCancellation()
         let image = Self.sampleImage(size: GenerationSize(width: request.width, height: request.height), variation: variation)
         let metrics = GenerationMetrics.decode("{\"requestedModel\":\"\(request.model.rawValue)\",\"inputTokens\":100,\"imageInputTokens\":0,\"outputTokens\":200,\"totalTokens\":300,\"estimatedTotalUsd\":0.0065,\"elapsedMs\":12000,\"estimateBasis\":\"Illustrative mock metrics only. No paid request was sent.\"}")

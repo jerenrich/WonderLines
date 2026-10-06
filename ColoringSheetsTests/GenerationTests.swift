@@ -25,6 +25,148 @@ final class GenerationTests: XCTestCase {
     }
 
     @MainActor
+    func testForegroundReplacesHangingGETButPreservesUnfinishedPOST() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [HeldRequestURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); HeldRequestURLProtocol.handler = nil; HeldRequestURLProtocol.stopped = nil }
+        let client = WorkerClient(credential: "synthetic", session: session)
+        let postStarted = expectation(description: "Submission in flight")
+        let readStarted = expectation(description: "Recovery GET stranded")
+        let readCancelled = expectation(description: "Old GET cancelled")
+        let finished = expectation(description: "Fresh GET returns saved image promptly")
+        let lock = NSLock()
+        var heldPost: HeldRequestURLProtocol?
+        var methods: [String] = []
+        let png = MockGenerator.sampleImage().pngData()!
+        HeldRequestURLProtocol.handler = { connection in
+            let reads = lock.withLock {
+                methods.append(connection.request.httpMethod!)
+                if connection.request.httpMethod == "POST" { heldPost = connection }
+                return methods.filter { $0 == "GET" }.count
+            }
+            if connection.request.httpMethod == "POST" { postStarted.fulfill(); return }
+            if reads == 1 { readStarted.fulfill(); return } // Never responds unless cancelled.
+            connection.finish(status: 200, data: png, type: "image/png")
+        }
+        HeldRequestURLProtocol.stopped = { connection in
+            XCTAssertEqual(connection.request.httpMethod, "GET", "Foreground must not cancel a paid submission")
+            readCancelled.fulfill()
+        }
+        let task = Task {
+            defer { finished.fulfill() }
+            return try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .redmond))
+        }
+        await fulfillment(of: [postStarted], timeout: 3)
+        await client.resumePolling()
+        lock.withLock { heldPost }?.finish(status: 202)
+        await fulfillment(of: [readStarted], timeout: 3)
+        await client.resumePolling()
+        await fulfillment(of: [readCancelled, finished], timeout: 3)
+        task.cancel()
+        let result = try await task.value
+        XCTAssertEqual(result.data, png)
+        XCTAssertEqual(lock.withLock { methods }, ["POST", "GET", "GET"])
+    }
+
+    func testStopCancelsInFlightRecoveryRead() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [HeldRequestURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); HeldRequestURLProtocol.handler = nil; HeldRequestURLProtocol.stopped = nil }
+        let scheduler = RecoveryPollScheduler()
+        let started = expectation(description: "GET in flight")
+        let stopped = expectation(description: "GET cancelled")
+        HeldRequestURLProtocol.handler = { _ in started.fulfill() }
+        HeldRequestURLProtocol.stopped = { _ in stopped.fulfill() }
+        let revision = await scheduler.revision
+        let task = Task {
+            try await scheduler.data(for: URLRequest(url: WorkerClient.endpoint), session: session, since: revision)
+        }
+        await fulfillment(of: [started], timeout: 3)
+        task.cancel()
+        await scheduler.wake()
+        await fulfillment(of: [stopped], timeout: 3)
+        do { _ = try await task.value; XCTFail("Explicit cancellation must not become a foreground retry") }
+        catch { XCTAssertTrue(error is CancellationError) }
+    }
+
+    @MainActor
+    func testForegroundWakesAllThreePollingDelaysWithoutAnotherPOST() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let suite = "ForegroundPollTests-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let identities = AnonymousIdentityStore(service: suite)
+        let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
+        try await identities.save(account)
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        let pendingStore = PendingGenerationStore(defaults: defaults)
+        let scope = WorkerClient.defaultServiceURL.absoluteString + "/" + account.accountID.uuidString.lowercased()
+        let waiting = expectation(description: "All three polls are waiting")
+        waiting.expectedFulfillmentCount = 3
+        let completed = expectation(description: "Foreground checks finish immediately")
+        completed.expectedFulfillmentCount = 3
+        let client = WorkerClient(session: session, identities: identities, pendingStore: pendingStore,
+            recoverySleep: { _ in
+                waiting.fulfill()
+                try await Task.sleep(for: .seconds(60))
+            })
+        let pending = (0..<3).map { _ in PendingGeneration(id: UUID(), model: .redmond, createdAt: Date()) }
+        for entry in pending { try await pendingStore.add(entry, scope: scope) }
+        var polls: [String: Int] = [:]
+        let png = MockGenerator.sampleImage().pngData()!
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET", "Returning must never submit another generation")
+            let id = request.url!.lastPathComponent
+            polls[id, default: 0] += 1
+            let ready = polls[id] == 2
+            return (HTTPURLResponse(url: request.url!, statusCode: ready ? 200 : 202, httpVersion: nil,
+                headerFields: ["Content-Type": ready ? "image/png" : "application/json"])!, ready ? png : Data())
+        }
+        let tasks = pending.map { entry in
+            Task {
+                defer { completed.fulfill() }
+                return try await client.recoverPending(entry)
+            }
+        }
+        await fulfillment(of: [waiting], timeout: 3)
+        await client.resumePolling()
+        await fulfillment(of: [completed], timeout: 3)
+        for task in tasks { task.cancel() } // Also drain safely if a regression times out.
+        for (index, task) in tasks.enumerated() {
+            let result = try await task.value
+            XCTAssertEqual(result.generationID, pending[index].id)
+        }
+        XCTAssertEqual(polls.count, 3)
+        XCTAssertTrue(polls.values.allSatisfy { $0 == 2 })
+    }
+
+    func testPollingWakeDoesNotMissForegroundDuringGETAndPreservesStop() async throws {
+        let scheduler = RecoveryPollScheduler()
+        let beforeForeground = await scheduler.revision
+        await scheduler.wake()
+        try await scheduler.wait(for: .seconds(60), since: beforeForeground, sleep: { _ in
+            XCTFail("A foreground event during a GET must skip the following delay")
+        })
+        let current = await scheduler.revision
+        let waiting = expectation(description: "Poll delay started")
+        let task = Task {
+            try await scheduler.wait(for: .seconds(60), since: current, sleep: { _ in
+                waiting.fulfill()
+                try await Task.sleep(for: .seconds(60))
+            })
+        }
+        await fulfillment(of: [waiting], timeout: 3)
+        task.cancel()
+        await scheduler.wake()
+        do { try await task.value; XCTFail("Stop waiting must still cancel the poll") }
+        catch { XCTAssertTrue(error is CancellationError) }
+    }
+
+    @MainActor
     func testDiagnosticsPersistOnlySafeMetadataAndStayBounded() throws {
         let suite = "diagnostics-test-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -302,6 +444,36 @@ final class GenerationTests: XCTestCase {
     }
 }
 
+final class HeldRequestURLProtocol: URLProtocol {
+    static var handler: ((HeldRequestURLProtocol) -> Void)?
+    static var stopped: ((HeldRequestURLProtocol) -> Void)?
+    private let stateLock = NSLock()
+    private var ended = false
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() { Self.handler?(self) }
+    override func stopLoading() {
+        let cancelled = stateLock.withLock {
+            guard !ended else { return false }
+            ended = true
+            return true
+        }
+        if cancelled { Self.stopped?(self) }
+    }
+    func finish(status: Int, data: Data = Data(), type: String = "application/json") {
+        let deliver = stateLock.withLock {
+            guard !ended else { return false }
+            ended = true
+            return true
+        }
+        guard deliver else { return }
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status,
+            httpVersion: nil, headerFields: ["Content-Type": type])!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+}
+
 final class MockURLProtocol: URLProtocol {
     static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -528,7 +700,10 @@ final class NetworkingTests: XCTestCase {
             XCTFail("Expected cancelled waiting")
         } catch { XCTAssertEqual(error as? GenerationError, .cancelled) }
         let restoredStore = PendingGenerationStore(defaults: defaults)
-        let nextClient = WorkerClient(session: session, identities: identities, pendingStore: restoredStore, recoverySleep: { _ in })
+        let nextClient = WorkerClient(session: session, identities: identities, pendingStore: restoredStore,
+            recoverySleep: { duration in
+                XCTAssertEqual(duration, .seconds(5), "Confirmed processing jobs should be checked every five seconds")
+            })
         let pending = await nextClient.pendingGenerations()
         XCTAssertEqual(pending.count, 1)
         XCTAssertEqual(pending.first?.id.uuidString.lowercased(), generationID)
@@ -552,6 +727,9 @@ final class NetworkingTests: XCTestCase {
         XCTAssertEqual(events.filter { $0.stage == "Recovery" && $0.httpStatus == 202 }.count, 2, "One waiting event per recovery session, not one per identical poll.")
         XCTAssertTrue(events.contains { $0.stage == "Recovery summary" && $0.outcome.contains("cancelled") })
         XCTAssertTrue(events.contains { $0.stage == "Recovery summary" && $0.outcome.contains("recovered; attempts=5") })
+        let delivered = await nextClient.pendingGenerations()
+        XCTAssertEqual(delivered.count, 1, "Keep recovery until the gallery acknowledges durable receipt")
+        await nextClient.acknowledgeResult(result.generationID!)
         let remaining = await nextClient.pendingGenerations()
         XCTAssertTrue(remaining.isEmpty)
         MockURLProtocol.handler = { request in
@@ -566,6 +744,135 @@ final class NetworkingTests: XCTestCase {
         } catch {}
         let rejected = await nextClient.pendingGenerations()
         XCTAssertTrue(rejected.isEmpty, "Configuration rejection must not leave a phantom pending sheet")
+    }
+
+    func testSunburstSurvivesCancellationAndClientRelaunchWithoutAnotherPOST() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let suite = "FalRecoveryTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let identities = AnonymousIdentityStore(service: suite)
+        let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
+        try await identities.save(account)
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        let store = PendingGenerationStore(defaults: defaults)
+        let firstClient = WorkerClient(session: session, identities: identities, pendingStore: store,
+                                       recoverySleep: { _ in throw CancellationError() })
+        let batchID = UUID()
+        var methods: [String] = []
+        var generationID: String?
+        MockURLProtocol.handler = { request in
+            methods.append(request.httpMethod!)
+            if request.httpMethod == "POST" { generationID = request.value(forHTTPHeaderField: "Idempotency-Key") }
+            return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!, Data())
+        }
+        do {
+            _ = try await firstClient.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .sunburst, composition: .side, batchID: batchID))
+            XCTFail("Expected cancelled waiting")
+        } catch { XCTAssertEqual(error as? GenerationError, .cancelled) }
+        let restoredStore = PendingGenerationStore(defaults: defaults)
+        let nextClient = WorkerClient(session: session, identities: identities, pendingStore: restoredStore, recoverySleep: { _ in })
+        let pending = await nextClient.pendingGenerations()
+        XCTAssertEqual(pending.count, 1)
+        XCTAssertEqual(pending.first?.batchID, batchID)
+        XCTAssertEqual(pending.first?.id.uuidString.lowercased(), generationID)
+        var polls = 0
+        let png = MockGenerator.sampleImage().pngData()!
+        MockURLProtocol.handler = { request in
+            methods.append(request.httpMethod!)
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url!.lastPathComponent, generationID)
+            polls += 1
+            if polls < 5 { return (HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil, headerFields: nil)!, Data()) }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                    headerFields: ["Content-Type": "image/png", "X-Generation-ID": generationID!])!, png)
+        }
+        let result = try await nextClient.recoverPending(try XCTUnwrap(pending.first))
+        XCTAssertEqual(result.requestedModel, .sunburst)
+        XCTAssertEqual(result.generationID?.uuidString.lowercased(), generationID)
+        XCTAssertEqual(methods.filter { $0 == "POST" }.count, 1)
+        XCTAssertEqual(polls, 5, "Sunburst recovery must tolerate more than the previous three short checks")
+        let events = await MainActor.run { DiagnosticLog.shared.events.filter { $0.generationID?.uuidString.lowercased() == generationID } }
+        XCTAssertEqual(events.filter { $0.stage == "Recovery" && $0.httpStatus == 202 }.count, 2, "One waiting event per recovery session, not one per identical poll.")
+        XCTAssertTrue(events.contains { $0.stage == "Recovery summary" && $0.outcome.contains("cancelled") })
+        XCTAssertTrue(events.contains { $0.stage == "Recovery summary" && $0.outcome.contains("recovered; attempts=5") })
+        let delivered = await nextClient.pendingGenerations()
+        XCTAssertEqual(delivered.count, 1, "Keep recovery until the gallery acknowledges durable receipt")
+        await nextClient.acknowledgeResult(result.generationID!)
+        let remaining = await nextClient.pendingGenerations()
+        XCTAssertTrue(remaining.isEmpty)
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            return (HTTPURLResponse(url: request.url!, statusCode: 503, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!,
+                    Data(#"{"error":{"code":"service_unavailable","message":"Configure fal first."}}"#.utf8))
+        }
+        do {
+            _ = try await nextClient.generate(GenerationRequest(description: "Flower", age: 8, model: .sunburst))
+            XCTFail("Expected configuration rejection")
+        } catch {}
+        let rejected = await nextClient.pendingGenerations()
+        XCTAssertTrue(rejected.isEmpty, "Configuration rejection must not leave a phantom pending sheet")
+    }
+
+    func testMissingRecoveryWaitsForReservationThenClearsOnlyConfirmedMissingJob() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: config)
+        let suite = "MissingJobTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let identities = AnonymousIdentityStore(service: suite)
+        let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
+        try await identities.save(account)
+        addTeardownBlock { await identities.remove() }
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        let pendingStore = PendingGenerationStore(defaults: defaults)
+        let scope = WorkerClient.defaultServiceURL.absoluteString + "/" + account.accountID.uuidString.lowercased()
+        let client = WorkerClient(session: session, identities: identities, pendingStore: pendingStore, recoverySleep: { _ in })
+        let missing = PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date())
+        try await pendingStore.add(missing, scope: scope)
+        var polls = 0
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            polls += 1
+            return (HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"])!, Data(#"{"error":{"code":"not_found"}}"#.utf8))
+        }
+        do { _ = try await client.recoverPending(missing); XCTFail("Expected missing job") }
+        catch { XCTAssertEqual(error as? GenerationError, .resultMissing) }
+        XCTAssertEqual(polls, 6, "Allow moderation/reservation to finish, without another POST")
+        let remaining = await client.pendingGenerations()
+        XCTAssertTrue(remaining.isEmpty)
+
+        let oldMissing = PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date().addingTimeInterval(-90))
+        try await pendingStore.add(oldMissing, scope: scope)
+        polls = 0
+        do { _ = try await client.recoverPending(oldMissing); XCTFail("Expected missing job") }
+        catch { XCTAssertEqual(error as? GenerationError, .resultMissing) }
+        XCTAssertEqual(polls, 1, "An old ID which is already confirmed missing must fail immediately")
+
+        let delayed = PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date())
+        try await pendingStore.add(delayed, scope: scope)
+        polls = 0
+        let png = MockGenerator.sampleImage().pngData()!
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            polls += 1
+            if polls < 3 { return (HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"])!, Data(#"{"error":{"code":"not_found"}}"#.utf8)) }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                headerFields: ["Content-Type": "image/png"])!, png)
+        }
+        let delivered = try await client.recoverPending(delayed)
+        XCTAssertEqual(delivered.generationID, delayed.id)
+        let beforeAcknowledgement = await client.pendingGenerations()
+        XCTAssertEqual(beforeAcknowledgement.map(\.id), [delayed.id], "Cancellation after delivery must retain recovery")
+        await client.acknowledgeResult(delayed.id)
+        let afterAcknowledgement = await client.pendingGenerations()
+        XCTAssertTrue(afterAcknowledgement.isEmpty)
     }
 
     func testFalUsageRefreshIsReadOnlyAndDecodesBillingEvidence() async throws {
@@ -710,14 +1017,38 @@ final class NetworkingTests: XCTestCase {
 @MainActor
 final class ControlledService: GenerationServing {
     var calls = 0
+    var pollingResumes = 0
+    func resumePolling() async { pollingResumes += 1 }
     var recoveryCalls = 0
+    var acknowledgedIDs: [UUID] = []
+    var onAcknowledgement: ((UUID) -> Void)?
     var recoverable: [PendingGeneration] = []
+    var recoveredEntries: [PendingGeneration] = []
+    var holdsRecovery = false
+    var recoveryContinuations: [Int: CheckedContinuation<ColoringResult, Error>] = [:]
     func pendingGenerations() async -> [PendingGeneration] { recoverable }
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult {
+        let index = recoveryCalls
         recoveryCalls += 1
-        recoverable.removeAll { $0.id == pending.id }
+        recoveredEntries.append(pending)
+        if holdsRecovery {
+            let result = try await withCheckedThrowingContinuation { recoveryContinuations[index] = $0 }
+            try Task.checkCancellation()
+            return result
+        }
         let image = MockGenerator.sampleImage()
         return ColoringResult(data: image.pngData()!, image: image, requestedModel: pending.model, metrics: nil, generationID: pending.id)
+    }
+    func acknowledgeResult(_ id: UUID) async {
+        onAcknowledgement?(id)
+        acknowledgedIDs.append(id)
+        recoverable.removeAll { $0.id == id }
+    }
+    func finishRecovery(at index: Int) {
+        let entry = recoveredEntries[index]
+        let image = MockGenerator.sampleImage()
+        recoveryContinuations.removeValue(forKey: index)?.resume(returning:
+            ColoringResult(data: image.pngData()!, image: image, requestedModel: entry.model, metrics: nil, generationID: entry.id))
     }
     var captured: [GenerationRequest] = []
     var continuations: [Int: CheckedContinuation<ColoringResult, Error>] = [:]
@@ -730,9 +1061,9 @@ final class ControlledService: GenerationServing {
     func succeed() {
         for index in continuations.keys.sorted() { succeed(at: index) }
     }
-    func succeed(at index: Int) {
+    func succeed(at index: Int, generationID: UUID? = nil) {
         let image = MockGenerator.sampleImage(variation: index % ColoringViewModel.batchSize)
-        continuations.removeValue(forKey: index)?.resume(returning: ColoringResult(data: image.pngData()!, image: image, requestedModel: .sunburst, metrics: nil))
+        continuations.removeValue(forKey: index)?.resume(returning: ColoringResult(data: image.pngData()!, image: image, requestedModel: .sunburst, metrics: nil, generationID: generationID))
     }
     func fail() {
         for index in continuations.keys.sorted() { fail(at: index) }
@@ -778,6 +1109,342 @@ final class StateTests: XCTestCase {
         await waitFor { relaunched.phase == .result }
         XCTAssertEqual(relaunched.selectedResultID, relaunched.results.first?.id)
         XCTAssertNotNil(relaunched.selectedResultID)
+    }
+
+    func testUnlockKeepsSubmissionAliveWithoutAnotherGeneration() async {
+        let suite = "UnlockRecoveryTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        let id = UUID()
+        service.recoverable = [PendingGeneration(id: id, model: .sunburst, createdAt: Date(), batchID: service.captured[0].batchID)]
+        store.enteredBackground()
+        await store.enteredForeground()
+        await store.enteredForeground()
+        XCTAssertEqual(service.pollingResumes, 1, "Wake once per return, without restarting submissions")
+        XCTAssertEqual(store.progressText, "Checking 1 sheet · 0 ready")
+        XCTAssertTrue(store.isGenerating, "Lock must not cancel the original submission")
+        XCTAssertEqual(service.recoveryCalls, 0)
+        service.succeed(at: 0, generationID: id)
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(service.calls, 1)
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertEqual(store.result?.generationID, id)
+
+        store.generate()
+        await waitFor { service.calls == 2 }
+        service.recoverable = [PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date())]
+        store.cancel()
+        store.enteredBackground()
+        await store.enteredForeground()
+        XCTAssertEqual(service.recoveryCalls, 0, "User stop must not automatically resume on unlock")
+        service.succeed()
+    }
+
+    func testFirstSheetAfterForegroundAppearsImmediatelyWhileOthersStillDraw() async {
+        let suite = "ImmediateForegroundSheet-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"
+        store.generate()
+        await waitFor { service.calls == 3 }
+        store.enteredBackground()
+        await store.enteredForeground()
+        service.succeed(at: 0)
+        await waitFor { store.results.count == 1 }
+        XCTAssertEqual(store.progressText, "Checking 3 sheets · 1 ready")
+        XCTAssertEqual(store.readyCount, 1)
+        XCTAssertTrue(store.isGenerating, "Show the first sheet before the other two finish")
+        XCTAssertEqual(service.pollingResumes, 1)
+        XCTAssertEqual(service.calls, 3)
+        XCTAssertEqual(service.recoveryCalls, 0)
+        service.succeed()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 3)
+    }
+
+    func testUnlockReplacesPreviousTwoSheetsWithThreeFromInterruptedBatch() async {
+        let suite = "ReplaceOnUnlock-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(2)
+        store.generate()
+        await waitFor { service.calls == 2 }
+        service.succeed()
+        await waitFor { store.phase == .result }
+        let oldIDs = Set(store.results.map(\.id))
+        XCTAssertEqual(oldIDs.count, 2)
+
+        store.setImageCount(3)
+        store.generate()
+        await waitFor { service.calls == 5 }
+        let batchID = service.captured[2].batchID
+        let pending = (0..<3).map { _ in PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date(), batchID: batchID) }
+        let stale = PendingGeneration(id: UUID(), model: .redmond, createdAt: Date(), batchID: UUID())
+        service.recoverable = [stale] + pending
+        store.enteredBackground()
+        await store.enteredForeground()
+        for index in 0..<3 { service.succeed(at: index + 2, generationID: pending[index].id) }
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(service.calls, 5, "Unlock must never submit more generation requests")
+        XCTAssertEqual(service.recoveryCalls, 0, "Keep the original requests; do not recover other batches")
+        XCTAssertEqual(store.results.count, 3, "New batch must replace the previous two sheets")
+        XCTAssertEqual(Set(store.results.compactMap(\.generationID)), Set(pending.map(\.id)))
+        XCTAssertTrue(Set(store.results.map(\.id)).isDisjoint(with: oldIDs))
+        await waitFor { service.acknowledgedIDs.count == 3 }
+        XCTAssertEqual(service.recoverable.map(\.id), [stale.id])
+        service.succeed() // Drain cancelled originals; they must not add sheets.
+        await Task.yield()
+        XCTAssertEqual(store.results.count, 3)
+    }
+
+    func testRepeatedUnlockPreservesPartialBatchAndSelectionWithoutDuplicates() async {
+        let suite = "RepeatedUnlock-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        service.holdsRecovery = true
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"
+        store.generate()
+        await waitFor { service.calls == 3 }
+        let pending = (0..<3).map { _ in PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date(), batchID: service.captured[0].batchID) }
+        service.recoverable = pending
+        store.cancel()
+        await store.refreshUnfinishedSheets()
+        store.recoverUnfinishedSheets()
+        await waitFor { service.recoveryCalls == 3 }
+        XCTAssertTrue(store.progressText.hasPrefix("Checking"))
+        store.enteredBackground() // Lock before any recovery result.
+        await store.enteredForeground()
+        XCTAssertEqual(service.recoveryCalls, 3, "Unlock must not replace in-flight recovery tasks")
+        service.finishRecovery(at: 0)
+        await waitFor { store.completedCount == 1 }
+        let selected = store.selectedResultID
+        store.enteredBackground() // Lock after the first sheet has arrived.
+        await store.enteredForeground()
+        for index in 1..<3 { service.finishRecovery(at: index) }
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 3)
+        XCTAssertEqual(store.selectedResultID, selected)
+        XCTAssertEqual(Set(store.results.compactMap(\.generationID)), Set(pending.map(\.id)))
+        XCTAssertEqual(service.calls, 3)
+        service.succeed()
+    }
+
+    func testManualRecoverySkipsAlreadyDisplayedGenerationIDs() async {
+        let suite = "DeduplicatedRecovery-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        let id = UUID()
+        service.succeed(at: 0, generationID: id)
+        await waitFor { store.phase == .result }
+        service.recoverable = [PendingGeneration(id: id, model: .sunburst, createdAt: Date())]
+        await store.refreshUnfinishedSheets()
+        store.recoverUnfinishedSheets()
+        await Task.yield()
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertEqual(service.recoveryCalls, 0)
+        XCTAssertEqual(service.calls, 1)
+    }
+
+    func testRelaunchRestoresGallerySelectionAndResumesOnlyUnfinishedPartOfBatch() async throws {
+        let suite = "DurableGalleryTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        service.onAcknowledgement = { id in
+            guard let saved = file.load() else {
+                XCTFail("Gallery must exist before acknowledging a result")
+                return
+            }
+            let storedIDs = (saved.sheets + saved.waitingToReveal).compactMap(\.generationID)
+            XCTAssertTrue(storedIDs.contains(id), "Save the received PNG before removing its recovery ID")
+        }
+        store.age = 8; store.description = "Synthetic flower"
+        store.generate()
+        await waitFor { service.calls == 3 }
+        let pending = (0..<3).map { _ in PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date(), batchID: service.captured[0].batchID) }
+        service.recoverable = pending
+        service.succeed(at: 0, generationID: pending[0].id)
+        service.succeed(at: 1, generationID: pending[1].id)
+        await waitFor { service.acknowledgedIDs.count == 2 }
+        // The reveal delay has not ended. Simulate termination with no background callback.
+        let relaunched = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        XCTAssertEqual(relaunched.results.count, 2)
+        relaunched.selectResult(at: 1)
+        let selected = relaunched.selectedResultID
+        let restoredSelection = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        XCTAssertEqual(restoredSelection.selectedResultID, selected)
+        await restoredSelection.enteredForeground()
+        await waitFor { restoredSelection.phase == .result && restoredSelection.results.count == 3 }
+        XCTAssertEqual(restoredSelection.selectedResultID, selected)
+        XCTAssertEqual(service.recoveredEntries.map(\.id), [pending[2].id])
+        XCTAssertEqual(service.calls, 3, "Relaunch must not generate replacements")
+        await waitFor { Set(service.acknowledgedIDs).count == 3 }
+        service.succeed() // Drain the original third request.
+        await waitFor { store.phase == .result }
+    }
+
+    func testStoppedBatchRemainsManualAfterRelaunch() async throws {
+        let suite = "StoppedGalleryTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        service.recoverable = [PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date(), batchID: service.captured[0].batchID)]
+        store.cancel()
+        let relaunched = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        await relaunched.enteredForeground()
+        XCTAssertEqual(service.recoveryCalls, 0)
+        XCTAssertEqual(relaunched.unfinishedSheets.count, 1)
+        service.succeed()
+    }
+
+    func testFailedLocalSaveRetainsRecoveryID() async throws {
+        let suite = "GallerySaveFailure-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let blocked = directory.appendingPathComponent("file-not-directory")
+        try Data().write(to: blocked)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults,
+            galleryStore: GalleryStore(url: blocked.appendingPathComponent("gallery.json")))
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        let id = UUID()
+        service.recoverable = [PendingGeneration(id: id, model: .sunburst, createdAt: Date())]
+        service.succeed(at: 0, generationID: id)
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 1)
+        XCTAssertTrue(service.acknowledgedIDs.isEmpty)
+        XCTAssertEqual(service.recoverable.map(\.id), [id])
+        XCTAssertTrue(store.batchMessage?.contains("could not be saved") == true)
+    }
+
+    func testLaterSuccessfulSaveAcknowledgesEverySavedSheet() async throws {
+        let suite = "SaveRecovery-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let blocked = directory.appendingPathComponent("temporarily-blocked")
+        try Data().write(to: blocked)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: blocked.appendingPathComponent("gallery.json"))
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(2)
+        store.generate()
+        await waitFor { service.calls == 2 }
+        let entries = (0..<2).map { _ in PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date()) }
+        service.recoverable = entries
+        service.succeed(at: 0, generationID: entries[0].id)
+        await waitFor { store.readyCount == 1 }
+        XCTAssertTrue(service.acknowledgedIDs.isEmpty)
+        try FileManager.default.removeItem(at: blocked)
+        service.succeed(at: 1, generationID: entries[1].id)
+        await waitFor { store.phase == .result }
+        await waitFor { service.recoverable.isEmpty }
+        XCTAssertEqual(Set(service.acknowledgedIDs), Set(entries.map(\.id)))
+        XCTAssertEqual(file.load()?.sheets.count, 2)
+        XCTAssertNil(store.batchMessage, "A successful save must clear the obsolete save warning")
+    }
+
+    func testCompletedGalleryRetriesFailedSaveOnLifecycleChanges() async throws {
+        for retryOnForeground in [false, true] {
+            let suite = "LifecycleSaveRetry-" + UUID().uuidString
+            let defaults = UserDefaults(suiteName: suite)!
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let blocked = directory.appendingPathComponent("temporarily-blocked")
+            try Data().write(to: blocked)
+            defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+            let file = GalleryStore(url: blocked.appendingPathComponent("gallery.json"))
+            let service = ControlledService()
+            let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+            store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+            store.generate()
+            await waitFor { service.calls == 1 }
+            let id = UUID()
+            service.recoverable = [PendingGeneration(id: id, model: .sunburst, createdAt: Date())]
+            service.succeed(at: 0, generationID: id)
+            await waitFor { store.phase == .result }
+            XCTAssertTrue(service.acknowledgedIDs.isEmpty)
+            if retryOnForeground { store.enteredBackground() }
+            try FileManager.default.removeItem(at: blocked)
+            if retryOnForeground { await store.enteredForeground() }
+            else { store.enteredBackground() }
+            XCTAssertEqual(file.load()?.sheets.compactMap(\.generationID), [id])
+            XCTAssertNil(store.batchMessage)
+            await waitFor { service.recoverable.isEmpty }
+            XCTAssertEqual(service.calls, 1)
+            XCTAssertEqual(service.recoveryCalls, 0)
+        }
+    }
+
+    func testRelaunchAcknowledgesSheetSavedBeforeTermination() async throws {
+        let suite = "SavedBeforeAcknowledgement-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        let id = UUID()
+        let image = MockGenerator.sampleImage()
+        let sheet = ColoringResult(data: image.pngData()!, image: image, requestedModel: .sunburst, metrics: nil, generationID: id)
+        try file.save(GallerySnapshot(sheets: [GallerySnapshot.Sheet(sheet)], waitingToReveal: [],
+            selectedID: sheet.id, hasRevealedResults: true, generationBatchID: UUID(), recoveringIDs: nil, shouldResume: true))
+        let service = ControlledService()
+        service.recoverable = [PendingGeneration(id: id, model: .sunburst, createdAt: Date())]
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file)
+        await store.enteredForeground()
+        await waitFor { service.recoverable.isEmpty }
+        XCTAssertEqual(store.results.map(\.generationID), [id])
+        XCTAssertEqual(service.recoveryCalls, 0, "The already saved PNG should not be downloaded again")
+        XCTAssertEqual(service.calls, 0)
+    }
+
+    func testInterruptedTransportAfterUnlockAutomaticallyChecksExistingJob() async {
+        let suite = "LateLockFailure-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.age = 8; store.description = "Synthetic flower"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        let id = UUID()
+        service.recoverable = [PendingGeneration(id: id, model: .sunburst, createdAt: Date(), batchID: service.captured[0].batchID)]
+        store.enteredBackground()
+        await store.enteredForeground()
+        service.fail() // URLSession interruption can arrive after foreground activation.
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(service.recoveryCalls, 1)
+        XCTAssertEqual(service.calls, 1)
+        XCTAssertEqual(store.result?.generationID, id)
     }
 
     func testSettingsPersistAndControlNextBatch() async {
@@ -870,8 +1537,8 @@ final class StateTests: XCTestCase {
         store.enteredBackground(); service.succeed()
         await waitFor { !store.isGenerating }
         XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 3)
-        XCTAssertEqual(store.result?.data, previous)
-        if case .error(let message) = store.phase { XCTAssertTrue(message.contains("charge")) } else { XCTFail("Expected uncertainty") }
+        XCTAssertEqual(store.results.count, 3)
+        XCTAssertEqual(store.phase, .result, "Lock must not discard the original results")
         defaults.set(99, forKey: "childAge")
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, 0)
     }
@@ -977,8 +1644,8 @@ final class StateTests: XCTestCase {
         service.succeed()
         try await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(store.result?.id, newID)
-        XCTAssertEqual(store.results.count, 1)
-        XCTAssertEqual(store.completedCount, 1)
+        XCTAssertEqual(store.results.count, 3)
+        XCTAssertEqual(store.completedCount, 3)
         XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 2)
     }
 
