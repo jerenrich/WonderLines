@@ -2,6 +2,160 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
+    private func waitUntilHittable(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        // activate() can return while SpringBoard is still animating the app
+        // into view. Its cached accessibility tree already exists at that point.
+        let visible = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [visible], timeout: 5), .completed, file: file, line: line)
+    }
+
+    @MainActor
+    func testMultilineDescriptionRemainsEditableAfterResume() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-childAge", "6"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        let draft = "A fox in a moonlit garden\nwith stars and flowers\nand a little pond"
+        subject.typeText(draft)
+        XCTAssertEqual(subject.value as? String, draft)
+        app.buttons["dismissKeyboard"].tap()
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        waitUntilHittable(app.buttons["clearDescription"])
+        XCTAssertTrue(app.buttons["clearDescription"].isHittable)
+        for point in [CGVector(dx: 0.2, dy: 0.2), CGVector(dx: 0.5, dy: 0.5), CGVector(dx: 0.9, dy: 0.8)] {
+            subject.coordinate(withNormalizedOffset: point).tap()
+            XCTAssertEqual(subject.value as? String, draft, "Positioning the cursor must preserve every line")
+        }
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        // A tap chooses a native insertion point; it must not select and replace
+        // the existing description when the next character is entered.
+        subject.typeText("#")
+        let edited = subject.value as? String
+        XCTAssertTrue(edited?.contains("#") == true)
+        XCTAssertEqual(edited?.replacingOccurrences(of: "#", with: ""), draft)
+        app.buttons["clearDescription"].tap()
+        XCTAssertEqual(subject.value as? String, "")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        subject.typeText("A garden")
+        XCTAssertEqual(subject.value as? String, "A garden")
+    }
+
+    @MainActor
+    func testDescriptionDraftSurvivesAppTermination() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-childAge", "6"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        subject.typeText("A fox with stars")
+        app.terminate()
+
+        // Remove the initial empty-draft override to exercise disk restoration.
+        app.launchArguments = ["--mock", "-childAge", "6"]
+        app.launch()
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        XCTAssertEqual(subject.value as? String, "A fox with stars")
+        XCTAssertTrue(app.buttons["clearDescription"].isHittable)
+        subject.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(subject.value as? String, "A fox with stars")
+        app.buttons["clearDescription"].tap()
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        XCTAssertEqual(subject.placeholderValue, "Describe your coloring sheet…")
+        XCTAssertFalse(app.buttons["clearDescription"].exists)
+        subject.tap()
+        subject.typeText("A garden")
+        XCTAssertEqual(subject.value as? String, "A garden")
+    }
+
+    @MainActor
+    func testDescriptionRemainsEditableAndClearableAfterResume() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-childAge", "6"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        subject.typeText("A fox")
+
+        // Exercise resume both with and without an active editor.
+        for dismissBeforeBackground in [false, true, false] {
+            if dismissBeforeBackground { app.buttons["dismissKeyboard"].tap() }
+            XCUIDevice.shared.press(.home)
+            app.activate()
+            waitUntilHittable(app.buttons["clearDescription"])
+            let resumed = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            resumed.name = "Description after resume, dismissed before background: \(dismissBeforeBackground)"
+            resumed.lifetime = .keepAlways
+            add(resumed)
+            XCTAssertEqual(subject.value as? String, "A fox")
+            XCTAssertTrue(app.buttons["clearDescription"].isHittable, app.debugDescription)
+            // Tapping anywhere in the editable area must never act as Clear.
+            for x in [0.1, 0.5, 0.9] {
+                subject.coordinate(withNormalizedOffset: CGVector(dx: x, dy: 0.5)).tap()
+                XCTAssertEqual(subject.value as? String, "A fox")
+            }
+            XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        }
+
+        subject.typeText(" with stars")
+        XCTAssertEqual(subject.value as? String, "A fox with stars")
+        app.buttons["clearDescription"].tap()
+        XCTAssertEqual(subject.value as? String, "")
+        XCTAssertFalse(app.buttons["clearDescription"].exists)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        subject.typeText("A garden")
+        XCTAssertEqual(subject.value as? String, "A garden")
+    }
+
+    @MainActor
+    func testMinimizedDescriptionPreservesTextAndOffersExplicitClear() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-childAge", "6", "-imageCount", "1"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        subject.typeText("A fox")
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["generate"].tap()
+        XCTAssertTrue(app.staticTexts["sheetPosition"].waitForExistence(timeout: 10))
+        let selectedSheet = app.staticTexts["sheetPosition"].label
+        app.buttons["minimizeComposer"].tap()
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        waitUntilHittable(app.buttons["expandComposer"])
+        XCTAssertTrue(app.buttons["clearDescription"].isHittable)
+        app.buttons["expandComposer"].tap()
+        let expanded = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        expanded.name = "Description reopened after resume"
+        expanded.lifetime = .keepAlways
+        add(expanded)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(subject.value as? String, "A fox")
+        subject.typeText(" with stars")
+        XCTAssertEqual(subject.value as? String, "A fox with stars")
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["minimizeComposer"].tap()
+        app.buttons["clearDescription"].tap()
+        XCTAssertEqual(subject.value as? String, "")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["sheetPosition"].label, selectedSheet)
+        subject.typeText("A garden")
+        XCTAssertEqual(subject.value as? String, "A garden")
+    }
+
+    @MainActor
     private func setAge(in app: XCUIApplication, position: CGFloat) {
         app.buttons["validation"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
@@ -12,7 +166,7 @@ final class GalleryUITests: XCTestCase {
     @MainActor
     func testSettingsScreenShowsAgeSliderModelAndImageCount() {
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "5", "-childAge", "0"]
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-imageCount", "5", "-childAge", "0"]
         app.launch()
         XCTAssertFalse(app.sliders["ageSetting"].exists)
         app.buttons["settings"].tap()
@@ -51,7 +205,7 @@ final class GalleryUITests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "5", "-childAge", "0"]
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-imageCount", "5", "-childAge", "0"]
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 5))
@@ -160,7 +314,7 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(subject.isHittable, "Clearing must leave the editor visible")
         XCTAssertEqual(subject.frame.width, beforeFocusedClear.width, accuracy: 1)
         XCTAssertEqual(subject.frame.height, beforeFocusedClear.height, accuracy: 1)
-        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         subject.typeText("A moonlit garden")
         XCTAssertEqual(subject.value as? String, "A moonlit garden")
         app.buttons["dismissKeyboard"].tap()
@@ -173,7 +327,7 @@ final class GalleryUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "1", "-childAge", "6",
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-imageCount", "1", "-childAge", "6",
                                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
@@ -205,7 +359,7 @@ final class GalleryUITests: XCTestCase {
         }
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-imageCount", "1", "-childAge", "8"]
+        app.launchArguments = ["-descriptionDraft", "", "-imageCount", "1", "-childAge", "8"]
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 10))
@@ -240,7 +394,7 @@ final class GalleryUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "-imageCount", "5", "-childAge", "0"]
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-imageCount", "5", "-childAge", "0"]
         app.launch()
 
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch

@@ -4,6 +4,27 @@ import UIKit
 
 final class GenerationTests: XCTestCase {
     @MainActor
+    func testDescriptionDraftSurvivesBackgroundAndRelaunchAndExplicitClear() throws {
+        let suite = "description-draft-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        XCTAssertEqual(store.description, "")
+        let draft = "  A fox 🦊\nwith stars  "
+        store.description = draft
+        store.enteredBackground()
+        XCTAssertEqual(store.description, draft)
+        let restored = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        XCTAssertEqual(restored.description, draft, "Restore the exact editable draft, including whitespace")
+        restored.description += " and a moon"
+        let edited = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        XCTAssertEqual(edited.description, draft + " and a moon")
+        edited.description = ""
+        XCTAssertEqual(ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults).description, "",
+                       "Explicitly cleared drafts must not return after relaunch")
+    }
+
+    @MainActor
     func testDiagnosticsPersistOnlySafeMetadataAndStayBounded() throws {
         let suite = "diagnostics-test-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -1102,6 +1123,46 @@ final class KeyboardFocusTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    func testDescriptionAllowsSelectionEditsAndRefocusWithoutReplacingText() async throws {
+        let suite = "DescriptionSelectionTests-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        store.age = 6
+        store.description = "A fox with stars"
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let host = UIHostingController(rootView: ContentView(store: store))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; previousWindow?.makeKey() }
+        try await Task.sleep(for: .milliseconds(200))
+        let input = try XCTUnwrap(textInput(in: host.view))
+        let text = try XCTUnwrap(input as? UITextInput)
+        let keyboard = try XCTUnwrap(input as? UIKeyInput)
+        XCTAssertTrue(input.becomeFirstResponder())
+        try await Task.sleep(for: .milliseconds(200))
+        let start = try XCTUnwrap(text.position(from: text.beginningOfDocument, offset: 2))
+        let end = try XCTUnwrap(text.position(from: start, offset: 3))
+        text.selectedTextRange = text.textRange(from: start, to: end)
+        keyboard.insertText("cat")
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(store.description, "A cat with stars")
+        input.resignFirstResponder()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertTrue(input.becomeFirstResponder())
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(store.description, "A cat with stars", "Beginning another edit must not clear or replace the draft")
+        XCTAssertTrue(input === textInput(in: host.view))
+        // Append at the native insertion point, without selecting all on focus.
+        text.selectedTextRange = text.textRange(from: text.endOfDocument, to: text.endOfDocument)
+        keyboard.insertText(" and a moon")
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(store.description, "A cat with stars and a moon")
+        input.resignFirstResponder()
     }
 
     func testDescriptionRetainsResponderWhenKeyboardChangesLayout() async throws {

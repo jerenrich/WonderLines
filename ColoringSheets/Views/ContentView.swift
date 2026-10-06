@@ -68,7 +68,12 @@ struct ContentView: View {
         .preferredColorScheme(.light)
         .task { await store.refreshUnfinishedSheets() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { store.enteredBackground() }
+            if phase == .background {
+                // The system can dismiss the keyboard while suspended. Start
+                // the next editing session from a known, unfocused state.
+                descriptionFocused = false
+                store.enteredBackground()
+            }
             if phase == .active { Task { await store.refreshUnfinishedSheets() } }
         }
         .sheet(item: $export, onDismiss: cleanExport) { item in
@@ -183,6 +188,13 @@ struct ContentView: View {
 
     private func composer(narrow: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Keep the native editor alive even when displaying its summary.
+            // Reopening must preserve text, selection, and responder identity.
+            controls(narrow: narrow)
+                .frame(height: composerMinimized ? 0 : nil)
+                .opacity(composerMinimized ? 0 : 1)
+                .clipped()
+                .allowsHitTesting(!composerMinimized)
             if composerMinimized {
                 HStack(spacing: 12) {
                     Button {
@@ -201,20 +213,8 @@ struct ContentView: View {
                     .accessibilityLabel("Edit description: \(minimizedPrompt)")
                     .accessibilityHint("Opens the keyboard to edit the description")
                     .accessibilityIdentifier("expandComposer")
-                    Button {
-                        store.description = ""
-                        setComposerMinimized(false)
-                        descriptionFocused = true
-                    } label: {
-                        Label("New sheet", systemImage: "plus")
-                            .foregroundStyle(.white).frame(minHeight: 32)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(store.isGenerating)
-                    .accessibilityIdentifier("newSheet")
+                    clearDescriptionButton()
                 }
-            } else {
-                controls(narrow: narrow)
             }
             generationStatus
         }
@@ -222,7 +222,8 @@ struct ContentView: View {
         .padding(.vertical, composerMinimized ? 6 : 12)
         .background(.white, in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18)
-            .strokeBorder(accent.opacity(descriptionFocused ? 0.45 : 0.15)))
+            .strokeBorder(accent.opacity(descriptionFocused ? 0.45 : 0.15))
+            .allowsHitTesting(false))
         .shadow(color: ink.opacity(0.06), radius: 8, y: 3)
     }
 
@@ -235,6 +236,29 @@ struct ContentView: View {
     }
 
     private var minimizedPrompt: String { Self.minimizedPrompt(from: store.description) }
+
+    private func clearDescriptionButton(hidden: Bool = false) -> some View {
+        Button {
+            store.description = ""
+            // Expand without animating an interactive field under the tap.
+            composerMinimized = false
+            descriptionFocused = true
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 17))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear description")
+        .accessibilityIdentifier("clearDescription")
+        // Reserve a separate target; only an explicit tap here clears text.
+        .opacity(store.description.isEmpty ? 0 : 1)
+        .allowsHitTesting(!store.description.isEmpty)
+        .disabled(store.description.isEmpty)
+        .accessibilityHidden(hidden || store.description.isEmpty)
+    }
 
     private func controls(narrow: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -250,23 +274,8 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .accessibilityLabel("Description")
                         .accessibilityIdentifier("subject")
-                    Button {
-                        store.description = ""
-                        descriptionFocused = true
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 17))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Clear description")
-                    .accessibilityIdentifier("clearDescription")
-                    // Reserve the button's space so clearing never resizes the field.
-                    .opacity(store.description.isEmpty ? 0 : 1)
-                    .disabled(store.description.isEmpty)
-                    .accessibilityHidden(store.description.isEmpty)
+                        .accessibilityHidden(composerMinimized)
+                    clearDescriptionButton(hidden: composerMinimized)
                 }
                 .background(accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
                 Button {
@@ -288,6 +297,7 @@ struct ContentView: View {
                 .disabled(store.isGenerating || store.validationMessage != nil)
                 .accessibilityLabel(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)")
                 .accessibilityIdentifier("generate")
+                .accessibilityHidden(composerMinimized)
                 Button {
                     if descriptionFocused { descriptionFocused = false }
                     else { setComposerMinimized(true) }
@@ -299,7 +309,7 @@ struct ContentView: View {
                 .accessibilityIdentifier(descriptionFocused ? "dismissKeyboard" : "minimizeComposer")
                 .opacity(descriptionFocused || store.result != nil ? 1 : 0)
                 .disabled(!descriptionFocused && store.result == nil)
-                .accessibilityHidden(!descriptionFocused && store.result == nil)
+                .accessibilityHidden(composerMinimized || (!descriptionFocused && store.result == nil))
             }
             Group {
                 if store.age == 0 {
@@ -322,6 +332,7 @@ struct ContentView: View {
                     .accessibilityIdentifier("validation")
                 }
             }
+            .accessibilityHidden(composerMinimized)
         }
     }
 

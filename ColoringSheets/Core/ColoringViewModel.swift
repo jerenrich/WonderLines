@@ -4,7 +4,9 @@ import SwiftUI
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
     static let batchSize = 3
-    @Published var description = ""
+    @Published var description: String {
+        didSet { defaults.set(description, forKey: "descriptionDraft") }
+    }
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
     @Published var model: ImageModel { didSet { defaults.set(model.rawValue, forKey: "generationModel") } }
     @Published private(set) var imageCount: Int { didSet { defaults.set(imageCount, forKey: "imageCount") } }
@@ -34,6 +36,7 @@ final class ColoringViewModel: ObservableObject {
 
     init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard) {
         self.service = service; self.isMock = isMock; self.defaults = defaults
+        description = defaults.string(forKey: "descriptionDraft") ?? ""
         let stored = defaults.integer(forKey: "childAge")
         age = (3...18).contains(stored) ? stored : 0
         let storedModel = defaults.string(forKey: "generationModel")
