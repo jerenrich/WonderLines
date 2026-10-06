@@ -181,7 +181,7 @@ struct GenerationRequest: Encodable, Equatable {
     }
 }
 
-struct GenerationMetrics: Decodable {
+struct GenerationMetrics: Codable {
     let requestedSize: String?
     let size: String?
     let requestedModel: String?
@@ -218,7 +218,7 @@ struct GenerationMetrics: Decodable {
 }
 
 struct ColoringResult: Identifiable {
-    let id = UUID()
+    let id: UUID
     let data: Data
     let image: UIImage
     let requestedModel: ImageModel
@@ -227,14 +227,15 @@ struct ColoringResult: Identifiable {
     let generationID: UUID?
 
     init(data: Data, image: UIImage, requestedModel: ImageModel, metrics: GenerationMetrics?,
-         access: AccessSnapshot? = nil, generationID: UUID? = nil) {
+         access: AccessSnapshot? = nil, generationID: UUID? = nil, id: UUID = UUID()) {
+        self.id = id
         self.data = data; self.image = image; self.requestedModel = requestedModel
         self.metrics = metrics; self.access = access; self.generationID = generationID
     }
 }
 
 enum GenerationError: LocalizedError, Equatable {
-    case validation(String), configuration, deviceVerification, deviceRejected, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled
+    case validation(String), configuration, deviceVerification, deviceRejected, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled, resultMissing
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
@@ -247,6 +248,7 @@ enum GenerationError: LocalizedError, Equatable {
         case .invalidImage: return "The service did not return a valid PNG. Generation may have been charged. Check usage before trying again."
         case .uncertain: return "The connection was interrupted or timed out. Generation may still finish and be charged. Check usage before choosing to generate again."
         case .cancelled: return "Stopped waiting. The server may still generate and charge for this sheet. Check usage before choosing to generate again."
+        case .resultMissing: return "The service has no saved job for this sheet, so it cannot be recovered. No new generation was started automatically."
         }
     }
 }
@@ -255,6 +257,11 @@ struct PendingGeneration: Codable, Identifiable {
     let id: UUID
     let model: ImageModel
     let createdAt: Date
+    let batchID: UUID?
+
+    init(id: UUID, model: ImageModel, createdAt: Date, batchID: UUID? = nil) {
+        self.id = id; self.model = model; self.createdAt = createdAt; self.batchID = batchID
+    }
 }
 
 // Only opaque IDs and model selections are retained; no prompts or credentials.
@@ -283,11 +290,15 @@ protocol GenerationServing {
     func generationMetrics(_ id: UUID) async throws -> GenerationMetrics?
     func pendingGenerations() async -> [PendingGeneration]
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult
+    func acknowledgeResult(_ id: UUID) async
+    func resumePolling() async
 }
 extension GenerationServing {
     func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? { nil }
     func pendingGenerations() async -> [PendingGeneration] { [] }
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult { throw GenerationError.configuration }
+    func acknowledgeResult(_ id: UUID) async {}
+    func resumePolling() async {}
 }
 
 // Deny every redirect, including same-host redirects: never forward this bearer credential.
@@ -295,6 +306,80 @@ final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sen
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil)
+    }
+}
+
+@MainActor
+private final class GenerationSubmissionLease {
+    private var identifier: UIBackgroundTaskIdentifier = .invalid
+    init() {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: "Send coloring sheet request") { [weak self] in
+            self?.finish()
+        }
+    }
+    func finish() {
+        guard identifier != .invalid else { return }
+        let current = identifier
+        identifier = .invalid
+        UIApplication.shared.endBackgroundTask(current)
+    }
+}
+
+private struct ForegroundReadInterrupted: Error {}
+
+// Resume with a fresh read even if an old GET was stranded by suspension.
+// Generation POSTs are never registered here and cannot be cancelled or repeated.
+actor RecoveryPollScheduler {
+    private(set) var revision = 0
+    private var delays: [UUID: Task<Void, Error>] = [:]
+    private var reads: [UUID: Task<(Data, URLResponse), Error>] = [:]
+
+    func wake() {
+        revision += 1
+        for delay in delays.values { delay.cancel() }
+        for read in reads.values { read.cancel() }
+    }
+
+    func data(for request: URLRequest, session: URLSession, since observedRevision: Int) async throws -> (Data, URLResponse) {
+        try Task.checkCancellation()
+        guard revision == observedRevision else { throw ForegroundReadInterrupted() }
+        let id = UUID()
+        let read = Task { try await session.data(for: request) }
+        reads[id] = read
+        defer { reads.removeValue(forKey: id) }
+        return try await withTaskCancellationHandler {
+            do {
+                let result = try await read.value
+                try Task.checkCancellation()
+                return result
+            } catch {
+                try Task.checkCancellation()
+                if revision != observedRevision { throw ForegroundReadInterrupted() }
+                throw error
+            }
+        } onCancel: {
+            read.cancel()
+        }
+    }
+
+    func wait(for duration: Duration, since observedRevision: Int,
+              sleep: @escaping @Sendable (Duration) async throws -> Void) async throws {
+        try Task.checkCancellation()
+        guard revision == observedRevision else { return }
+        let id = UUID()
+        let delay = Task { try await sleep(duration) }
+        delays[id] = delay
+        defer { delays.removeValue(forKey: id) }
+        try await withTaskCancellationHandler {
+            do { try await delay.value }
+            catch {
+                try Task.checkCancellation()
+                guard error is CancellationError, revision != observedRevision else { throw error }
+            }
+            try Task.checkCancellation()
+        } onCancel: {
+            delay.cancel()
+        }
     }
 }
 
@@ -312,6 +397,7 @@ final class WorkerClient: GenerationServing {
     private let session: URLSession
     private let pendingStore: PendingGenerationStore
     private let recoverySleep: @Sendable (Duration) async throws -> Void
+    private let pollScheduler = RecoveryPollScheduler()
 
     init(serviceURL: URL = defaultServiceURL, session: URLSession? = nil, identities: AnonymousIdentityStore = AnonymousIdentityStore(),
          pendingStore: PendingGenerationStore = .shared,
@@ -348,6 +434,10 @@ final class WorkerClient: GenerationServing {
     }
 
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
+        // A lock must not cancel App Attest or the POST before the server saves
+        // the job. iOS grants a bounded window; polling does not hold this lease.
+        let submissionLease = await GenerationSubmissionLease()
+        defer { Task { await submissionLease.finish() } }
         var http = URLRequest(url: endpoint)
         http.httpMethod = "POST"
         let authToken: String
@@ -364,7 +454,7 @@ final class WorkerClient: GenerationServing {
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let idempotencyKey = generationID.uuidString.lowercased()
         http.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
-        http.setValue("1", forHTTPHeaderField: "X-Coloring-API-Version")
+        http.setValue("2", forHTTPHeaderField: "X-Coloring-API-Version")
         let requestBody = try request.encoded()
         http.httpBody = requestBody
         if legacyCredential == nil, let accountID = await identities?.session()?.accountID {
@@ -379,8 +469,9 @@ final class WorkerClient: GenerationServing {
                 throw GenerationError.deviceVerification
             }
         }
-        if request.model == .redmond, let scope = await pendingScope() {
-            try await pendingStore.add(PendingGeneration(id: generationID, model: request.model, createdAt: Date()), scope: scope)
+        if let scope = await pendingScope() {
+            try await pendingStore.add(PendingGeneration(id: generationID, model: request.model, createdAt: Date(),
+                                                       batchID: request.batchID), scope: scope)
         }
         if Task.isCancelled {
             if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
@@ -391,6 +482,7 @@ final class WorkerClient: GenerationServing {
         await DiagnosticLog.shared.record("Generation POST", "sending", generationID: generationID, model: request.model)
         do { (data, response) = try await session.data(for: http) }
         catch {
+            await submissionLease.finish()
             Self.logger.error("Generation transport failed id=\(generationID.uuidString, privacy: .public) urlError=\((error as? URLError)?.errorCode ?? 0)")
             await DiagnosticLog.shared.record("Generation POST", "transport failed; checking existing job",
                                               generationID: generationID, model: request.model, error: error)
@@ -398,6 +490,7 @@ final class WorkerClient: GenerationServing {
             if legacyCredential != nil { throw GenerationError.uncertain }
             return try await recover(generationID, authorization: authToken, requestedModel: request.model)
         }
+        await submissionLease.finish()
         guard let response = response as? HTTPURLResponse else { throw GenerationError.uncertain }
         Self.logResponse("generation", data: data, response: response, generationID: generationID)
         await DiagnosticLog.shared.record("Generation POST", "response", generationID: generationID,
@@ -419,7 +512,8 @@ final class WorkerClient: GenerationServing {
         return try await parseRecovered(data, response: response, generationID: generationID, requestedModel: request.model)
     }
 
-    private func recover(_ generationID: UUID, authorization: String, requestedModel: ImageModel) async throws -> ColoringResult {
+    private func recover(_ generationID: UUID, authorization: String, requestedModel: ImageModel,
+                         reservationGraceUntil: Date = Date().addingTimeInterval(60)) async throws -> ColoringResult {
         let started = ContinuousClock.now
         var completedAttempts = 0
         var lastState: String?
@@ -429,31 +523,53 @@ final class WorkerClient: GenerationServing {
             let elapsed = duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000
             await DiagnosticLog.shared.record("Recovery summary", "\(outcome); attempts=\(completedAttempts); elapsedMs=\(elapsed)", generationID: generationID, model: requestedModel, error: error)
         }
-        let attempts = requestedModel == .redmond ? 40 : 3
+        let attempts = 120
+        var retryDelay: Duration = .seconds(5)
+        var pollRevision = await pollScheduler.revision
         do {
             for attempt in 0..<attempts {
                 try Task.checkCancellation()
+                let previousRevision = pollRevision
                 if attempt > 0 {
-                    try await recoverySleep(.seconds(requestedModel == .redmond ? min(15, attempt * 5) : 5))
+                    try await pollScheduler.wait(for: retryDelay, since: pollRevision,
+                                                 sleep: recoverySleep)
                 }
+                pollRevision = await pollScheduler.revision
+                let foregroundCheck = pollRevision != previousRevision
+                retryDelay = .seconds(5)
                 var request = URLRequest(url: endpoint.appending(path: generationID.uuidString.lowercased()))
                 request.timeoutInterval = 30
                 request.setValue("Bearer " + authorization, forHTTPHeaderField: "Authorization")
                 completedAttempts += 1
+                if foregroundCheck {
+                    await DiagnosticLog.shared.record("Recovery", "foreground check sending; attempt=\(attempt + 1)",
+                        generationID: generationID, model: requestedModel)
+                }
                 do {
-                    let (data, response) = try await session.data(for: request)
+                    let (data, response) = try await pollScheduler.data(for: request, session: session, since: pollRevision)
                     guard let http = response as? HTTPURLResponse else { continue }
                     let code = Self.workerErrorCode(data, response: http)
                     let state = "HTTP \(http.statusCode):\(code ?? "none")"
-                    if state != lastState {
+                    if state != lastState || foregroundCheck {
                         Self.logResponse("recovery", data: data, response: http, generationID: generationID)
-                        await DiagnosticLog.shared.record("Recovery", "state changed; attempt=\(attempt + 1)", generationID: generationID, model: requestedModel, httpStatus: http.statusCode, workerCode: code)
+                        await DiagnosticLog.shared.record("Recovery", "\(foregroundCheck ? "foreground check response" : "state changed"); attempt=\(attempt + 1)", generationID: generationID, model: requestedModel, httpStatus: http.statusCode, workerCode: code)
                         lastState = state
                     }
                     if http.statusCode == 202 { continue }
+                    // A disconnected POST can still be completing moderation before
+                    // reservation. Give it a bounded window before declaring it missing.
+                    if http.statusCode == 404, code == "not_found", attempt < 5,
+                       Date() < reservationGraceUntil {
+                        retryDelay = .seconds(min(15, (attempt + 1) * 5))
+                        continue
+                    }
+                    if [500, 503].contains(http.statusCode) { continue }
                     let result = try await parseRecovered(data, response: http, generationID: generationID, requestedModel: requestedModel)
                     await summary("recovered")
                     return result
+                } catch is ForegroundReadInterrupted {
+                    await DiagnosticLog.shared.record("Recovery", "replacing interrupted read after foreground", generationID: generationID, model: requestedModel)
+                    continue
                 } catch is CancellationError { throw GenerationError.cancelled }
                 catch let error as GenerationError { throw error }
                 catch {
@@ -508,16 +624,29 @@ final class WorkerClient: GenerationServing {
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult {
         let credential = try await authorization()
         guard await pendingGenerations().contains(where: { $0.id == pending.id }) else { throw GenerationError.configuration }
-        return try await recover(pending.id, authorization: credential, requestedModel: pending.model)
+        return try await recover(pending.id, authorization: credential, requestedModel: pending.model,
+                                 reservationGraceUntil: pending.createdAt.addingTimeInterval(60))
+    }
+
+    func acknowledgeResult(_ id: UUID) async {
+        if let scope = await pendingScope() { await pendingStore.remove(id, scope: scope) }
+    }
+
+    func resumePolling() async {
+        await pollScheduler.wake()
     }
 
     private func parseRecovered(_ data: Data, response: HTTPURLResponse, generationID: UUID,
                                 requestedModel: ImageModel) async throws -> ColoringResult {
         guard !Task.isCancelled else { throw GenerationError.cancelled }
         do {
-            let result = try Self.parse(data, response: response, requestedModel: requestedModel)
+            let parsed = try Self.parse(data, response: response, requestedModel: requestedModel)
+            // Keep the original job identity even if a successful response omits its header.
+            let result = ColoringResult(data: parsed.data, image: parsed.image, requestedModel: parsed.requestedModel,
+                                        metrics: parsed.metrics, access: parsed.access, generationID: generationID)
             await DiagnosticLog.shared.record("Generation result", "ready", generationID: generationID, model: requestedModel)
-            if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
+            // The gallery acknowledges only after accepting and saving the sheet.
+            // Cancellation between this return and delivery must remain recoverable.
             return result
         } catch {
             if response.statusCode == 200, let reason = Self.imageValidationFailure(data, response: response) {
@@ -527,6 +656,7 @@ final class WorkerClient: GenerationServing {
                                               model: requestedModel, error: error)
             // Keep interrupted, authentication and transient failures recoverable.
             let terminal = [400, 410, 422, 429].contains(response.statusCode) ||
+                (response.statusCode == 404 && Self.workerErrorCode(data, response: response) == "not_found") ||
                 (response.statusCode == 502 && Self.workerErrorCode(data, response: response) != nil)
             if terminal, let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
             throw error
@@ -640,6 +770,9 @@ final class WorkerClient: GenerationServing {
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
         let contentType = response.value(forHTTPHeaderField: "Content-Type")?.lowercased().split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
         guard response.statusCode == 200 else {
+            if response.statusCode == 404, workerErrorCode(data, response: response) == "not_found" {
+                throw GenerationError.resultMissing
+            }
             if response.statusCode == 403,
                ["invalid_assertion", "app_attest_required"].contains(workerErrorCode(data, response: response) ?? "") {
                 throw GenerationError.deviceRejected

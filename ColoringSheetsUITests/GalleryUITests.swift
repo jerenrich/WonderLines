@@ -2,6 +2,31 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
+    func testBackgroundDuringSubmissionKeepsAllThreeSheets() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "--slow-mock", "-childAge", "8", "-imageCount", "3"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        subject.tap()
+        subject.typeText("Synthetic background test flower")
+        app.buttons["dismissKeyboard"].tap()
+        app.buttons["generate"].tap()
+        let progress = app.staticTexts["generationProgress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 3))
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 5))
+        app.activate()
+        XCTAssertTrue(progress.waitForExistence(timeout: 3))
+        XCTAssertTrue(progress.label.hasPrefix("Checking 3 sheets"), "A resumed batch must show the recovery state while sheets are still pending")
+        XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 20))
+        let finished = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: progress)
+        XCTAssertEqual(XCTWaiter.wait(for: [finished], timeout: 5), .completed, "The remaining sheets must also finish")
+        XCTAssertEqual(app.staticTexts["sheetPosition"].label, "Sheet 1 of 3")
+    }
+
+    @MainActor
     private func setAge(in app: XCUIApplication, position: CGFloat) {
         app.buttons["validation"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
