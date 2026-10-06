@@ -27,9 +27,9 @@ for (const name of names) {
   assert.throws(() => moderationDecision(wrongType));
 }
 assert.throws(() => moderationDecision({}));
-for (const [score, allowed] of [[0.0566, true], [0.10, true], [0.1001, false]]) {
+for (const [score, allowed] of [[0.0566, true], [0.10, true], [0.30, true], [0.3001, false]]) {
   const result = safeModerationResult(); result.answers.bypass.noul = score;
-  assert.equal(moderationDecision(result, MODERATION_MODELS.jev), allowed, 'Jev bypass threshold is inclusive at 10%.');
+  assert.equal(moderationDecision(result, MODERATION_MODELS.jev), allowed, 'Jev bypass threshold is inclusive at 30%.');
 }
 const calibrated = safeModerationResult(); calibrated.answers.all_ages.noul = 0.83;
 assert.equal(moderationDecision(calibrated), true);
@@ -37,7 +37,11 @@ assert.equal(moderationDecision(calibrated, MODERATION_MODELS['clef-flash']), tr
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS.jev), false);
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS.clef), true);
 for (const model of Object.values(MODERATION_MODELS)) {
+  const relaxed = safeModerationResult();
+  for (const name of names.filter(name => name !== 'all_ages')) relaxed.answers[name].noul = 0.30;
+  assert.equal(moderationDecision(relaxed, model), true, model + ' accepts content scores at 30%.');
   for (const [name, limit] of Object.entries(moderationThresholds(model))) {
+    assert.ok(limit >= 0.30, model + ' has at least a 30% threshold for ' + name);
     const atLimit = safeModerationResult(); atLimit.answers[name].noul = limit;
     assert.equal(moderationDecision(atLimit, model), true, model + ' accepts boundary for ' + name);
     atLimit.answers[name].noul += name === 'all_ages' ? -0.0001 : 0.0001;
@@ -45,6 +49,7 @@ for (const model of Object.values(MODERATION_MODELS)) {
     assert.deepEqual(moderationAssessment(atLimit, model).reasonCodes, [name === 'all_ages' ? 'uncertain' : name]);
   }
 }
+assert.equal(moderationThresholds(MODERATION_MODELS.clef).bypass, 0.51, 'Preserve limits already above 30%.');
 const harmlessAdventure = safeModerationResult(); harmlessAdventure.answers.violence.noul = 0.08;
 assert.equal(moderationDecision(harmlessAdventure), true);
 harmlessAdventure.answers.all_ages.noul = moderationThresholds().all_ages - 0.01;
