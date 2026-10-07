@@ -462,7 +462,7 @@ struct ContentView: View {
                         .accessibilityValue(store.age == 0 ? "Choose an age" : "\(store.age) years")
                         .accessibilityIdentifier("ageSetting")
                     }
-                    Text("Younger ages use simpler shapes and larger coloring areas. Older ages add finer details. Your choice stays on this device and applies to the next batch.")
+                    Text("Younger ages use simpler shapes and larger coloring areas. Older ages add finer details.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Generation") {
