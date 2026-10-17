@@ -13,7 +13,9 @@ const result=await cleanLegacyUsageLogs(bucket,now);
 assert.deepEqual(deletions,[key]);assert.equal(result.removed,1);assert.equal(reads,2);
 assert.equal((await cleanLegacyUsageLogs({list:async()=>({objects:[recent,image,report],truncated:false}),delete:async()=>assert.fail('Nothing expired')},now)).removed,0);
 await assert.rejects(cleanLegacyUsageLogs(bucket,NaN),/invalid_diagnostic_retention_configuration/);
-await assert.rejects(cleanLegacyUsageLogs({list:async()=>({objects:[{key,uploaded:'bad date'}]}),delete:async()=>assert.fail()},now),/invalid_diagnostic_timestamp/);
+for (const uploaded of ['bad date', null, undefined, 0, new Date(NaN)]) {
+  await assert.rejects(cleanLegacyUsageLogs({list:async()=>({objects:[{key,uploaded}]}),delete:async()=>assert.fail()},now),/invalid_diagnostic_timestamp/);
+}
 await assert.rejects(cleanLegacyUsageLogs({list:async()=>({objects:[old]}),delete:async()=>{throw new Error('synthetic deletion failure');}},now),/synthetic deletion failure/);
 await assert.rejects(cleanLegacyUsageLogs({list:async()=>({objects:[],truncated:true,cursor:'same'}),delete:async()=>assert.fail()},now),/invalid_diagnostic_cursor/);
 console.log('PASS: seven-day R2 diagnostic expiry, exact boundary, pagination, idempotency, failure reporting; images and reports preserved. No network.');

@@ -16,7 +16,7 @@ export async function cleanLegacyUsageLogs(bucket, now = Date.now()) {
     for (const object of listed.objects) {
       scanned++;
       if (!LEGACY_USAGE_KEY.test(object.key)) continue;
-      const uploaded = new Date(object.uploaded).getTime();
+      const uploaded = object.uploaded instanceof Date ? object.uploaded.getTime() : NaN;
       if (!Number.isFinite(uploaded)) throw new Error('invalid_diagnostic_timestamp');
       if (uploaded < cutoff) expired.push(object.key);
     }
