@@ -17,9 +17,38 @@ From the repository root:
 
 ```sh
 node Scripts/test_worker.mjs
+node Scripts/test_request_security.mjs
 ```
 
 This replaces upstream requests with synthetic responses and makes no network calls or paid generations. It covers direct OpenAI, both Gateway credential modes, Gemini, all nine Workers AI models, model remapping, validation before spending, PNG output and metrics, provider failures, recovery, idempotency, renewal, and budgets.
+
+## Registration and request limits
+
+New anonymous accounts are limited to five registration attempts per minute per
+network address through `REGISTRATION_LIMITER` (namespace `1005`). Only the
+Cloudflare-supplied `CF-Connecting-IP` is used; client forwarding headers are
+ignored. The binding receives an HMAC of the address, and application storage and
+logs do not retain addresses or their hashes. Missing or failed registration
+protection returns HTTP 503 before creating an account. Deploy with the checked-in
+Wrangler configuration to provision the binding.
+
+Cloudflare's [rate limiter](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+is approximate and local to each Cloudflare location. A separate serialized
+counter in the existing Budget Durable Object strictly limits registrations
+across all locations and addresses to 1,000 per UTC day. Override that default
+with the dashboard-managed `GLOBAL_DAILY_REGISTRATION_LIMIT` (integer string
+0–100000); zero pauses new registrations and invalid values fail closed. No
+Durable Object migration is needed. The counter stores only the current day and
+aggregate count, survives object eviction, and resets on the next day's first
+registration. A failed account creation can still consume a reserved slot.
+Throttling returns HTTP 429 with `Retry-After`. Existing accounts, renewal,
+generation allowances and recovery continue independently of registration limits.
+
+JSON request bodies are read once with a streaming byte limit: 4,096 bytes for
+ordinary API requests and 16,384 for attestation enrollment. Oversized uploads
+return HTTP 413 and cancel the remaining stream, including when Content-Length
+is absent or understated. App Attest verifies the exact bounded bytes later used
+for JSON parsing. The moderation lab uses the same reader with a 16,384-byte cap.
 
 ## All-ages description moderation
 

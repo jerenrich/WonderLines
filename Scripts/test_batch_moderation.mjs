@@ -21,7 +21,7 @@ class Namespace {
 }
 const inputs = [], prompts = [], logs = [];
 let reject = false, unavailable = false;
-const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-secret', FREE_DAILY_ALLOWANCE: '100', GLOBAL_DAILY_GENERATION_LIMIT: '100', MODERATION_GATEWAY_ID: 'test',
+const env = {OPENAI_API_KEY: 'synthetic', REGISTRATION_LIMITER: {limit: async () => ({success: true})}, ACCOUNT_TOKEN_SECRET: 'synthetic-secret', FREE_DAILY_ALLOWANCE: '100', GLOBAL_DAILY_GENERATION_LIMIT: '100', MODERATION_GATEWAY_ID: 'test',
   AI: {async run(model, input) {
     inputs.push(input.state.description);
     await new Promise(resolve => setTimeout(resolve, 5));
@@ -39,7 +39,7 @@ globalThis.fetch = async (url, init) => {
 };
 console.info = value => logs.push(JSON.parse(value));
 try {
-  const registered = await worker.fetch(new Request('https://example.test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}), env);
+  const registered = await worker.fetch(new Request('https://example.test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.1'}, body: '{}'}), env);
   const identity = await registered.json();
   const id = crypto.randomUUID();
   const description = 'ferarri';

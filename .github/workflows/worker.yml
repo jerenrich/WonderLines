@@ -6,6 +6,7 @@ on:
     paths:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
       - 'Scripts/test_diagnostic_retention.mjs'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
       - 'Scripts/test_diagnostic_retention.mjs'
@@ -67,6 +69,7 @@ jobs:
       - name: Run offline Worker and image cost tests
         run: |
           node Scripts/test_worker.mjs
+          node Scripts/test_request_security.mjs
           node Scripts/test_privacy.mjs
           node Scripts/test_reporting_concurrency.mjs
           node Scripts/test_batch_moderation.mjs

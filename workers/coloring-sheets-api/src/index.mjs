@@ -6,6 +6,7 @@ import {falCostData} from './fal-cost.mjs';
 import {structuredComposition, isUUID} from './composition.mjs';
 import {moderateSubject, ModerationError, moderationModel, MODERATION_POLICY} from './moderation.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
+import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
 const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
@@ -39,8 +40,37 @@ async function claims(header, secret, allowExpired = false) {
   const [body, signature, extra] = header.slice(7).split('.'); if (!body || !signature || extra) return null;
   try { const value = JSON.parse(new TextDecoder().decode(unb64(body))); return await crypto.subtle.verify('HMAC', await key(secret), unb64(signature), encoder.encode(body)) && value.v === 1 && /^[0-9a-f-]{36}$/.test(value.sub) && /^[0-9a-f-]{36}$/.test(value.cid) && Number.isSafeInteger(value.exp) && (allowExpired || value.exp > Date.now() / 1000) ? value : null; } catch { return null; }
 }
-async function body(request, max = 4096) { if (!request.headers.get('Content-Type')?.startsWith('application/json')) return null; const text = await request.text(); if (text.length > max) return null; try { return JSON.parse(text); } catch { return null; } }
+async function body(request, max = 4096, raw) {
+  if (!request.headers.get('Content-Type')?.startsWith('application/json')) return null;
+  const bytes = raw ?? await readBoundedBody(request, max);
+  try { return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(bytes)); } catch { return null; }
+}
 async function digest(value) { return b64(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))); }
+async function register(request, env) {
+  if (request.method !== 'POST') return fail('invalid_request', 'Send an empty JSON object.', 400);
+  // CF-Connecting-IP is set by Cloudflare. Never trust client forwarding headers.
+  const address = request.headers.get('CF-Connecting-IP');
+  if (!address || !env.REGISTRATION_LIMITER) return fail('service_unavailable', 'Registration protection is unavailable.', 503);
+  try {
+    const hash = b64(new Uint8Array(await crypto.subtle.sign('HMAC', await key(env.ACCOUNT_TOKEN_SECRET), encoder.encode('registration:' + address))));
+    if (!(await env.REGISTRATION_LIMITER.limit({key: hash})).success) {
+      return reply({error: {code: 'registration_rate_limited', message: 'Too many registrations. Please try again in a minute.'}}, 429, {'Retry-After': '60'});
+    }
+  } catch { return fail('service_unavailable', 'Registration protection is unavailable.', 503); }
+  const input = await body(request);
+  if (!input || Array.isArray(input) || typeof input !== 'object' || Object.keys(input).length) return fail('invalid_request', 'Send an empty JSON object.', 400);
+  // The shared ledger supplies a strict global cap even across network addresses
+  // and Cloudflare locations. Reserve before creating any persistent account.
+  let allowed;
+  try {
+    const ledger = env.BUDGET.get(env.BUDGET.idFromName('daily-generation-budget'));
+    allowed = await ledger.fetch('https://budget/register', {method: 'POST', body: '{}'});
+  } catch { return fail('service_unavailable', 'Registration protection is unavailable.', 503); }
+  if (!allowed.ok) return allowed;
+  const id = crypto.randomUUID(), made = await call(env, id, '/initialize', {accountId: id});
+  if (made.status !== 201) return fail('service_unavailable', 'Could not create an anonymous account.', 503);
+  return reply({accountId: id, accessToken: await token(id, made.value.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: made.value.access}, 201);
+}
 // The challenge is self-contained and MACed, so issuing one costs no DO write.
 // Assertion counters in the account DO supply the one-time replay guarantee.
 async function challenge(accountID, purpose, secret) {
@@ -83,6 +113,18 @@ export class Budget {
   }
   async reserve(request) {
     const input = await request.json().catch(() => null);
+    if (new URL(request.url).pathname === '/register') {
+      const day = new Date().toISOString().slice(0, 10), existing = await this.state.storage.get('registrations');
+      const used = existing?.day === day ? existing.used : 0;
+      const limit = globalDailyGenerationLimit(this.env.GLOBAL_DAILY_REGISTRATION_LIMIT ?? '1000');
+      if (limit === null) return fail('service_unavailable', 'The registration limit is not configured correctly.', 503);
+      if (used >= limit) {
+        const retry = Math.max(1, Math.ceil((Date.parse(day + 'T00:00:00Z') + 86400000 - Date.now()) / 1000));
+        return reply({error: {code: 'registration_rate_limited', message: 'New registrations are temporarily unavailable. Please try again later.'}}, 429, {'Retry-After': String(retry)});
+      }
+      await this.state.storage.put('registrations', {day, used: used + 1});
+      return reply({reserved: true}, 201);
+    }
     if (new URL(request.url).pathname === '/forget-account' && isUUID(input?.accountId)) {
       const entries = await this.state.storage.list({prefix: 'claim:' + input.accountId + ':'});
       for (const key of entries.keys()) await this.state.storage.delete(key);
@@ -568,8 +610,8 @@ async function saved(env, job, access) {
   if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
   return reply({generationId: job.id, status: 'processing'}, 202, {'Retry-After': '5', 'X-Access-Snapshot': accessHeader(access)});
 }
-async function generate(request, env, account) {
-  const input = await body(request), generationId = request.headers.get('Idempotency-Key');
+async function generate(request, env, account, raw) {
+  const input = await body(request, 4096, raw), generationId = request.headers.get('Idempotency-Key');
   if (!input || !/^[0-9a-f-]{36}$/.test(generationId ?? '')) return fail('invalid_request', 'Send JSON and a UUID Idempotency-Key.', 400);
   const size = dimensions(input);
   const structured = Object.hasOwn(input, 'batchID') || Object.hasOwn(input, 'description');
@@ -658,9 +700,17 @@ export default {
     }
   },
   async fetch(request, env) {
+    try { return await fetchRequest(request, env); }
+    catch (error) {
+      if (error instanceof RequestBodyTooLarge) return fail('request_too_large', 'The request body is too large.', 413);
+      throw error;
+    }
+  }
+};
+async function fetchRequest(request, env) {
   const url = new URL(request.url);
   if (!env.ACCOUNT_TOKEN_SECRET) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
-  if (url.pathname === '/v1/installations') { if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400); const id = crypto.randomUUID(), made = await call(env, id, '/initialize', {accountId: id}); if (made.status !== 201) return fail('service_unavailable', 'Could not create an anonymous account.', 503); return reply({accountId: id, accessToken: await token(id, made.value.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: made.value.access}, 201); }
+  if (url.pathname === '/v1/installations') return register(request, env);
   if (url.pathname === '/v1/installations/renew') {
     if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400);
     // Only renewal accepts an expired signed credential. The account must still
@@ -707,6 +757,7 @@ export default {
   if (url.pathname === '/v1/generations' && request.method === 'POST') {
     const signed = request.headers.get('X-App-Attest-Assertion');
     if (env.APP_ATTEST_ENFORCE && !['true', 'false'].includes(env.APP_ATTEST_ENFORCE)) return fail('service_unavailable', 'App Attest policy is invalid.', 503);
+    const raw = await readBoundedBody(request, 4096);
     if (signed || account.appAttested || env.APP_ATTEST_ENFORCE === 'true') {
       if (!appAttestConfigured(env)) return fail('service_unavailable', 'App Attest is not configured.', 503);
       const encoded = request.headers.get('X-App-Attest-Client-Data');
@@ -714,8 +765,7 @@ export default {
       try {
         clientData = fromB64url(encoded, 2048);
         const parsed = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(clientData));
-        const raw = await request.clone().arrayBuffer();
-        if (raw.byteLength > 4096 || parsed.method !== 'POST' || parsed.path !== '/v1/generations' ||
+        if (parsed.method !== 'POST' || parsed.path !== '/v1/generations' ||
             parsed.idempotencyKey !== request.headers.get('Idempotency-Key') ||
             parsed.bodySHA256 !== b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', raw))) ||
             !await challengeValid(parsed.challenge, account.id, 'assertion', env.ACCOUNT_TOKEN_SECRET)) {
@@ -725,7 +775,7 @@ export default {
       const checked = await call(env, account.id, '/assertion', {assertion: signed, clientData: encoded, generationID: request.headers.get('Idempotency-Key')});
       if (checked.status !== 200) return reply(checked.value, checked.status);
     }
-    return generate(request, env, account);
+    return generate(request, env, account, raw);
   }
   const reportMatch = /^\/v1\/generations\/([0-9a-f-]{36})\/report$/.exec(url.pathname);
   if (reportMatch && request.method === 'POST') {
@@ -740,7 +790,7 @@ export default {
   }
   const match = /^\/v1\/generations\/([0-9a-f-]{36})$/.exec(url.pathname); if (match && request.method === 'GET') { const found = await call(env, account.id, '/job', {generationId: match[1]}); return found.status === 200 ? saved(env, found.value.job, found.value.access) : fail('not_found', 'Generation not found.', 404); }
   return fail('not_found', 'Not found.', 404);
-}};
+}
 
 function moderationModelForLog(env) {
   try { return moderationModel(env); } catch { return 'invalid'; }

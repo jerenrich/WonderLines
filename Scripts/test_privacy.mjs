@@ -34,14 +34,14 @@ class Bucket {
     for (const k of Array.isArray(keys)?keys:[keys]) this.values.delete(k);
   }
 }
-const env={ACCOUNT_TOKEN_SECRET:'synthetic-secret',OPENAI_API_KEY:'synthetic-provider',FREE_DAILY_ALLOWANCE:'100',GLOBAL_DAILY_GENERATION_LIMIT:'1000',MODERATION_GATEWAY_ID:'synthetic',AI:{run:async()=>safeModerationResult()}};
+const env={REGISTRATION_LIMITER:{limit:async()=>({success:true})},ACCOUNT_TOKEN_SECRET:'synthetic-secret',OPENAI_API_KEY:'synthetic-provider',FREE_DAILY_ALLOWANCE:'100',GLOBAL_DAILY_GENERATION_LIMIT:'1000',MODERATION_GATEWAY_ID:'synthetic',AI:{run:async()=>safeModerationResult()}};
 env.ACCOUNTS=new Namespace(Account,env); env.BUDGET=new Namespace(Budget,env); env.GENERATIONS=new Bucket();
 const realFetch=globalThis.fetch, realInfo=console.info;
 const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
 let hold, providerStarted, providerCalls=0;
 globalThis.fetch=async()=>{providerCalls++;providerStarted?.();if(hold)await hold;return Response.json({data:[{b64_json:png}]});};
 console.info=()=>{};
-const api=(path,who,method='GET',value,headers={})=>worker.fetch(new Request('https://test'+path,{method,headers:{...(who?{Authorization:'Bearer '+who.accessToken}:{}),...(value?{'Content-Type':'application/json'}:{}),...headers},...(value?{body:JSON.stringify(value)}:{})}),env);
+const api=(path,who,method='GET',value,headers={})=>worker.fetch(new Request('https://test'+path,{method,headers:{...(who?{Authorization:'Bearer '+who.accessToken}:{}),...(value?{'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.1'}:{}),...headers},...(value?{body:JSON.stringify(value)}:{})}),env);
 const register=async()=>await(await api('/v1/installations',null,'POST',{})).json();
 const generate=(who,id,queued=false)=>api('/v1/generations',who,'POST',{subject:'Synthetic flower',model:'gpt-image-2.5-flare',width:1456,height:1024},{'Idempotency-Key':id,...(queued?{'X-Coloring-API-Version':'2'}:{})});
 const until=async(predicate)=>{for(let i=0;i<200;i++){if(await predicate())return;await new Promise(r=>setTimeout(r,1));}throw new Error('Timed out');};

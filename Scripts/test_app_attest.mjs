@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash, generateKeyPairSync, sign} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import worker, {Account} from '../workers/coloring-sheets-api/src/index.mjs';
+import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
 import {verifyAssertion, verifyAttestationHash, acceptCounter, decodeCBOR, b64url} from '../workers/coloring-sheets-api/src/app-attest.mjs';
 
 const sha = value => createHash('sha256').update(value).digest();
@@ -89,11 +89,13 @@ class Accounts {
     return {fetch: (request, init) => this.objects.get(id).fetch(new Request(request, init))};
   }
 }
-const env = {ACCOUNT_TOKEN_SECRET: 'local-test-secret', APP_ATTEST_APP_ID: appID,
+const env = {REGISTRATION_LIMITER: {limit: async () => ({success: true})}, ACCOUNT_TOKEN_SECRET: 'local-test-secret', APP_ATTEST_APP_ID: appID,
   APP_ATTEST_ENVIRONMENT: 'production', APP_ATTEST_ENFORCE: 'true'};
 env.ACCOUNTS = new Accounts(env);
+const registrationBudget = new Budget({storage: new Storage()}, env);
+env.BUDGET = {idFromName: id => id, get: () => ({fetch: (url, init) => registrationBudget.fetch(new Request(url, init))})};
 const base = 'https://example.test';
-const registered = await worker.fetch(new Request(base + '/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}), env);
+const registered = await worker.fetch(new Request(base + '/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.1'}, body: '{}'}), env);
 const account = await registered.json();
 const auth = {'Authorization': 'Bearer ' + account.accessToken};
 const challengeResponse = await worker.fetch(new Request(base + '/v1/app-attest/challenge', {

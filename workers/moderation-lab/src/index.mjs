@@ -1,4 +1,5 @@
 import {MODERATION_MODELS, MODERATION_POLICY, moderateSubject, moderationThresholds} from '../../coloring-sheets-api/src/moderation.mjs';
+import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
 const json = (value, status = 200) => Response.json(value, {status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
 const COOKIE = '__Host-lab_session';
 const MAX_AGE = 30 * 24 * 60 * 60;
@@ -45,14 +46,13 @@ export default {
       response.headers.set('Set-Cookie', cookieHeader(expires + '.' + await signature(env.LAB_ACCESS_KEY, expires)));
       return response;
     }
-    if (Number(request.headers.get('Content-Length')) > 16384) return json({error: 'Request too large'}, 413);
     let input;
     try {
-      const raw = await request.text();
-      if (raw.length > 16384) return json({error: 'Request too large'}, 413);
-      input = JSON.parse(raw);
-    } catch { return json({error: 'Invalid JSON'}, 400); }
-    if (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 4000) return json({error: 'Enter a prompt of 1–4,000 characters'}, 400);
+      input = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(await readBoundedBody(request, 16384)));
+    } catch (error) {
+      return error instanceof RequestBodyTooLarge ? json({error: 'Request too large'}, 413) : json({error: 'Invalid JSON'}, 400);
+    }
+    if (typeof input?.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 4000) return json({error: 'Enter a prompt of 1–4,000 characters'}, 400);
     if (!env.LIMITER || !(await env.LIMITER.limit({key: 'lab'})).success) return json({error: 'Comparison limit reached. Try again in a minute.'}, 429);
     const results = await Promise.all(Object.entries(MODERATION_MODELS).map(async ([name, id]) => {
       const base = {name, id, thresholds: moderationThresholds(id)};

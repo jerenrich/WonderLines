@@ -47,7 +47,7 @@ class BudgetNamespace {
   }
 }
 let moderationCalls = 0;
-const env = {OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3', GLOBAL_DAILY_GENERATION_LIMIT: '10000',
+const env = {OPENAI_API_KEY: 'synthetic', REGISTRATION_LIMITER: {limit: async () => ({success: true})}, ACCOUNT_TOKEN_SECRET: 'synthetic-token-secret', FREE_DAILY_ALLOWANCE: '3', GLOBAL_DAILY_GENERATION_LIMIT: '10000',
   MODERATION_GATEWAY_ID: 'synthetic-gateway', AI: {async run() { moderationCalls++; return safeModerationResult(); }}};
 env.ACCOUNTS = new Accounts(env); env.BUDGET = new BudgetNamespace(env); env.GENERATIONS = new Images();
 const originalFetch = globalThis.fetch;
@@ -60,7 +60,7 @@ globalThis.fetch = async (url, request) => {
   return new Response(JSON.stringify({data: [{b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg=='}], usage: {input_tokens: 1, output_tokens: 2, total_tokens: 3}}));
 };
 try {
-  const registered = await worker.fetch(new Request('https://example.test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}), env);
+  const registered = await worker.fetch(new Request('https://example.test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.1'}, body: '{}'}), env);
   assert.equal(registered.status, 201); const identity = await registered.json();
   assert.match(identity.accountId, /^[0-9a-f-]{36}$/); assert.ok(identity.accessToken);
   const generationId = crypto.randomUUID();
@@ -217,7 +217,7 @@ try {
     AI_GATEWAY_ACCOUNT_ID: 'a'.repeat(32), AI_GATEWAY_ID: 'coloring-sheets', AI_GATEWAY_TOKEN: 'synthetic-gateway'};
   falEnv.ACCOUNTS = new Accounts(falEnv); falEnv.BUDGET = new BudgetNamespace(falEnv); falEnv.GENERATIONS = new Images();
   const falIdentity = await (await worker.fetch(new Request('https://example.test/v1/installations', {
-    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+    method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.1'}, body: '{}'
   }), falEnv)).json();
   const falAuth = {Authorization: 'Bearer ' + falIdentity.accessToken};
   const falPost = (id, extra = {}) => worker.fetch(new Request('https://example.test/v1/generations', {
@@ -423,7 +423,7 @@ try {
   gatewayEnv.ACCOUNTS = new Accounts(gatewayEnv); gatewayEnv.BUDGET = new BudgetNamespace(gatewayEnv);
   gatewayEnv.GENERATIONS = new Images();
   const gatewayIdentity = await (await worker.fetch(new Request('https://example.test/v1/installations', {
-    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+    method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.1'}, body: '{}'
   }), gatewayEnv)).json();
   const auth = {'Authorization': 'Bearer ' + gatewayIdentity.accessToken};
   const generateRequest = (model, id = crypto.randomUUID(), extras = {}) => new Request('https://example.test/v1/generations', {
@@ -878,7 +878,7 @@ try {
   durableEnv.BUDGET = new BudgetNamespace(durableEnv);
   durableEnv.GENERATIONS = new Images();
   const durableIdentity = await (await worker.fetch(new Request('https://example.test/v1/installations', {
-    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+    method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.1'}, body: '{}'
   }), durableEnv)).json();
   const durableAuth = {'Authorization': 'Bearer ' + durableIdentity.accessToken};
   const durablePost = (id, model = 'gpt-image-2.5-sunburst') => worker.fetch(new Request('https://example.test/v1/generations', {

@@ -7,6 +7,7 @@
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "images": { "binding": "IMAGES" },
   "ai": { "binding": "AI" },
+  "ratelimits": [{"name": "REGISTRATION_LIMITER", "namespace_id": "1005", "simple": {"limit": 5, "period": 60}}],
   "vars": {
     "MODERATION_MODEL": "clef",
     "FREE_DAILY_ALLOWANCE": "100",
