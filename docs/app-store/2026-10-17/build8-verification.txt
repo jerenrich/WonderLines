@@ -1,0 +1,35 @@
+Wonder Lines 1.0 (8), 17 October 2026
+
+Source base: 7989541937cd673644cb14c45eae31733522a77a.
+Client changes: simplified report form, compact gallery report controls.
+Build number bumped to8 in project and generator. Other source unchanged.
+
+Tests
+- Unit suite:78 passed,5 intentional opt-in live skips,0 failures.
+- iPad Air11 M3, OS27.0:4 UI tests passed (first launch, gallery/actions/rotation,
+  one-off consent/withdrawal/deletion, report/cancel/removal).
+- iPhone17e, OS27.0: same4 UI tests passed, no failures/skips.
+- All generation in these checks used mocks. No new paid AI calls were made.
+- Report form iPad screenshot and compact iPhone gallery screenshot inspected.
+- Xcode emitted simulator diagnostic-collection warnings because the global
+  developer directory points to CommandLineTools. Test processes exited0 and
+  both xcresult summaries report Passed; this did not invalidate test execution.
+- No fresh physical build8 run; physical generation/report/deletion was verified
+  on build7. Older OS runtimes remain unavailable as previously recorded.
+
+Release
+Archive:.build/build8/WonderLines-1.0-8.xcarchive
+Export:.build/build8/Export/ColoringSheets.ipa
+SHA256:3e1f697cc6257e95e2ce32180afa090456c930198a2d7161d49f58037cde154a
+IPA inspected:1.0(8), iOS17+, live production service, mock=false.
+Privacy manifest bundled; NSPrivacyTracking=false.
+Distribution signature passes codesign --verify --deep --strict with host trust.
+Production App Attest; get-task-allow=false.
+Upload succeeded at16:23 Europe/London. Apple processing pending.
+
+Submission
+Prior build7 remains Waiting for Review until build8 is selectable.
+Current App Store Connect text saved privately in .build/build8/metadata-before.json.
+Listing wording/settings are to be preserved. Only two top-level reviewer-note
+build-number references proposed for change7->8; user approval requested.
+No separate App Review message sent.

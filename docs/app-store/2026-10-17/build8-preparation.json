@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "build": 8,
+  "sourceBaseCommit": "7989541937cd673644cb14c45eae31733522a77a",
+  "changes": [
+    "Simplified sheet-report form",
+    "Compact gallery report controls",
+    "Backend registration/body limits already deployed separately"
+  ],
+  "archive": ".build/build8/WonderLines-1.0-8.xcarchive",
+  "ipa": ".build/build8/Export/ColoringSheets.ipa",
+  "ipaSHA256": "3e1f697cc6257e95e2ce32180afa090456c930198a2d7161d49f58037cde154a",
+  "liveService": true,
+  "productionAppAttest": true,
+  "getTaskAllow": false,
+  "strictSignatureVerified": true,
+  "privacyManifestBundled": true,
+  "unitTests": {
+    "passed": 78,
+    "skipped": 5,
+    "failed": 0
+  },
+  "iPadUITests": {
+    "passed": 4,
+    "failed": 0,
+    "device": "iPad Air 11-inch (M3)",
+    "os": "27.0"
+  },
+  "iPhoneUITests": {
+    "passed": 4,
+    "failed": 0,
+    "device": "iPhone17e",
+    "os": "27.0"
+  },
+  "freshPaidGenerationRequests": 0,
+  "physicalBuild8Run": false,
+  "reviewNotesDraft": "build8-review-notes-draft.txt",
+  "reviewWordingApproval": "pending only two build-number replacements",
+  "metadataBaseline": ".build/build8/metadata-before.json",
+  "uploaded": true,
+  "submitted": false,
+  "previousSubmission": "39e2f8b5-da20-411b-86f2-b17edacae9b9",
+  "backendDeploymentCI": "https://github.com/jerenrich/WonderLines/actions/runs/39043822353",
+  "backendCIStatus": "success",
+  "upload": {
+    "status": "Upload succeeded; Apple processing",
+    "at": "2026-10-17T16:23:00+01:00",
+    "log": ".build/build8/upload.log"
+  }
+}

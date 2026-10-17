@@ -1,0 +1,11 @@
+Hello,
+
+Build 1.0 (8) includes the fix for the disabled Generate button. Enter a description, tap Generate and accept the one-time AI sharing prompt. No settings changes or sign-in are needed.
+
+We also fixed reported-sheet recovery, stopped recording descriptions in service diagnostic logs, clarified that generation is free for users, and removed an optional model that failed our live check. Availability is now limited to iPhone and iPad.
+
+We tested the app on iPad Air 11-inch (M3) and iPhone simulators running OS 27.0, and verified real generation, reporting and account deletion on a physical iPad.
+
+Please review build 1.0 (8).
+
+Thank you.
