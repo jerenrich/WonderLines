@@ -279,6 +279,7 @@ actor PendingGenerationStore {
         entries.append(entry)
         defaults.set(try JSONEncoder().encode(entries), forKey: "pendingGenerations." + scope)
     }
+    func clear(scope: String) { defaults.removeObject(forKey: "pendingGenerations." + scope) }
     func remove(_ id: UUID, scope: String) {
         let entries = list(scope: scope).filter { $0.id != id }
         defaults.set(try? JSONEncoder().encode(entries), forKey: "pendingGenerations." + scope)
@@ -292,6 +293,8 @@ protocol GenerationServing {
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult
     func acknowledgeResult(_ id: UUID) async
     func resumePolling() async
+    func deleteAccount() async throws
+    func reportSheet(_ id: UUID, reason: String) async throws
 }
 extension GenerationServing {
     func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? { nil }
@@ -299,6 +302,8 @@ extension GenerationServing {
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult { throw GenerationError.configuration }
     func acknowledgeResult(_ id: UUID) async {}
     func resumePolling() async {}
+    func deleteAccount() async throws { throw PrivacyActionError.unavailable }
+    func reportSheet(_ id: UUID, reason: String) async throws { throw PrivacyActionError.unavailable }
 }
 
 // Deny every redirect, including same-host redirects: never forward this bearer credential.
@@ -634,6 +639,40 @@ final class WorkerClient: GenerationServing {
 
     func resumePolling() async {
         await pollScheduler.wake()
+    }
+
+    func deleteAccount() async throws {
+        // Do not register or renew an account merely to delete it. The deletion
+        // route accepts the saved signed credential even after token expiry.
+        guard let saved = try await identities?.sessionForDeletion() else { return }
+        var request = URLRequest(url: serviceURL.appending(path: "/v1/account"))
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer " + saved.accessToken, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              (try? JSONDecoder().decode(DeletedAccountResponse.self, from: data))?.deleted == true else {
+            throw PrivacyActionError.deletionUnconfirmed
+        }
+        if let scope = await pendingScope() { await pendingStore.clear(scope: scope) }
+        try await appAttest.clearLocalEnrollment()
+        try await identities?.deleteSavedSession()
+    }
+
+    func reportSheet(_ id: UUID, reason: String) async throws {
+        guard SheetReportReason.allCases.contains(where: { $0.rawValue == reason }),
+              await identities?.session() != nil else { throw PrivacyActionError.unavailable }
+        let credential = try await authorization()
+        var request = URLRequest(url: serviceURL.appending(path: "/v1/generations/" + id.uuidString.lowercased() + "/report"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + credential, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["reason": reason])
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, [200, 201].contains(http.statusCode),
+              (try? JSONDecoder().decode(SheetReportResponse.self, from: data))?.reported == true else {
+            throw PrivacyActionError.reportUnconfirmed
+        }
+        await acknowledgeResult(id)
     }
 
     private func parseRecovered(_ data: Data, response: HTTPURLResponse, generationID: UUID,

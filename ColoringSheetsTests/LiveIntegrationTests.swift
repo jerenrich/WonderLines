@@ -22,6 +22,7 @@ final class LiveIntegrationTests: XCTestCase {
         try Data("claimed".utf8).write(to: claim, options: .withoutOverwriting)
         let suite = "LiveFirstUse-\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ColoringViewModel(service: WorkerClient(serviceURL: configuration.serviceURL),
                                       isMock: false, defaults: defaults)

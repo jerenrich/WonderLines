@@ -18,6 +18,9 @@ struct ContentView: View {
     @State private var showUsage = false
     @State private var showSettings = false
     @State private var showDiagnostics = false
+    @State private var showReport = false
+    @State private var confirmDeletion = false
+    @State private var confirmWithdrawal = false
     @State private var detailMessage: String?
     private let ink = Color(red: 0.12, green: 0.25, blue: 0.29)
     private let accent = Color(red: 0.12, green: 0.45, blue: 0.49)
@@ -35,6 +38,18 @@ struct ContentView: View {
                     .frame(height: editingInShortWindow ? 0 : nil)
                     .clipped()
                     .accessibilityHidden(editingInShortWindow)
+                if store.deletionPending {
+                    HStack(spacing: 10) {
+                        if store.isDeletingAccount { ProgressView() }
+                        Text(store.isDeletingAccount ? "Deleting your account and saved sheets…" : "Deletion is unfinished. Generation is paused until you retry.")
+                            .font(.callout)
+                        if !store.isDeletingAccount {
+                            Button("Retry") { Task { await store.deleteAccountAndData() } }
+                        }
+                    }
+                    .padding(12).background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("deletionStatus")
+                }
                 preview
                     .clipped()
             }
@@ -86,6 +101,11 @@ struct ContentView: View {
             usageSheet
                 .presentationCompactAdaptation(.sheet)
         }
+        .sheet(isPresented: $store.showsConsent) { AIConsentView(store: store) }
+        .sheet(isPresented: $showReport) { SheetReportView(store: store) }
+        .alert("Privacy & safety", isPresented: Binding(get: { store.privacyMessage != nil && !showReport }, set: { if !$0 { store.privacyMessage = nil } })) {
+            Button("OK") { store.privacyMessage = nil }
+        } message: { Text(store.privacyMessage ?? "") }
         .sheet(isPresented: $showSettings) { settingsSheet }
         .sheet(isPresented: $showDiagnostics) {
             NavigationStack {
@@ -294,7 +314,7 @@ struct ContentView: View {
                 }
                 .fixedSize(horizontal: true, vertical: false)
                 .buttonStyle(.borderedProminent)
-                .disabled(store.isGenerating || store.validationMessage != nil)
+                .disabled(store.isGenerating || store.validationMessage != nil || store.deletionPending || store.isReporting)
                 .accessibilityLabel(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)")
                 .accessibilityIdentifier("generate")
                 .accessibilityHidden(composerMinimized)
@@ -484,6 +504,29 @@ struct ContentView: View {
                     Text("Generate up to 100 images per day. The daily limit resets at midnight UTC. Changes apply to the next batch.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+                Section("Privacy & safety") {
+                    Link("Privacy policy", destination: PrivacyConsent.policyURL)
+                        .accessibilityIdentifier("privacyPolicy")
+                    Link("Contact support", destination: PrivacyConsent.supportURL)
+                    Link("Email support", destination: PrivacyConsent.emailURL)
+                    Text("jordan.erenrich@gmail.com").font(.footnote).textSelection(.enabled)
+                    Text(store.hasConsent ? "AI data sharing: agreed. Your choice is saved for future sheets." : "AI data sharing: not agreed. We’ll ask before your next generation.")
+                        .font(.footnote)
+                    if store.hasConsent {
+                        Button("Withdraw AI consent", role: .destructive) { confirmWithdrawal = true }
+                            .disabled(store.isDeletingAccount)
+                            .accessibilityIdentifier("withdrawConsent")
+                    }
+                    Button(store.isDeletingAccount ? "Deleting…" : "Delete account and data", role: .destructive) { confirmDeletion = true }
+                        .disabled(store.isDeletingAccount || store.isReporting)
+                        .accessibilityIdentifier("deleteAccount")
+                    if store.deletionPending {
+                        Text("Deletion is pending. Generation is paused. Keep the app open while deleting, or retry if the connection was interrupted.")
+                            .font(.footnote)
+                    }
+                    Text("Deletes the anonymous service account, server sheets, reports and local app history. Exported copies remain where you saved them. Provider logs follow the privacy policy.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 Section("Help") {
                     NavigationLink {
                         diagnosticsSheet
@@ -495,6 +538,15 @@ struct ContentView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
+            .confirmationDialog("Delete account and data?", isPresented: $confirmDeletion, titleVisibility: .visible) {
+                Button("Delete account and data", role: .destructive) {
+                    showSettings = false
+                    Task { await store.deleteAccountAndData() }
+                }
+            } message: { Text("This permanently deletes your service account, server sheets and reports, and your local gallery and history. Generation in progress will be stopped. Exported copies and provider logs are handled as described in the privacy policy.") }
+            .confirmationDialog("Withdraw AI consent?", isPresented: $confirmWithdrawal, titleVisibility: .visible) {
+                Button("Withdraw consent", role: .destructive) { store.withdrawConsent() }
+            } message: { Text("New generation and recovery will pause. Requests already sent cannot be recalled. Your saved sheets remain available. Use Delete account and data to remove stored records.") }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
@@ -585,6 +637,9 @@ struct ContentView: View {
         }
         .disabled(isSavingPhoto)
         Button { beginExport(.print) } label: { Label("Print", systemImage: "printer") }
+        Button { showReport = true } label: { Label("Report sheet", systemImage: "flag") }
+            .disabled(store.isGenerating || store.isReporting || store.deletionPending)
+            .accessibilityIdentifier("reportSheet")
     }
     private func count(_ value: Int?) -> String { value.map(String.init) ?? "Unavailable" }
     private func metric(_ label: String, _ value: String) -> some View {

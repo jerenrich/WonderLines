@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "build": "6",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "serviceConfiguration": {
+    "mock": false,
+    "serviceURL": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+  },
+  "privacyManifest": {
+    "NSPrivacyAccessedAPITypes": [
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "CA92.1"
+        ]
+      }
+    ],
+    "NSPrivacyCollectedDataTypes": [
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePerformanceData",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherDiagnosticData",
+        "NSPrivacyCollectedDataTypeLinked": true,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      }
+    ],
+    "NSPrivacyTracking": false,
+    "NSPrivacyTrackingDomains": []
+  },
+  "ipaSHA256": "97910fcb939388203371b7f41c105a40d4adec68d17f25c1750e991277496171",
+  "uploaded": false,
+  "submitted": false,
+  "backendDeployed": true,
+  "backendCommit": "2018c17f865e295c24daf85567c78e2750829a83",
+  "deploymentRun": "https://github.com/jerenrich/WonderLines/actions/runs/39019418836",
+  "distributionSignatureVerified": true,
+  "productionAppAttest": true,
+  "debuggingEntitlement": false
+}

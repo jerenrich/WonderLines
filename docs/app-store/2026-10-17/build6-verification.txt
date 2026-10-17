@@ -1,0 +1,65 @@
+Wonder Lines 1.0 (6) — implementation and verification
+17 October 2026
+
+Five targeted findings addressed
+1. Settings links to the public privacy policy and support section, plus email.
+   Updated policy/support pages are published and verified accessible.
+2. AI sharing permission appears before the first generation or recovery and is
+   saved across relaunches. Cancel preserves the draft and sends no generation.
+   Settings can withdraw consent. A materially changed disclosure version asks
+   again; an ordinary app update does not.
+3. Account deletion removes the anonymous account, attestation record, jobs,
+   images, reports and account-linked budget claims, then local gallery, draft,
+   preferences, diagnostics, recovery references and credentials. Failed cleanup
+   retains the retry credential and pauses generation with a visible Retry path.
+   In-flight work drains or is rejected, preventing deleted images reappearing.
+   A temporary 24-hour deletion marker and aggregate service totals remain;
+   external/hosting logs and exported images follow the published policy.
+4. PrivacyInfo.xcprivacy is in both the archive and exported IPA, with the
+   UserDefaults approved reason CA92.1 and matching collected-data categories.
+5. Report sheet sends an authenticated reason/reference to a private R2 queue.
+   Confirmed reports remove the sheet from gallery and block recovery. Cross-
+   account access is rejected. Human review is required: see build6-report-
+   operations.txt for the daily Cloudflare review/removal procedure. No automatic
+   email notification has been configured.
+
+Verification
+- Full iPad unit suite: 81 tests, 77 passed, 4 opt-in live tests skipped, 0 failures.
+- Five focused UI flows per device (10 total) passed across iPad Air 11-inch M3
+  and iPhone 17e simulators, OS 27.0: consent/withdrawal/deletion, reporting,
+  accessibility text, rotation/gallery/editing, and settings navigation.
+- New privacy backend suite and existing Worker, batch moderation, moderation,
+  and moderation-lab suites passed without paid requests.
+- One separate live generation was submitted, succeeded, reported, made
+  unrecoverable, and deleted with its temporary account/report. Deleted access
+  was rejected; a second deletion returned success. No real user data was used.
+- Release archive and local App Store export succeeded. IPA uses live service,
+  build 6, production App Attest and distribution signature (debugging disabled).
+- Website publication and server CI/deployment passed for commit 2018c17.
+
+Test adjustments and limits
+The settings test was updated to scroll to Diagnostics after the new privacy
+section. One iPhone clear-field test initially tapped during the keyboard's
+entrance animation; the recording showed the target moving. It passed in an
+isolated rerun. The test now waits until the keyboard is fully on screen before
+that tap. This was a test timing change; app behavior was not changed for it.
+Simulated images exercise the UI, and the separate live check exercises the
+server. Build 6 has not been tested on a physical device, Mac or Vision Pro.
+Lower-priority audit observations (cost wording, Beta label and untested extra
+platform availability) are outside the five targeted fixes and remain open.
+
+Artifacts (relative to project root)
+.build/build6/WonderLines-1.0-6.xcarchive
+.build/build6/Export/ColoringSheets.ipa
+.build/build6/ipad-regression.xcresult (unit/rotation/large-text passes)
+.build/build6/privacy-ui-ipad-3.xcresult (privacy unit/UI passes)
+.build/build6/ipad-settings-recheck.xcresult (updated settings test passes)
+.build/build6/phone.xcresult (privacy/large-text passes; initial rotation failure)
+.build/build6/phone-rotation-recheck.xcresult (rotation/settings passes)
+.build/build6/phone-keyboard-settled.xcresult (keyboard timing verification)
+build6-archive-info.json (distribution metadata)
+build6-live-verification.json (live endpoint results)
+
+Submission
+Build 6 is prepared locally, not uploaded or submitted. Build 5 remains Waiting
+for Review. The new App Review reply is only a draft and requires user approval.

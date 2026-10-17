@@ -18,7 +18,10 @@ ui_test_files = sorted((root / 'ColoringSheetsUITests').rglob('*.swift'))
 asset_catalog = 'ColoringSheets/Assets.xcassets'
 asset_ref = obj(asset_catalog, f'{{isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = {quoted(asset_catalog)}; sourceTree = SOURCE_ROOT;}}')
 asset_build = obj(asset_catalog+'build', f'{{isa = PBXBuildFile; fileRef = {asset_ref};}}')
-resources = obj('Appresources', f'{{isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {array([asset_build])}; runOnlyForDeploymentPostprocessing = 0;}}')
+privacy_path = 'ColoringSheets/PrivacyInfo.xcprivacy'
+privacy_ref = obj(privacy_path, f'{{isa = PBXFileReference; lastKnownFileType = text.xml; path = {quoted(privacy_path)}; sourceTree = SOURCE_ROOT;}}')
+privacy_build = obj(privacy_path+'build', f'{{isa = PBXBuildFile; fileRef = {privacy_ref};}}')
+resources = obj('Appresources', f'{{isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {array([asset_build, privacy_build])}; runOnlyForDeploymentPostprocessing = 0;}}')
 groups = []
 for group, files in [('App', app_files), ('Tests', test_files), ('UITests', ui_test_files)]:
     refs, builds = [], []
@@ -27,7 +30,7 @@ for group, files in [('App', app_files), ('Tests', test_files), ('UITests', ui_t
         ref = obj(path, f'{{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {quoted(path)}; sourceTree = SOURCE_ROOT;}}')
         refs.append(ref)
         builds.append(obj(path+'build', f'{{isa = PBXBuildFile; fileRef = {ref};}}'))
-    if group == 'App': refs.append(asset_ref)
+    if group == 'App': refs.extend([asset_ref, privacy_ref])
     groups.append(obj(group, f'{{isa = PBXGroup; name = {group}; children = {array(refs)}; sourceTree = "<group>";}}'))
     obj(group+'sources', f'{{isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {array(builds)}; runOnlyForDeploymentPostprocessing = 0;}}')
 app_product = obj('appProduct', '{isa = PBXFileReference; explicitFileType = wrapper.application; path = ColoringSheets.app; sourceTree = BUILT_PRODUCTS_DIR;}')
@@ -46,7 +49,7 @@ for scope in ['Project','App','Tests','UITests']:
         if config == 'Debug': values.update({'ENABLE_TESTABILITY':'YES','ONLY_ACTIVE_ARCH':'YES','SWIFT_OPTIMIZATION_LEVEL':'-Onone','SWIFT_ACTIVE_COMPILATION_CONDITIONS':'DEBUG','GCC_PREPROCESSOR_DEFINITIONS':'DEBUG=1 $(inherited)'})
         else: values.update({'SWIFT_COMPILATION_MODE':'wholemodule','SWIFT_OPTIMIZATION_LEVEL':'-O'})
         if scope == 'App':
-            values.update({'PRODUCT_BUNDLE_IDENTIFIER':'com.jordan.family.ColoringSheets','PRODUCT_NAME':'ColoringSheets','GENERATE_INFOPLIST_FILE':'YES','INFOPLIST_KEY_CFBundleDisplayName':'Wonder Lines','INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription':'Save coloring sheets to your Photos library.','INFOPLIST_KEY_UILaunchScreen_Generation':'YES','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone':'UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight','INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad':'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_ENTITLEMENTS':'ColoringSheets/ColoringSheets.entitlements','MARKETING_VERSION':'1.0','CURRENT_PROJECT_VERSION':'5','SUPPORTS_MACCATALYST':'NO','SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD':'NO','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','COLORING_MODE':'live' if config == 'Release' else '$(inherited)'})
+            values.update({'PRODUCT_BUNDLE_IDENTIFIER':'com.jordan.family.ColoringSheets','PRODUCT_NAME':'ColoringSheets','GENERATE_INFOPLIST_FILE':'YES','INFOPLIST_KEY_CFBundleDisplayName':'Wonder Lines','INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription':'Save coloring sheets to your Photos library.','INFOPLIST_KEY_UILaunchScreen_Generation':'YES','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone':'UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight','INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad':'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight','CODE_SIGN_STYLE':'Automatic','DEVELOPMENT_TEAM':'9PG633BF3R','CODE_SIGN_ENTITLEMENTS':'ColoringSheets/ColoringSheets.entitlements','MARKETING_VERSION':'1.0','CURRENT_PROJECT_VERSION':'6','SUPPORTS_MACCATALYST':'NO','SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD':'NO','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','COLORING_MODE':'live' if config == 'Release' else '$(inherited)'})
             if config == 'Debug': del values['COLORING_MODE']
         if scope == 'Tests':
             values.update({'PRODUCT_BUNDLE_IDENTIFIER':'com.jordan.family.ColoringSheetsTests','PRODUCT_NAME':'$(TARGET_NAME)','GENERATE_INFOPLIST_FILE':'YES','TEST_HOST':'$(BUILT_PRODUCTS_DIR)/ColoringSheets.app/ColoringSheets','BUNDLE_LOADER':'$(TEST_HOST)','CODE_SIGN_STYLE':'Automatic'})

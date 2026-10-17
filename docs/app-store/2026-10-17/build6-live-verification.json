@@ -1,0 +1,45 @@
+{
+  "startedAt": "2026-10-17T09:01:54.152Z",
+  "generationSubmissions": 1,
+  "checks": [
+    {
+      "name": "register temporary account",
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "name": "one live generated sheet",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "submit sheet report",
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "name": "reported sheet blocked from recovery",
+      "actual": 410,
+      "expected": 410
+    },
+    {
+      "name": "delete temporary account and its image/report",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "deleted credential rejected",
+      "actual": 401,
+      "expected": 401
+    },
+    {
+      "name": "deletion retry is idempotent",
+      "actual": 200,
+      "expected": 200
+    }
+  ],
+  "imageBytes": 1291567,
+  "passed": true,
+  "temporaryAccountDeleted": true,
+  "finishedAt": "2026-10-17T09:02:13.132Z"
+}

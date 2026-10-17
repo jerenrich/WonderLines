@@ -38,6 +38,9 @@ final class GalleryStore {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(GallerySnapshot.self, from: data)
     }
+    func remove() throws {
+        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+    }
     func save(_ snapshot: GallerySnapshot) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(snapshot).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -69,6 +72,16 @@ final class ColoringViewModel: ObservableObject {
     @Published private(set) var batchMessage: String?
     @Published private(set) var unfinishedSheets: [PendingGeneration] = []
     @Published private(set) var access: AccessSnapshot = .free
+    @Published var showsConsent = false
+    @Published private(set) var hasConsent: Bool
+    @Published private(set) var isDeletingAccount = false
+    @Published private(set) var deletionPending: Bool
+    @Published private(set) var isReporting = false
+    @Published var privacyMessage: String?
+    private let requiresConsent: Bool
+    private var consentForRecovery = false
+    var consentActionTitle: String { consentForRecovery ? "Agree and Continue" : "Agree and Generate" }
+    var canUseService: Bool { (!requiresConsent || hasConsent) && !deletionPending }
     let isMock: Bool
     private let service: any GenerationServing
     private let defaults: UserDefaults
@@ -91,8 +104,11 @@ final class ColoringViewModel: ObservableObject {
     private static let saveFailureMessage = "The sheets could not be saved on this device. Keep the app open; received jobs remain available for recovery."
 
     init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard,
-         galleryStore: GalleryStore? = nil) {
+         galleryStore: GalleryStore? = nil, requiresConsent: Bool? = nil) {
         self.service = service; self.isMock = isMock; self.defaults = defaults
+        self.requiresConsent = requiresConsent ?? !isMock
+        hasConsent = defaults.integer(forKey: PrivacyConsent.key) == PrivacyConsent.currentVersion
+        deletionPending = defaults.bool(forKey: PrivacyConsent.deletionKey)
         description = defaults.string(forKey: "descriptionDraft") ?? ""
         self.galleryStore = galleryStore ?? (!isMock && defaults === UserDefaults.standard ? GalleryStore() : nil)
         let stored = defaults.integer(forKey: "childAge")
@@ -158,6 +174,73 @@ final class ColoringViewModel: ObservableObject {
         (isRecovering ? "Checking \(activeSheetLabel)" : "Drawing \(activeSheetLabel)") + " · \(readyCount) ready" + (failedCount > 0 ? " · \(failedCount) unavailable" : "")
     }
 
+    func acceptConsent() {
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
+        hasConsent = true; showsConsent = false
+        if consentForRecovery { recoverUnfinishedSheets() } else { generate() }
+    }
+
+    func withdrawConsent() {
+        cancel()
+        resumesAfterBackground = false
+        defaults.removeObject(forKey: PrivacyConsent.key)
+        hasConsent = false; showsConsent = false
+        persistState()
+    }
+
+    func deleteAccountAndData() async {
+        guard !isDeletingAccount, !isReporting else { return }
+        isDeletingAccount = true
+        deletionPending = true
+        defaults.set(true, forKey: PrivacyConsent.deletionKey)
+        defer { isDeletingAccount = false }
+        // Drain any registration/submission already started before removing its
+        // credential. Cancellation alone does not finish an async registration.
+        let running = tasks
+        cancel()
+        for task in running { await task.value }
+        do {
+            try await service.deleteAccount()
+            try galleryStore?.remove()
+            results = []; pendingResults = []; unfinishedSheets = []
+            selectedResultID = nil; acknowledgedResultIDs = []
+            resumesAfterBackground = false; recoveringIDs = nil; generationBatchID = nil
+            hasRevealedResults = false; localSaveFailed = false; batchMessage = nil
+            completedCount = 0; failedCount = 0; activeBatchSize = 0; isRecovering = false
+            access = .free; firstFailure = nil; receivedFirstResult = false
+            description = ""; age = Self.defaultAge; model = .sunburst; imageCount = Self.batchSize
+            for key in ["descriptionDraft", "childAge", "generationModel", "imageCount", PrivacyConsent.key, PrivacyConsent.deletionKey] {
+                defaults.removeObject(forKey: key)
+            }
+            DiagnosticLog.shared.clear()
+            hasConsent = false; deletionPending = false; showsConsent = false
+            phase = .idle
+            privacyMessage = "Your service account, saved sheets and app history have been deleted. Copies you exported remain where you saved or shared them. Provider logs follow the retention described in the privacy policy."
+        } catch {
+            privacyMessage = "Deletion could not be confirmed. Your saved account is kept so you can retry. Generation stays paused until deletion finishes. Please check your connection and tap Delete account and data again."
+        }
+    }
+
+    func reportSelectedSheet(reason: SheetReportReason) async {
+        guard !isReporting, !deletionPending, let selected = result else { return }
+        guard let generationID = selected.generationID else {
+            privacyMessage = "This sheet has no service reference. Please contact support using the link in Settings."
+            return
+        }
+        isReporting = true
+        defer { isReporting = false }
+        do {
+            try await service.reportSheet(generationID, reason: reason.rawValue)
+            results.removeAll { $0.id == selected.id }
+            selectedResultID = results.first?.id
+            phase = results.isEmpty ? .idle : .result
+            persistState()
+            privacyMessage = "Report received. This sheet has been removed from your gallery and recovery. Support will review it."
+        } catch {
+            privacyMessage = "Your report could not be sent. Please try again, or contact support in Settings."
+        }
+    }
+
     func setImageCount(_ count: Int) {
         imageCount = min(max(count, 1), Self.batchSize)
     }
@@ -189,7 +272,8 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func generate() {
-        guard !isGenerating else { return }
+        guard !isGenerating, !deletionPending, !isReporting else { return }
+        guard canUseService else { consentForRecovery = false; showsConsent = true; return }
         let current = UUID()
         let requests: [GenerationRequest]
         do { requests = try self.requests(batchID: current) } catch { phase = .error(error.localizedDescription); return }
@@ -339,6 +423,7 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func enteredForeground() async {
+        guard canUseService else { await refreshUnfinishedSheets(); return }
         let returningFromBackground = isInBackground
         isInBackground = false
         if localSaveFailed { persistState() }
@@ -372,7 +457,7 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func refreshUsage() async {
-        guard let selected = result, selected.requestedModel == .redmond, let generationID = selected.generationID else { return }
+        guard canUseService, let selected = result, selected.requestedModel == .redmond, let generationID = selected.generationID else { return }
         do {
             guard let metrics = try await service.generationMetrics(generationID),
                   let index = results.firstIndex(where: { $0.id == selected.id }) else { return }
@@ -382,18 +467,22 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func refreshUnfinishedSheets() async {
+        let currentAttempt = attempt
         let entries = await service.pendingGenerations()
+        guard !deletionPending, currentAttempt == attempt else { return }
         let displayed = Set(results.compactMap(\.generationID))
         unfinishedSheets = entries.filter { !displayed.contains($0.id) }
     }
 
     func recoverUnfinishedSheets() {
+        guard !deletionPending else { return }
+        guard canUseService else { consentForRecovery = true; showsConsent = true; return }
         resumesAfterBackground = false
         recover(unfinishedSheets, appending: true)
     }
 
     private func recover(_ entries: [PendingGeneration], appending: Bool) {
-        guard !isGenerating else { return }
+        guard !isGenerating, canUseService else { return }
         let displayed = Set(appending ? results.compactMap(\.generationID) : [])
         var seen = displayed
         let pending = entries.filter { seen.insert($0.id).inserted }

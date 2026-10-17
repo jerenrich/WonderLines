@@ -9,6 +9,7 @@ final class GenerationTests: XCTestCase {
     func testDescriptionDraftSurvivesBackgroundAndRelaunchAndExplicitClear() throws {
         let suite = "description-draft-\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
         XCTAssertEqual(store.description, "")
@@ -100,6 +101,7 @@ final class GenerationTests: XCTestCase {
         let session = URLSession(configuration: configuration)
         let suite = "ForegroundPollTests-" + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let identities = AnonymousIdentityStore(service: suite)
         let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
         try await identities.save(account)
@@ -172,6 +174,7 @@ final class GenerationTests: XCTestCase {
     func testDiagnosticsPersistOnlySafeMetadataAndStayBounded() throws {
         let suite = "diagnostics-test-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let log = DiagnosticLog(defaults: defaults)
         let id = UUID()
@@ -193,6 +196,7 @@ final class GenerationTests: XCTestCase {
     func testDiagnosticRetentionMigrationAndClear() throws {
         let suite = "diagnostic-retention-\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let log = DiagnosticLog(defaults: defaults)
         log.record("Batch", "started", batchID: UUID())
@@ -643,6 +647,7 @@ final class NetworkingTests: XCTestCase {
         let session = URLSession(configuration: configuration)
         let suite = "ModerationTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let identities = AnonymousIdentityStore(service: suite)
         try await identities.save(AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600)))
         addTeardownBlock { await identities.remove() }
@@ -826,6 +831,7 @@ final class NetworkingTests: XCTestCase {
         let session = URLSession(configuration: configuration)
         let suite = "FalRecoveryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let identities = AnonymousIdentityStore(service: suite)
         let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
         try await identities.save(account)
@@ -899,6 +905,7 @@ final class NetworkingTests: XCTestCase {
         let session = URLSession(configuration: configuration)
         let suite = "FalRecoveryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let identities = AnonymousIdentityStore(service: suite)
         let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
         try await identities.save(account)
@@ -971,6 +978,7 @@ final class NetworkingTests: XCTestCase {
         let session = URLSession(configuration: config)
         let suite = "MissingJobTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let identities = AnonymousIdentityStore(service: suite)
         let account = AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600))
         try await identities.save(account)
@@ -1046,6 +1054,7 @@ final class NetworkingTests: XCTestCase {
     func testPendingGenerationsAreScopedAndExpire() async throws {
         let suite = "PendingScopeTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = PendingGenerationStore(defaults: defaults)
         let entry = PendingGeneration(id: UUID(), model: .redmond, createdAt: Date())
@@ -1231,6 +1240,7 @@ final class StateTests: XCTestCase {
     func testFreshInstallCanGenerateWithoutChoosingAge() async {
         let suite = "FirstLaunch-\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1250,6 +1260,7 @@ final class StateTests: XCTestCase {
     func testUnsetOrInvalidSavedAgeUsesDefaultAndValidChoicesSurviveUpdate() {
         let suite = "AgeMigration-\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         for saved in [0, -1, 2, 19, 99] {
             defaults.set(saved, forKey: "childAge")
@@ -1266,6 +1277,7 @@ final class StateTests: XCTestCase {
     func testRecoverUnfinishedSheetsAppendsWithoutGenerating() async {
         let suite = "RecoverGalleryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
@@ -1296,6 +1308,7 @@ final class StateTests: XCTestCase {
     func testUnlockKeepsSubmissionAliveWithoutAnotherGeneration() async {
         let suite = "UnlockRecoveryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
@@ -1330,6 +1343,7 @@ final class StateTests: XCTestCase {
     func testFirstSheetAfterForegroundAppearsImmediatelyWhileOthersStillDraw() async {
         let suite = "ImmediateForegroundSheet-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1354,6 +1368,7 @@ final class StateTests: XCTestCase {
     func testUnlockReplacesPreviousTwoSheetsWithThreeFromInterruptedBatch() async {
         let suite = "ReplaceOnUnlock-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
@@ -1391,6 +1406,7 @@ final class StateTests: XCTestCase {
     func testRepeatedUnlockPreservesPartialBatchAndSelectionWithoutDuplicates() async {
         let suite = "RepeatedUnlock-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         service.holdsRecovery = true
@@ -1425,6 +1441,7 @@ final class StateTests: XCTestCase {
     func testManualRecoverySkipsAlreadyDisplayedGenerationIDs() async {
         let suite = "DeduplicatedRecovery-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
@@ -1446,6 +1463,7 @@ final class StateTests: XCTestCase {
     func testRelaunchRestoresGallerySelectionAndResumesOnlyUnfinishedPartOfBatch() async throws {
         let suite = "DurableGalleryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
         let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
@@ -1487,6 +1505,7 @@ final class StateTests: XCTestCase {
     func testStoppedBatchRemainsManualAfterRelaunch() async throws {
         let suite = "StoppedGalleryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
         let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
@@ -1507,6 +1526,7 @@ final class StateTests: XCTestCase {
     func testFailedLocalSaveRetainsRecoveryID() async throws {
         let suite = "GallerySaveFailure-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let blocked = directory.appendingPathComponent("file-not-directory")
@@ -1531,6 +1551,7 @@ final class StateTests: XCTestCase {
     func testLaterSuccessfulSaveAcknowledgesEverySavedSheet() async throws {
         let suite = "SaveRecovery-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let blocked = directory.appendingPathComponent("temporarily-blocked")
@@ -1560,6 +1581,7 @@ final class StateTests: XCTestCase {
         for retryOnForeground in [false, true] {
             let suite = "LifecycleSaveRetry-" + UUID().uuidString
             let defaults = UserDefaults(suiteName: suite)!
+            defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let blocked = directory.appendingPathComponent("temporarily-blocked")
@@ -1591,6 +1613,7 @@ final class StateTests: XCTestCase {
     func testRelaunchAcknowledgesSheetSavedBeforeTermination() async throws {
         let suite = "SavedBeforeAcknowledgement-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
         let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
@@ -1612,6 +1635,7 @@ final class StateTests: XCTestCase {
     func testInterruptedTransportAfterUnlockAutomaticallyChecksExistingJob() async {
         let suite = "LateLockFailure-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
@@ -1632,6 +1656,7 @@ final class StateTests: XCTestCase {
     func testSettingsPersistAndControlNextBatch() async {
         let name = "SettingsTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1681,6 +1706,7 @@ final class StateTests: XCTestCase {
     func testSelectionPersistenceDuplicatesFailureAndBackground() async {
         let name = "ColoringTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1731,6 +1757,7 @@ final class StateTests: XCTestCase {
     func testParallelArrivalsSelectionExportsAndPartialFailure() async throws {
         let name = "BatchTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1788,6 +1815,7 @@ final class StateTests: XCTestCase {
     func testCancellationRetainsCompletedSheetsAndIgnoresStaleCompletions() async throws {
         let name = "BatchCancellationTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1837,6 +1865,7 @@ final class StateTests: XCTestCase {
     func testCompletedBatchRevealsImmediatelyAndLaterArrivalsPreserveSelection() async throws {
         let name = "BatchRevealTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1874,6 +1903,7 @@ final class StateTests: XCTestCase {
     func testPartialFailureRevealsBufferedSuccessWithoutWaiting() async {
         let name = "BatchPartialRevealTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1894,6 +1924,7 @@ final class StateTests: XCTestCase {
     func testCancelBeforeTasksStartAndInvalidInputMakeNoRequests() async throws {
         let name = "BatchValidationTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1909,6 +1940,7 @@ final class StateTests: XCTestCase {
     func testAllCompositionsValidateBeforeAnyRequestStarts() async throws {
         let name = "CompositionValidationTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -1980,6 +2012,7 @@ final class KeyboardFocusTests: XCTestCase {
     func testDescriptionAllowsSelectionEditsAndRefocusWithoutReplacingText() async throws {
         let suite = "DescriptionSelectionTests-" + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
         store.age = 6
@@ -2020,6 +2053,7 @@ final class KeyboardFocusTests: XCTestCase {
     func testDescriptionRetainsResponderWhenKeyboardChangesLayout() async throws {
         let suite = "KeyboardFocusTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
         store.age = 6
@@ -2077,6 +2111,7 @@ final class KeyboardFocusTests: XCTestCase {
     func testSuccessfulGenerationPreservesEditorAndNeverInterruptsTyping() async throws {
         let suite = "ComposerTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
@@ -2135,6 +2170,7 @@ final class KeyboardFocusTests: XCTestCase {
         }
         let suite = "ComposerLayoutTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
         store.age = 6; store.description = "A flower in a sunny garden"
@@ -2186,6 +2222,7 @@ final class KeyboardFocusTests: XCTestCase {
         for (device, size) in recentIPadLandscapeSizes {
             let suite = "PostGenerationComposerLayoutTests-" + UUID().uuidString
             let defaults = UserDefaults(suiteName: suite)!
+            defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
             defer { defaults.removePersistentDomain(forName: suite) }
             let service = ControlledService()
             let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)

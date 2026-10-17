@@ -246,10 +246,18 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "modelSetting").firstMatch.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "imageCountSetting").firstMatch.exists)
+        for _ in 0..<6 {
+            if app.buttons["diagnostics"].exists && app.buttons["diagnostics"].isHittable { break }
+            app.swipeUp()
+        }
         app.buttons["diagnostics"].tap()
         XCTAssertTrue(app.navigationBars["Diagnostics"].waitForExistence(timeout: 5))
         app.navigationBars["Diagnostics"].buttons.element(boundBy: 0).tap()
         let age = app.sliders["ageSetting"]
+        for _ in 0..<6 {
+            if age.exists && age.isHittable { break }
+            app.swipeDown()
+        }
         XCTAssertTrue(age.isHittable)
         XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "6 years")
         age.adjust(toNormalizedSliderPosition: 1)
@@ -381,6 +389,15 @@ final class GalleryUITests: XCTestCase {
         XCTAssertEqual(subject.frame.height, beforeClearSize.height, accuracy: 1)
         XCTAssertFalse(app.buttons["generate"].isEnabled)
         subject.typeText("A new idea")
+        // On iPhone the keyboard can exist in accessibility before its entrance
+        // animation finishes. Wait for it to be on screen before tapping the
+        // clear button, whose position moves with the composer during that time.
+        let keyboardShown = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let keyboard = app.keyboards.firstMatch
+            return keyboard.exists && keyboard.frame.maxY <= app.frame.maxY + 1 &&
+                subject.frame.maxY < keyboard.frame.minY
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [keyboardShown], timeout: 5), .completed)
         let beforeFocusedClear = subject.frame
         app.buttons["clearDescription"].tap()
         XCTAssertEqual(subject.value as? String, "")

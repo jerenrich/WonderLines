@@ -48,6 +48,14 @@ actor AnonymousIdentityStore {
         try? loadSession()
     }
 
+    func sessionForDeletion() async throws -> AnonymousSession? {
+        // Renewal may be in flight from a usage lookup. Drain it so it cannot
+        // write a saved credential back after deletion. Read failures must not
+        // be mistaken for an installation with no account.
+        if let registration { _ = try? await registration.value }
+        return try loadSession()
+    }
+
     private func loadSession() throws -> AnonymousSession? {
         guard let data = try read() else { return nil }
         guard let saved = try? JSONDecoder().decode(AnonymousSession.self, from: data) else {
@@ -73,6 +81,11 @@ actor AnonymousIdentityStore {
         guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else {
             throw GenerationError.configuration
         }
+    }
+
+    func deleteSavedSession() throws {
+        let status = SecItemDelete(baseQuery() as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { throw PrivacyActionError.localDeletionFailed }
     }
 
     func remove() { SecItemDelete(baseQuery() as CFDictionary) }

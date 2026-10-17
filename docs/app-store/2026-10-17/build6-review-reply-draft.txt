@@ -1,0 +1,13 @@
+DRAFT — requires Jordan's approval before sending. Build 6 is not yet uploaded.
+
+Hello,
+
+Build 1.0 (6) includes the fix for the disabled Generate button. On a fresh install, enter a description, tap Generate and accept the one-time AI consent prompt. No settings changes or sign-in are needed.
+
+This build also adds privacy and support links in Settings, account and data deletion, a Report sheet option, and the required privacy manifest.
+
+We tested the new flows on iPad Air 11-inch (M3) and iPhone simulators running OS 27.0, and verified generation, reporting and account deletion against the live service.
+
+Please review build 1.0 (6).
+
+Thank you.

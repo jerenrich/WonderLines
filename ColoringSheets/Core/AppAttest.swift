@@ -55,6 +55,11 @@ actor AppAttestClient {
         self.keychainService = keychainService
     }
 
+    func clearLocalEnrollment() throws {
+        let status = SecItemDelete(query() as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { throw PrivacyActionError.localDeletionFailed }
+    }
+
     func proof(accountID: UUID, token: String, serviceURL: URL, session: URLSession,
                idempotencyKey: String, body: Data) async throws -> [String: String]? {
         guard service.isSupported else {
