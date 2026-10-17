@@ -6,6 +6,7 @@ on:
     paths:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -61,6 +63,7 @@ jobs:
       - name: Run offline Worker and image cost tests
         run: |
           node Scripts/test_worker.mjs
+          node Scripts/test_privacy.mjs
           node Scripts/test_batch_moderation.mjs
           node Scripts/test_moderation.mjs
           node workers/moderation-lab/tests/worker.mjs

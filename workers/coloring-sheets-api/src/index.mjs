@@ -82,6 +82,12 @@ export class Budget {
   }
   async reserve(request) {
     const input = await request.json().catch(() => null);
+    if (new URL(request.url).pathname === '/forget-account' && isUUID(input?.accountId)) {
+      const entries = await this.state.storage.list({prefix: 'claim:' + input.accountId + ':'});
+      for (const key of entries.keys()) await this.state.storage.delete(key);
+      // Keep aggregate daily spend counters, without the deleted account IDs.
+      return reply({deleted: true});
+    }
     if (new URL(request.url).pathname !== '/reserve' || typeof input?.claim !== 'string') return fail('invalid_request', 'Invalid budget reservation.', 400);
     if (await this.state.storage.get('claim:' + input.claim)) return reply({reserved: true});
     const day = new Date().toISOString().slice(0, 10), existing = await this.state.storage.get('usage');
@@ -104,8 +110,21 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); }
-  async fetch(request) {
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); this.activeOperations = new Set(); this.deletionWork = null; }
+  track(operation) {
+    const pending = Promise.resolve().then(operation);
+    this.activeOperations.add(pending);
+    pending.then(() => this.activeOperations.delete(pending), () => this.activeOperations.delete(pending));
+    return pending;
+  }
+  fetch(request) {
+    if (new URL(request.url).pathname === '/delete') return this.deleteAccount(request);
+    return this.track(async () => {
+      if (await this.state.storage.get('deletion')) return fail('account_deleted', 'This account has been deleted.', 410);
+      return this.handleRequest(request);
+    });
+  }
+  async handleRequest(request) {
     const input = await request.json().catch(() => null), path = new URL(request.url).pathname;
     if (!input || request.method !== 'POST') return fail('invalid_request', 'Send JSON.', 400);
     if (path === '/initialize') return this.initialize(input);
@@ -138,11 +157,97 @@ export class Account {
       this.reservations = reservation.catch(() => {});
       return reservation;
     }
+    if (path === '/report') return this.report(input);
+    if (path === '/store-result') return this.storeResult(input);
     if (path === '/job') return this.job(input);
     if (path === '/usage') return this.usage(input);
     if (path === '/complete') return this.complete(input);
     if (path === '/access') return reply({access: await this.access()});
     return fail('not_found', 'Not found.', 404);
+  }
+  async deleteAccount(request) {
+    const input = await request.json().catch(() => null);
+    if (request.method !== 'POST' || !isUUID(input?.accountId) || !isUUID(input?.credentialId)) return fail('invalid_request', 'Invalid deletion request.', 400);
+    const credentialHash = await digest(input.credentialId);
+    const previous = await this.state.storage.get('deletion');
+    const account = await this.state.storage.get('account');
+    if (previous ? previous.credentialHash !== credentialHash : account && account.credentialId !== input.credentialId) {
+      return fail('unauthorized', 'Invalid account credential.', 401);
+    }
+    // Only the public route with a valid signed (possibly expired) credential can
+    // call this. An absent record is an idempotently completed deletion.
+    if (!previous && !account) return reply({deleted: true});
+    if (!previous) {
+      await this.state.storage.put('deletion', {accountId: input.accountId, credentialHash, startedAt: Date.now(), complete: false});
+      await this.state.storage.setAlarm(Date.now() + 1000);
+    }
+    try { await this.finishDeletion(); return reply({deleted: true}); }
+    catch { return fail('deletion_pending', 'Deletion is still pending. Please retry.', 503); }
+  }
+  async finishDeletion() {
+    if (this.deletionWork) return this.deletionWork;
+    const work = (async () => {
+      let marker = await this.state.storage.get('deletion');
+      if (!marker) return;
+      // Any operation that passed the gate before deletion must finish before
+      // cleanup. New operations fail closed. Include provider and billing awaits.
+      await Promise.allSettled([...this.activeOperations]);
+      await this.state.storage.setAlarm(Date.now() + 60000);
+      for (const prefix of [marker.accountId + '/', 'reports/' + marker.accountId + '/']) {
+        for (;;) {
+          const page = await this.env.GENERATIONS.list({prefix, limit: 1000});
+          if (!page.objects.length) break;
+          await this.env.GENERATIONS.delete(page.objects.map(object => object.key));
+        }
+      }
+      const budget = this.env.BUDGET.get(this.env.BUDGET.idFromName('daily-generation-budget'));
+      const forgotten = await budget.fetch('https://budget/forget-account', {method: 'POST', body: JSON.stringify({accountId: marker.accountId})});
+      if (!forgotten.ok) throw new Error('Account cleanup pending');
+      marker = {...marker, complete: true};
+      // Keep only a short-lived deletion marker to reject late work and sweep
+      // writes from older Worker deployments. No prompts, keys or images remain.
+      for (;;) {
+        const entries = await this.state.storage.list({limit: 1000});
+        const keys = [...entries.keys()].filter(key => key !== 'deletion');
+        if (!keys.length) break;
+        await this.state.storage.delete(keys);
+      }
+      if (Date.now() - marker.startedAt < 86400000) {
+        await this.state.storage.put('deletion', marker);
+        await this.state.storage.setAlarm(Date.now() + 3600000);
+      } else {
+        await this.state.storage.delete('deletion');
+        await this.state.storage.deleteAlarm();
+      }
+    })();
+    this.deletionWork = work;
+    try { await work; } finally { this.deletionWork = null; }
+  }
+  async report({generationId, reason}) {
+    if (!isUUID(generationId) || !['sexual', 'violence', 'hate', 'other'].includes(reason)) return fail('invalid_request', 'Choose a report reason.', 400);
+    const job = await this.state.storage.get('job:' + generationId);
+    if (!job || job.state !== 'completed') return fail('not_found', 'Saved sheet not found.', 404);
+    if (job.reported) return reply({reported: true});
+    const account = await this.state.storage.get('account');
+    const report = {accountId: account.id, generationId, reason, reportedAt: new Date().toISOString(),
+      objectKey: job.objectKey, model: job.metrics?.requestedModel ?? null, status: 'pending'};
+    // A durable queue in the existing private bucket; support reviews it using
+    // the documented report-review procedure. No mail app is required to report.
+    try {
+      await this.env.GENERATIONS.put('reports/' + account.id + '/' + generationId + '.json', JSON.stringify(report),
+        {httpMetadata: {contentType: 'application/json'}});
+      await this.state.storage.put('job:' + generationId, {...job, reported: true});
+    } catch { return fail('report_unavailable', 'The report could not be confirmed. Please retry.', 503); }
+    console.info(JSON.stringify({event: 'sheet_report_received', generationID: generationId, reason}));
+    return reply({reported: true}, 201);
+  }
+  async storeResult({generationId, image, metrics}) {
+    const job = await this.state.storage.get('job:' + generationId);
+    if (!job || job.state !== 'processing') return fail('not_found', 'Generation not found.', 404);
+    const account = await this.state.storage.get('account');
+    const objectKey = account.id + '/' + generationId + '.png';
+    await this.env.GENERATIONS.put(objectKey, unb64(image), {httpMetadata: {contentType: 'image/png'}});
+    return this.complete({generationId, result: {state: 'completed', objectKey, metrics}});
   }
   async moderateBatch({batchID, description}) {
     if (!isUUID(batchID) || typeof description !== 'string' || !description.trim() || description.length > 500) return fail('invalid_request', 'Invalid batch.', 400);
@@ -247,6 +352,12 @@ export class Account {
     return reply({job, access: await this.access()}, 201);
   }
   async alarm() {
+    await this.track(async () => {
+      if (!await this.state.storage.get('deletion')) await this.runAlarm();
+    });
+    if (await this.state.storage.get('deletion')) await this.finishDeletion();
+  }
+  async runAlarm() {
     const pending = await this.state.storage.list({prefix: 'fal:', limit: 5});
     const images = await this.state.storage.list({prefix: 'image:', limit: 3});
     if (!pending.size && !images.size) return;
@@ -443,6 +554,7 @@ export class Account {
 
 async function authenticate(request, env, allowExpired = false) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, allowExpired); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, credentialId: c.cid, access: checked.value.access, appAttested: checked.value.appAttested} : null; }
 async function saved(env, job, access) {
+  if (job.reported) return fail('sheet_reported', 'This sheet was reported and is no longer available for recovery.', 410);
   if (job.state === 'completed') { const image = await env.GENERATIONS.get(job.objectKey); if (!image) return fail('result_unavailable', 'Saved image is unavailable.', 410); return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}}); }
   if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
   return reply({generationId: job.id, status: 'processing'}, 202, {'Retry-After': '5', 'X-Access-Snapshot': accessHeader(access)});
@@ -506,8 +618,8 @@ async function generate(request, env, account) {
       viaGateway: upstreamRequest.viaGateway, requestedSize: size.width + 'x' + size.height, size: actualSize,
       inputTokens, textInputTokens: textInputTokens ?? null, imageInputTokens: imageInputTokens ?? null,
       outputTokens, totalTokens, elapsedMs: Date.now() - started, ...imageCost(upstreamRequest, result)};
-    await env.GENERATIONS.put(objectKey, image, {httpMetadata: {contentType: 'image/png'}});
-    const completed = await call(env, account.id, '/complete', {generationId, result: {state: 'completed', objectKey, metrics}});
+    const completed = await call(env, account.id, '/store-result', {generationId, image: b64(new Uint8Array(image)), metrics});
+    if (completed.status !== 200) return reply(completed.value, completed.status);
     return new Response(image, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': generationId, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(metrics)), 'X-Access-Snapshot': accessHeader(completed.value.access)}});
   } catch (error) {
     // A synchronous provider failure has no background work that can finish it.
@@ -539,6 +651,12 @@ export default { async fetch(request, env) {
     const account = await authenticate(request, env, true);
     if (!account) return fail('unauthorized', 'The saved account credential could not be renewed.', 401);
     return reply({accountId: account.id, accessToken: await token(account.id, account.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: account.access});
+  }
+  if (url.pathname === '/v1/account' && request.method === 'DELETE') {
+    const signed = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, true);
+    if (!signed) return fail('unauthorized', 'A saved account credential is required.', 401);
+    const deleted = await call(env, signed.sub, '/delete', {accountId: signed.sub, credentialId: signed.cid});
+    return reply(deleted.value, deleted.status);
   }
   const account = await authenticate(request, env); if (!account) return fail('unauthorized', 'Register this app installation again.', 401);
   if (url.pathname === '/v1/app-attest/challenge' && request.method === 'POST') {
@@ -591,6 +709,12 @@ export default { async fetch(request, env) {
       if (checked.status !== 200) return reply(checked.value, checked.status);
     }
     return generate(request, env, account);
+  }
+  const reportMatch = /^\/v1\/generations\/([0-9a-f-]{36})\/report$/.exec(url.pathname);
+  if (reportMatch && request.method === 'POST') {
+    const input = await body(request);
+    const report = await call(env, account.id, '/report', {generationId: reportMatch[1], reason: input?.reason});
+    return reply(report.value, report.status);
   }
   const usageMatch = /^\/v1\/generations\/([0-9a-f-]{36})\/usage$/.exec(url.pathname);
   if (usageMatch && request.method === 'GET') {
