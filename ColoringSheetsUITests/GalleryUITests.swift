@@ -32,7 +32,9 @@ final class GalleryUITests: XCTestCase {
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["ageDifficulty"].label.contains("6 years"))
+        app.buttons["settings"].tap()
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "6 years")
+        app.buttons["Done"].tap()
         subject.tap()
         subject.typeText(String(repeating: "flower ", count: 75))
         app.buttons["dismissKeyboard"].tap()
@@ -230,7 +232,7 @@ final class GalleryUITests: XCTestCase {
 
     @MainActor
     private func setAge(in app: XCUIApplication, position: CGFloat) {
-        app.buttons["ageDifficulty"].tap()
+        app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         app.sliders["ageSetting"].adjust(toNormalizedSliderPosition: position)
         app.buttons["Done"].tap()
@@ -295,7 +297,7 @@ final class GalleryUITests: XCTestCase {
         XCTAssertFalse(app.buttons["About generation and costs"].exists)
         XCTAssertFalse(app.buttons["clearDescription"].exists)
         XCTAssertEqual(subject.placeholderValue, "Describe your coloring sheet…")
-        XCTAssertTrue(app.buttons["ageDifficulty"].exists, "Drawing difficulty should be visible before typing")
+        XCTAssertFalse(app.buttons["ageDifficulty"].exists, "Drawing difficulty is available in Settings")
         subject.tap()
         XCTAssertTrue(app.buttons["dismissKeyboard"].waitForExistence(timeout: 5))
         XCTAssertTrue(subject.placeholderValue?.isEmpty ?? true, "The placeholder disappears on focus")
@@ -458,7 +460,9 @@ final class GalleryUITests: XCTestCase {
         subject.tap()
         subject.typeText("A friendly dinosaur riding a bicycle on the moon")
         app.buttons["dismissKeyboard"].tap()
-        XCTAssertTrue(app.buttons["ageDifficulty"].label.contains("6 years"))
+        app.buttons["settings"].tap()
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "6 years")
+        app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["generate"].isEnabled)
         app.buttons["generate"].tap()
 

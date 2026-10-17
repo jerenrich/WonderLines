@@ -139,6 +139,7 @@ struct ContentView: View {
                 Spacer(minLength: 0)
                 Menu {
                     exportButtons
+                    reportButton
                     Button { showUsage = true } label: {
                         Label("Usage and estimated cost", systemImage: "chart.bar.xaxis")
                     }
@@ -151,8 +152,8 @@ struct ContentView: View {
                 .accessibilityIdentifier("sheetActions")
             } else {
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) { exportButtons; usageButton }
-                    HStack(spacing: 8) { exportButtons; usageButton }.labelStyle(.iconOnly)
+                    HStack(spacing: 8) { exportButtons; reportButton.labelStyle(.iconOnly); usageButton }
+                    HStack(spacing: 8) { exportButtons; reportButton; usageButton }.labelStyle(.iconOnly)
                 }
                 .buttonStyle(.bordered)
                 .disabled(store.result == nil)
@@ -332,16 +333,6 @@ struct ContentView: View {
                 .accessibilityHidden(composerMinimized || (!descriptionFocused && store.result == nil))
             }
             Group {
-                Button {
-                    descriptionFocused = false
-                    showSettings = true
-                } label: {
-                    Label("Age difficulty: \(store.age) years · Change", systemImage: "slider.horizontal.3")
-                        .font(.footnote)
-                        .frame(minHeight: 44)
-                }
-                .accessibilityIdentifier("ageDifficulty")
-                .accessibilityHint("Adjusts drawing detail in Settings")
                 if !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    let message = store.validationMessage {
                     Button { detailMessage = message } label: {
@@ -637,8 +628,11 @@ struct ContentView: View {
         }
         .disabled(isSavingPhoto)
         Button { beginExport(.print) } label: { Label("Print", systemImage: "printer") }
+    }
+    private var reportButton: some View {
         Button { showReport = true } label: { Label("Report sheet", systemImage: "flag") }
             .disabled(store.isGenerating || store.isReporting || store.deletionPending)
+            .help("Report sheet")
             .accessibilityIdentifier("reportSheet")
     }
     private func count(_ value: Int?) -> String { value.map(String.init) ?? "Unavailable" }

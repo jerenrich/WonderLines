@@ -28,20 +28,14 @@ struct AIConsentView: View {
 struct SheetReportView: View {
     @ObservedObject var store: ColoringViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var reason = SheetReportReason.other
     var body: some View {
         NavigationStack {
             Form {
-                Section("What is the concern?") {
-                    Picker("Reason", selection: $reason) {
-                        ForEach(SheetReportReason.allCases) { Text($0.label).tag($0) }
-                    }.pickerStyle(.inline)
-                }
                 Section {
-                    Text("Send this sheet’s service reference and your selected reason to Wonder Lines support for review. Support can inspect the saved sheet and its generation details. A successfully reported sheet is removed from your gallery and recovery.")
+                    Text("Send this sheet to Wonder Lines support for review. Support can inspect the saved sheet and its generation details. A successfully reported sheet is removed from your gallery and recovery.")
                     Button(store.isReporting ? "Sending…" : "Send report") {
                         Task {
-                            await store.reportSelectedSheet(reason: reason)
+                            await store.reportSelectedSheet(reason: .other)
                             dismiss()
                         }
                     }
