@@ -1,5 +1,7 @@
 import XCTest
 import UIKit
+import DeviceCheck
+import Security
 @testable import ColoringSheets
 
 final class GenerationTests: XCTestCase {
@@ -487,6 +489,151 @@ final class MockURLProtocol: URLProtocol {
         } catch { client?.urlProtocol(self, didFailWithError: error) }
     }
     override func stopLoading() {}
+}
+
+private actor SyntheticAppleAttest: AppleAttesting {
+    nonisolated var isSupported: Bool { true }
+    private(set) var keys: [String] = []
+    private var invalidKeys = Set<String>()
+    var invalidatesEveryKey = false
+    var attestationError: DCError.Code?
+    private var rejectedFirstAttestation = false
+    func configure(invalidKeys: Set<String> = [], everyKey: Bool = false, attestationError: DCError.Code? = nil) {
+        self.invalidKeys = invalidKeys
+        invalidatesEveryKey = everyKey
+        self.attestationError = attestationError
+    }
+    func generateKey() async throws -> String {
+        let key = Data("synthetic-key-\(keys.count)".utf8).base64EncodedString()
+        keys.append(key)
+        return key
+    }
+    func attestKey(_ keyID: String, clientDataHash: Data) async throws -> Data {
+        if let attestationError {
+            if attestationError != .invalidKey || !rejectedFirstAttestation {
+                rejectedFirstAttestation = true
+                throw DCError(attestationError)
+            }
+        }
+        return Data("synthetic-attestation".utf8)
+    }
+    func generateAssertion(_ keyID: String, clientDataHash: Data) async throws -> Data {
+        if invalidatesEveryKey || invalidKeys.contains(keyID) { throw DCError(.invalidKey) }
+        return Data("synthetic-assertion".utf8)
+    }
+}
+
+private final class AttestationTestServer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var remoteKey: String?
+    private var requests: [URLRequest] = []
+    var recorded: [URLRequest] { lock.withLock { requests } }
+    func respond(_ request: URLRequest) throws -> (HTTPURLResponse, Data) {
+        try lock.withLock {
+            requests.append(request)
+            let result: [String: Any]
+            switch request.url!.path {
+            case "/v1/app-attest/challenge": result = ["challenge": "synthetic-challenge"]
+            case "/v1/app-attest/attest":
+                // URLProtocol exposes POST bodies as a stream; the value itself
+                // is irrelevant here. Account/key replacement is tested server-side.
+                remoteKey = "server-key"
+                result = ["attested": true]
+            case "/v1/app-attest/status": result = ["keyID": remoteKey as Any? ?? NSNull()]
+            default: throw URLError(.unsupportedURL)
+            }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!,
+                    try JSONSerialization.data(withJSONObject: result))
+        }
+    }
+}
+
+final class AppAttestRecoveryTests: XCTestCase {
+    private func withClient(_ operation: (AppAttestClient, SyntheticAppleAttest, URLSession, AttestationTestServer) async throws -> Void) async throws {
+        let keychain = "AttestRecovery-\(UUID())"
+        let apple = SyntheticAppleAttest()
+        let server = AttestationTestServer()
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: config)
+        MockURLProtocol.handler = server.respond
+        defer {
+            session.invalidateAndCancel()
+            MockURLProtocol.handler = nil
+            SecItemDelete([kSecClass as String: kSecClassGenericPassword,
+                           kSecAttrService as String: keychain] as CFDictionary)
+        }
+        try await operation(AppAttestClient(service: apple, keychainService: keychain), apple, session, server)
+    }
+
+    func testReinstalledKeyIsReplacedOnceAcrossConcurrentBatchWithoutGeneration() async throws {
+        try await withClient { client, apple, session, server in
+            let account = UUID()
+            func proof() async throws -> [String: String]? {
+                try await client.proof(accountID: account, token: "original-account-token",
+                    serviceURL: URL(string: "https://example.test")!, session: session,
+                    idempotencyKey: UUID().uuidString.lowercased(), body: Data("{}".utf8))
+            }
+            _ = try await proof()
+            let originalKeys = await apple.keys
+            await apple.configure(invalidKeys: Set(originalKeys))
+            async let first = proof()
+            async let second = proof()
+            async let third = proof()
+            let proofs = try await [first, second, third]
+            XCTAssertTrue(proofs.allSatisfy { $0?["X-App-Attest-Assertion"] != nil })
+            let keys = await apple.keys
+            XCTAssertEqual(keys.count, 2, "Concurrent sheets must share a single replacement key")
+            let requests = server.recorded
+            XCTAssertEqual(requests.filter { $0.url?.path == "/v1/app-attest/attest" }.count, 2)
+            XCTAssertTrue(requests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == "Bearer original-account-token" })
+            XCTAssertFalse(requests.contains { $0.url?.path == "/v1/generations" || $0.url?.path == "/v1/installations" })
+        }
+    }
+
+    func testRepeatedInvalidKeysStopAfterOneReplacement() async throws {
+        try await withClient { client, apple, session, _ in
+            await apple.configure(everyKey: true)
+            do {
+                _ = try await client.proof(accountID: UUID(), token: "synthetic",
+                    serviceURL: URL(string: "https://example.test")!, session: session,
+                    idempotencyKey: UUID().uuidString.lowercased(), body: Data("{}".utf8))
+                XCTFail("Repeated invalid keys must fail instead of looping")
+            } catch { }
+            let keys = await apple.keys
+            XCTAssertEqual(keys.count, 2)
+        }
+    }
+
+    func testInvalidKeyDuringInitialAttestationCanRecover() async throws {
+        try await withClient { client, apple, session, _ in
+            await apple.configure(attestationError: .invalidKey)
+            let proof = try await client.proof(accountID: UUID(), token: "synthetic",
+                serviceURL: URL(string: "https://example.test")!, session: session,
+                idempotencyKey: UUID().uuidString.lowercased(), body: Data("{}".utf8))
+            XCTAssertNotNil(proof?["X-App-Attest-Assertion"])
+            let keys = await apple.keys
+            XCTAssertEqual(keys.count, 2)
+        }
+    }
+
+    func testTemporaryAppleFailureRetainsSavedKeyAcrossAttempts() async throws {
+        try await withClient { client, apple, session, _ in
+            await apple.configure(attestationError: .serverUnavailable)
+            let account = UUID()
+            for _ in 0..<2 {
+                do {
+                    _ = try await client.proof(accountID: account, token: "synthetic",
+                        serviceURL: URL(string: "https://example.test")!, session: session,
+                        idempotencyKey: UUID().uuidString.lowercased(), body: Data("{}".utf8))
+                    XCTFail("The temporary error must reach the caller")
+                } catch { XCTAssertEqual((error as? DCError)?.code, .serverUnavailable) }
+            }
+            let keys = await apple.keys
+            XCTAssertEqual(keys.count, 1, "A temporary failure must not discard or repeatedly create keys")
+        }
+    }
 }
 
 final class NetworkingTests: XCTestCase {
@@ -1081,6 +1228,41 @@ final class StateTests: XCTestCase {
         }
         XCTFail("State did not settle")
     }
+    func testFreshInstallCanGenerateWithoutChoosingAge() async {
+        let suite = "FirstLaunch-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        XCTAssertNil(defaults.object(forKey: "childAge"))
+        XCTAssertEqual(store.age, 6)
+        XCTAssertNotNil(store.validationMessage, "An empty description still needs input")
+        store.description = "A friendly dinosaur riding a bicycle on the moon"
+        XCTAssertNil(store.validationMessage)
+        store.generate()
+        await waitFor { service.pendingCount == 3 }
+        XCTAssertTrue(service.captured.allSatisfy { $0.age == 6 })
+        service.succeed()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.results.count, 3)
+    }
+
+    func testUnsetOrInvalidSavedAgeUsesDefaultAndValidChoicesSurviveUpdate() {
+        let suite = "AgeMigration-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for saved in [0, -1, 2, 19, 99] {
+            defaults.set(saved, forKey: "childAge")
+            let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+            store.description = "A flower"
+            XCTAssertEqual(store.age, 6)
+            XCTAssertNil(store.validationMessage)
+        }
+        for saved in 3...18 {
+            defaults.set(saved, forKey: "childAge")
+            XCTAssertEqual(ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults).age, saved)
+        }
+    }
     func testRecoverUnfinishedSheetsAppendsWithoutGenerating() async {
         let suite = "RecoverGalleryTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
@@ -1484,6 +1666,9 @@ final class StateTests: XCTestCase {
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 3, "Old five-image preferences must be clamped")
         defaults.set(-4, forKey: "imageCount")
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 1)
+        defaults.set("1", forKey: "imageCount")
+        XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).imageCount, 1,
+                       "Numeric preference overrides must honor the requested batch size")
         defaults.set("unsupported", forKey: "generationModel")
         XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).model, .sunburst)
         for removed in ["dreamshaper-8-lcm", "stable-diffusion-xl-lightning",
@@ -1499,7 +1684,7 @@ final class StateTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
-        XCTAssertEqual(store.age, 0)
+        XCTAssertEqual(store.age, ColoringViewModel.defaultAge)
         XCTAssertEqual(store.pageFormat, .a4Landscape)
         store.age = 3; store.description = "Synthetic flower"
         store.updatePreview(size: CGSize(width: 600, height: 700), displayScale: 2)
@@ -1540,7 +1725,7 @@ final class StateTests: XCTestCase {
         XCTAssertEqual(store.results.count, 3)
         XCTAssertEqual(store.phase, .result, "Lock must not discard the original results")
         defaults.set(99, forKey: "childAge")
-        XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, 0)
+        XCTAssertEqual(ColoringViewModel(service: service, isMock: true, defaults: defaults).age, ColoringViewModel.defaultAge)
     }
 
     func testParallelArrivalsSelectionExportsAndPartialFailure() async throws {

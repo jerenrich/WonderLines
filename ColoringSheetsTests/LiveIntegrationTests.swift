@@ -3,6 +3,48 @@ import XCTest
 
 /// Opt-in only. Standard test runs skip this test and never send paid requests.
 final class LiveIntegrationTests: XCTestCase {
+    @MainActor
+    func testExplicitOneGenerationThroughFirstUseState() async throws {
+        guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_LIVE_CHECK"] == "one-generation" else {
+            throw XCTSkip("One live first-use generation requires explicit opt-in.")
+        }
+        let configuration = AppConfiguration.load()
+        XCTAssertFalse(configuration.mock)
+        guard !configuration.mock else { return }
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("LiveVerification", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        // A runner restart cannot accidentally repeat this paid smoke check.
+        let claim = directory.appendingPathComponent("first-use-2026-10-17-claimed")
+        guard !FileManager.default.fileExists(atPath: claim.path) else {
+            throw XCTSkip("This installation has already claimed its one-generation check.")
+        }
+        try Data("claimed".utf8).write(to: claim, options: .withoutOverwriting)
+        let suite = "LiveFirstUse-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ColoringViewModel(service: WorkerClient(serviceURL: configuration.serviceURL),
+                                      isMock: false, defaults: defaults)
+        XCTAssertEqual(store.age, 6)
+        store.setImageCount(1)
+        store.description = "A friendly dinosaur riding a bicycle on the moon"
+        XCTAssertNil(store.validationMessage)
+        store.generate()
+        let deadline = ContinuousClock.now + .seconds(240)
+        while store.isGenerating && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        if store.isGenerating { store.cancel(); XCTFail("The live sheet did not finish within four minutes"); return }
+        XCTAssertEqual(store.phase, .result)
+        XCTAssertEqual(store.results.count, 1)
+        let result = try XCTUnwrap(store.result)
+        try result.data.write(to: directory.appendingPathComponent("first-use-2026-10-17.png"), options: .atomic)
+        let attachment = XCTAttachment(image: result.image)
+        attachment.name = "Real iPad first-use generation"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func testExplicitAppAttestConcurrencyWithoutGeneration() async throws {
         guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_ATTEST_CHECK"] == "compare-concurrency" else {
             throw XCTSkip("Real-device assertion comparison requires explicit opt-in.")

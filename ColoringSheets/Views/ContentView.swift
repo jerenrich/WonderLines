@@ -312,18 +312,18 @@ struct ContentView: View {
                 .accessibilityHidden(composerMinimized || (!descriptionFocused && store.result == nil))
             }
             Group {
-                if store.age == 0 {
-                    Button {
-                        descriptionFocused = false
-                        showSettings = true
-                    } label: {
-                        Label("Choose an age in Settings", systemImage: "slider.horizontal.3")
-                            .font(.footnote)
-                            .frame(minHeight: 44)
-                    }
-                    .accessibilityIdentifier("validation")
-                } else if !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                          let message = store.validationMessage {
+                Button {
+                    descriptionFocused = false
+                    showSettings = true
+                } label: {
+                    Label("Age difficulty: \(store.age) years · Change", systemImage: "slider.horizontal.3")
+                        .font(.footnote)
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("ageDifficulty")
+                .accessibilityHint("Adjusts drawing detail in Settings")
+                if !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   let message = store.validationMessage {
                     Button { detailMessage = message } label: {
                         Label("Shorten the description", systemImage: "exclamationmark.circle")
                             .font(.footnote)
@@ -445,21 +445,19 @@ struct ContentView: View {
             Form {
                 Section("Age difficulty") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(store.age == 0 ? "Choose an age" : "\(store.age) years")
+                        Text("\(store.age) years")
                             .font(.headline)
                             .accessibilityIdentifier("ageSettingValue")
                         Slider(value: Binding(
-                            get: { Double(max(3, store.age)) },
+                            get: { Double(store.age) },
                             set: { store.age = Int($0) }), in: 3...18, step: 1) {
                             Text("Age difficulty")
                         } minimumValueLabel: {
                             Text("3")
                         } maximumValueLabel: {
                             Text("18")
-                        } onEditingChanged: { editing in
-                            if editing && store.age == 0 { store.age = 3 }
                         }
-                        .accessibilityValue(store.age == 0 ? "Choose an age" : "\(store.age) years")
+                        .accessibilityValue("\(store.age) years")
                         .accessibilityIdentifier("ageSetting")
                     }
                     Text("Younger ages use simpler shapes and larger coloring areas. Older ages add finer details.")

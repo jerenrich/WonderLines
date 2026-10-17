@@ -2,6 +2,54 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
+    func testFirstLaunchGeneratesWithoutOpeningSettings() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        // Run on a newly installed app: do not supply an age preference.
+        app.launchArguments = ["--mock", "-descriptionDraft", ""]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["generate"].isEnabled, "An empty description cannot generate")
+        subject.tap()
+        subject.typeText("A friendly dinosaur riding a bicycle on the moon")
+        app.buttons["dismissKeyboard"].tap()
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "First launch after entering a description"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        XCTAssertTrue(app.buttons["generate"].isEnabled, "A fresh install must generate without a hidden Settings prerequisite")
+        app.buttons["generate"].tap()
+        XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["sheetPosition"].label, "Sheet 1 of 3")
+    }
+
+    @MainActor
+    func testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-descriptionDraft", "", "-childAge", "0", "-imageCount", "1"]
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["ageDifficulty"].label.contains("6 years"))
+        subject.tap()
+        subject.typeText(String(repeating: "flower ", count: 75))
+        app.buttons["dismissKeyboard"].tap()
+        XCTAssertFalse(app.buttons["generate"].isEnabled)
+        app.buttons["validation"].tap()
+        XCTAssertTrue(app.alerts["Generation details"].waitForExistence(timeout: 3))
+        app.alerts.buttons["OK"].tap()
+        app.buttons["clearDescription"].tap()
+        subject.typeText("A flower")
+        app.buttons["dismissKeyboard"].tap()
+        XCTAssertTrue(app.buttons["generate"].isEnabled)
+        app.buttons["generate"].tap()
+        XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["sheetPosition"].label, "Sheet 1 of 1")
+    }
+
+    @MainActor
     func testBackgroundDuringSubmissionKeepsAllThreeSheets() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -182,7 +230,7 @@ final class GalleryUITests: XCTestCase {
 
     @MainActor
     private func setAge(in app: XCUIApplication, position: CGFloat) {
-        app.buttons["validation"].tap()
+        app.buttons["ageDifficulty"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         app.sliders["ageSetting"].adjust(toNormalizedSliderPosition: position)
         app.buttons["Done"].tap()
@@ -203,7 +251,7 @@ final class GalleryUITests: XCTestCase {
         app.navigationBars["Diagnostics"].buttons.element(boundBy: 0).tap()
         let age = app.sliders["ageSetting"]
         XCTAssertTrue(age.isHittable)
-        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "Choose an age")
+        XCTAssertEqual(app.staticTexts["ageSettingValue"].label, "6 years")
         age.adjust(toNormalizedSliderPosition: 1)
         age.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
             .press(forDuration: 0.1, thenDragTo: age.coordinate(withNormalizedOffset: CGVector(dx: 1.1, dy: 0.5)))
@@ -239,7 +287,7 @@ final class GalleryUITests: XCTestCase {
         XCTAssertFalse(app.buttons["About generation and costs"].exists)
         XCTAssertFalse(app.buttons["clearDescription"].exists)
         XCTAssertEqual(subject.placeholderValue, "Describe your coloring sheet…")
-        XCTAssertTrue(app.buttons["validation"].exists, "Choose age should be available before typing")
+        XCTAssertTrue(app.buttons["ageDifficulty"].exists, "Drawing difficulty should be visible before typing")
         subject.tap()
         XCTAssertTrue(app.buttons["dismissKeyboard"].waitForExistence(timeout: 5))
         XCTAssertTrue(subject.placeholderValue?.isEmpty ?? true, "The placeholder disappears on focus")
@@ -384,33 +432,34 @@ final class GalleryUITests: XCTestCase {
         }
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-descriptionDraft", "", "-imageCount", "1", "-childAge", "8"]
+        app.launchArguments = ["-descriptionDraft", "", "-imageCount", "1", "-childAge", "0",
+                               "-generationModel", "gpt-image-2.5-sunburst"]
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 10))
         subject.tap()
-        subject.typeText("Baby on moon")
+        subject.typeText("A friendly dinosaur riding a bicycle on the moon")
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["settings"].tap()
-        let age = app.sliders["ageSetting"]
-        age.adjust(toNormalizedSliderPosition: 1)
-        age.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
-            .press(forDuration: 0.1, thenDragTo: age.coordinate(withNormalizedOffset: CGVector(dx: 1.1, dy: 0.5)))
-        app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["ageDifficulty"].label.contains("6 years"))
+        XCTAssertTrue(app.buttons["generate"].isEnabled)
         app.buttons["generate"].tap()
 
-        // This launch starts with an empty in-memory gallery. Wait for a result
-        // or explicit failure, not a transient absence of the progress label.
+        // A live installation can already contain a saved gallery. Its presence
+        // alone cannot prove that this new generation succeeded.
+        let progress = app.staticTexts["generationProgress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 5))
         let complete = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in
-                app.staticTexts["sheetPosition"].exists || app.buttons["failureDiagnostics"].exists
+                !progress.exists || app.buttons["failureDiagnostics"].exists
             }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 240), .completed)
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Live iPad generation result"
         screenshot.lifetime = .keepAlways
         add(screenshot)
+        XCTAssertFalse(app.buttons["failureDiagnostics"].exists, app.debugDescription)
         XCTAssertTrue(app.staticTexts["sheetPosition"].exists, "At least one live sheet must reach the gallery: \(app.debugDescription)")
+        XCTAssertEqual(app.staticTexts["sheetPosition"].label, "Sheet 1 of 1")
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "configuration update")).firstMatch.exists)
     }
 
@@ -471,5 +520,92 @@ final class GalleryUITests: XCTestCase {
         XCTAssertTrue(app.buttons["expandComposer"].label.contains("with stars"))
         app.buttons["previousSheet"].tap()
         expectPage(2)
+    }
+}
+
+extension GalleryUITests {
+    /// Deliberate physical-device review demonstration; never part of routine QA.
+    @MainActor
+    func testAppReviewPhysicalDemonstration() throws {
+        guard ProcessInfo.processInfo.environment["WONDERLINES_APP_REVIEW_CAPTURE"] == "one-batch" else {
+            throw XCTSkip("App Review capture requires explicit one-batch opt-in.")
+        }
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-descriptionDraft", "", "-imageCount", "3", "-childAge", "6", "-generationModel", "gpt-image-2.5-sunburst"]
+        app.terminate()
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 2)
+        app.launch()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertTrue(subject.waitForExistence(timeout: 10))
+        func capture(_ name: String) {
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = name
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        capture("01-launch")
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.sliders["ageSetting"].waitForExistence(timeout: 5))
+        capture("02-settings")
+        Thread.sleep(forTimeInterval: 3)
+        app.buttons["Done"].tap()
+        subject.tap()
+        subject.typeText("A friendly dinosaur riding a bicycle on the moon")
+        app.buttons["dismissKeyboard"].tap()
+        capture("03-description")
+        app.buttons["generate"].tap()
+        let progress = app.staticTexts["generationProgress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 5))
+        let completion = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: progress)
+        XCTAssertEqual(XCTWaiter.wait(for: [completion], timeout: 240), .completed)
+        XCTAssertTrue(app.images["sheetPreview"].exists, app.debugDescription)
+        XCTAssertFalse(app.buttons["failureDiagnostics"].exists, app.debugDescription)
+        capture("04-live-gallery")
+        if app.buttons["nextSheet"].isEnabled {
+            app.buttons["nextSheet"].tap()
+            capture("05-next-sheet")
+            Thread.sleep(forTimeInterval: 3)
+            app.buttons["previousSheet"].tap()
+        }
+        func action(_ label: String) {
+            if app.buttons["sheetActions"].exists { app.buttons["sheetActions"].tap() }
+            app.buttons[label].tap()
+        }
+        action("Save to Photos")
+        let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let allow = system.buttons["Allow Photos to Be Added"]
+        if allow.waitForExistence(timeout: 2) { allow.tap() }
+        else if system.alerts.buttons["Allow"].exists { system.alerts.buttons["Allow"].tap() }
+        let saved = app.staticTexts["The coloring sheet is now in your Photos library."]
+        XCTAssertTrue(saved.waitForExistence(timeout: 10), app.debugDescription)
+        capture("06-saved-to-photos")
+        app.alerts.buttons["OK"].tap()
+        action("Share")
+        Thread.sleep(forTimeInterval: 3)
+        capture("07-system-share")
+        if app.buttons["Close"].exists { app.buttons["Close"].tap() }
+        else if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+        else { app.swipeDown() }
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        action("Print")
+        Thread.sleep(forTimeInterval: 3)
+        capture("08-print-options")
+        XCTAssertTrue(app.buttons["Cancel"].exists, app.debugDescription)
+        app.buttons["Cancel"].tap()
+        if app.buttons["sheetActions"].exists { app.buttons["sheetActions"].tap() }
+        app.buttons["usage"].tap()
+        capture("09-usage")
+        Thread.sleep(forTimeInterval: 3)
+        app.buttons["Done"].tap()
+        if app.buttons["editDescription"].exists { app.buttons["editDescription"].tap() }
+        subject.tap()
+        subject.typeText(" with stars")
+        app.buttons["dismissKeyboard"].tap()
+        capture("10-edit-and-retain-gallery")
+        XCTAssertTrue(app.images["sheetPreview"].exists)
+        Thread.sleep(forTimeInterval: 3)
     }
 }

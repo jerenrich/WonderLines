@@ -3,6 +3,24 @@ import DeviceCheck
 import Foundation
 import Security
 
+protocol AppleAttesting: Sendable {
+    var isSupported: Bool { get }
+    func generateKey() async throws -> String
+    func attestKey(_ keyID: String, clientDataHash: Data) async throws -> Data
+    func generateAssertion(_ keyID: String, clientDataHash: Data) async throws -> Data
+}
+
+struct AppleAttestService: AppleAttesting {
+    var isSupported: Bool { DCAppAttestService.shared.isSupported }
+    func generateKey() async throws -> String { try await DCAppAttestService.shared.generateKey() }
+    func attestKey(_ keyID: String, clientDataHash: Data) async throws -> Data {
+        try await DCAppAttestService.shared.attestKey(keyID, clientDataHash: clientDataHash)
+    }
+    func generateAssertion(_ keyID: String, clientDataHash: Data) async throws -> Data {
+        try await DCAppAttestService.shared.generateAssertion(keyID, clientDataHash: clientDataHash)
+    }
+}
+
 /// One device key per anonymous account. Key IDs and enrollment state survive app
 /// restarts; the private key stays in the Secure Enclave under DeviceCheck.
 actor AppAttestClient {
@@ -25,10 +43,17 @@ actor AppAttestClient {
         let idempotencyKey: String
         let bodySHA256: String
     }
-    private let service = DCAppAttestService.shared
-    private let keychainService = "com.jordan.family.ColoringSheets.app-attest"
+    private struct InvalidKey: Error { let keyID: String }
+    private let service: any AppleAttesting
+    private let keychainService: String
     private var enrollment: Task<Saved, Error>?
     private static let assertionQueue = AppleAssertionQueue()
+
+    init(service: any AppleAttesting = AppleAttestService(),
+         keychainService: String = "com.jordan.family.ColoringSheets.app-attest") {
+        self.service = service
+        self.keychainService = keychainService
+    }
 
     func proof(accountID: UUID, token: String, serviceURL: URL, session: URLSession,
                idempotencyKey: String, body: Data) async throws -> [String: String]? {
@@ -36,6 +61,29 @@ actor AppAttestClient {
             await DiagnosticLog.shared.record("Device verification", "unsupported on this device")
             return nil
         }
+        do {
+            return try await makeProof(accountID: accountID, token: token, serviceURL: serviceURL,
+                                       session: session, idempotencyKey: idempotencyKey, body: body)
+        } catch let error as InvalidKey {
+            // App Attest keys do not survive reinstall/restore, while Keychain
+            // references can. Replace only the key Apple explicitly invalidated.
+            // Another request in this batch may already have replaced it.
+            if try load()?.keyID == error.keyID {
+                let status = SecItemDelete(query() as CFDictionary)
+                guard status == errSecSuccess || status == errSecItemNotFound else { throw GenerationError.configuration }
+            }
+            await DiagnosticLog.shared.record("Device verification", "invalid key; enrolling replacement before generation")
+            try Task.checkCancellation()
+            // One retry of verification only. No generation POST has been sent,
+            // and the anonymous identity, quota, and recovery IDs stay intact.
+            return try await makeProof(accountID: accountID, token: token, serviceURL: serviceURL,
+                                       session: session, idempotencyKey: idempotencyKey, body: body)
+        }
+    }
+
+    private func makeProof(accountID: UUID, token: String, serviceURL: URL, session: URLSession,
+                           idempotencyKey: String, body: Data) async throws -> [String: String] {
+        try Task.checkCancellation()
         let saved = try await enrolled(accountID: accountID, token: token, serviceURL: serviceURL, session: session)
         let generationID = UUID(uuidString: idempotencyKey)
         let challenge = try await issueChallenge(purpose: "assertion", token: token, serviceURL: serviceURL, session: session, generationID: generationID)
@@ -51,6 +99,7 @@ actor AppAttestClient {
                 return assertion
             } catch {
                 await DiagnosticLog.shared.record("Apple assertion", "failed; inFlightAtStart=1; elapsedMs=\(Self.elapsedMilliseconds(since: started))", generationID: generationID, error: error)
+                if (error as? DCError)?.code == .invalidKey { throw InvalidKey(keyID: saved.keyID) }
                 throw error
             }
         }
@@ -69,11 +118,14 @@ actor AppAttestClient {
                 // hold this key. This read avoids another Apple attestation.
                 let remote = try await enrollmentStatus(token: token, serviceURL: serviceURL, session: session)
                 if let remote {
-                    guard let key = Data(base64Encoded: saved.keyID),
-                          remote == Self.base64url(key) else { throw GenerationError.configuration }
-                    saved.attested = true
-                    try save(saved)
-                    return saved
+                    guard let key = Data(base64Encoded: saved.keyID) else { throw GenerationError.configuration }
+                    if remote == Self.base64url(key) {
+                        saved.attested = true
+                        try save(saved)
+                        return saved
+                    }
+                    // A replacement may not have reached the server yet. Keep
+                    // its saved key and attest it instead of generating another.
                 }
             } else {
                 let keyID: String
@@ -91,6 +143,7 @@ actor AppAttestClient {
             do { object = try await service.attestKey(saved.keyID, clientDataHash: Data(SHA256.hash(data: Data(challenge.utf8)))) }
             catch {
                 await DiagnosticLog.shared.record("Apple attestation", "failed", error: error)
+                if (error as? DCError)?.code == .invalidKey { throw InvalidKey(keyID: saved.keyID) }
                 throw error
             }
             await DiagnosticLog.shared.record("Apple attestation", "ready")

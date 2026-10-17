@@ -48,6 +48,8 @@ final class GalleryStore {
 final class ColoringViewModel: ObservableObject {
     enum Phase: Equatable { case idle, generating, result, error(String) }
     static let batchSize = 3
+    // Drawing complexity is a preference, not a prerequisite for first use.
+    static let defaultAge = 6
     @Published var description: String {
         didSet { defaults.set(description, forKey: "descriptionDraft") }
     }
@@ -94,10 +96,10 @@ final class ColoringViewModel: ObservableObject {
         description = defaults.string(forKey: "descriptionDraft") ?? ""
         self.galleryStore = galleryStore ?? (!isMock && defaults === UserDefaults.standard ? GalleryStore() : nil)
         let stored = defaults.integer(forKey: "childAge")
-        age = (3...18).contains(stored) ? stored : 0
+        age = (3...18).contains(stored) ? stored : Self.defaultAge
         let storedModel = defaults.string(forKey: "generationModel")
         model = ImageModel.selectable.first(where: { $0.rawValue == storedModel }) ?? .sunburst
-        let storedCount = defaults.object(forKey: "imageCount") as? Int ?? Self.batchSize
+        let storedCount = defaults.object(forKey: "imageCount") == nil ? Self.batchSize : defaults.integer(forKey: "imageCount")
         imageCount = min(max(storedCount, 1), Self.batchSize)
         if let saved = self.galleryStore?.load() {
             results = saved.sheets.compactMap(\.result)
