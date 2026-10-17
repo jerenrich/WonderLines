@@ -8,7 +8,7 @@ Implemented
    Worker moderation logs exclude raw descriptions. Historical Gateway cleanup
    and dashboard configuration verification remain pending Cloudflare sign-in.
    Privacy-policy edits are local pending that verification; not yet published.
-3. Customer website copy removes prototype/demo/server-setup language. Redmond
+3. Published customer website copy removes prototype/demo/server-setup language. Redmond
    is excluded from the picker after its one-sheet live check returned HTTP502.
    Older Redmond data remains decodable; restored preferences safely fall back
    to Sunburst without resetting consent.
@@ -61,3 +61,7 @@ Resolved test setup issue
 Release unit tests initially could not import the app's internal module. The
 physical test invocation enabled testability only for that test build, then
 passed. No production entitlement or signing setting was weakened.
+
+Source e6ddda8 pushed. Worker CI/deployment and Pages publication both passed:
+https://github.com/jerenrich/WonderLines/actions/runs/39028069498
+https://github.com/jerenrich/WonderLines/actions/runs/39028068990
