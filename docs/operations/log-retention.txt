@@ -3,8 +3,8 @@ Wonder Lines diagnostic log retention — 17 October 2026
 Policy and scope
 - New AI Gateway generation/recovery/moderation log collection is disabled.
   App descriptions and image bodies are excluded from new Worker diagnostics.
-- Operational diagnostics use Cloudflare Workers Logs: seven days on the current
-  Workers Paid plan (three days on Free until the announced pricing transition).
+- Operational diagnostics use Cloudflare Workers Logs, with a maximum seven-day
+  policy. Current documented retention is seven days on Paid and three on Free.
 - Account job metrics and saved sheets are application records, not diagnostic
   logs. This change does not expire accounts, job records, sheets or reports.
 - Duplicate fal usage diagnostics are no longer written as .usage.json in R2.

@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "2ed04622eb2c14c0ee37006132e23ee4a2d0129e",
+  "backendVersion": "e8890cfb-3d60-48d7-8616-94aa7c782ea7",
+  "backendCI": "https://github.com/jerenrich/WonderLines/actions/runs/39032503867",
+  "backendCIStatus": "success",
+  "pagesCI": "https://github.com/jerenrich/WonderLines/actions/runs/39032503833",
+  "pagesCIStatus": "success",
+  "policyDays": 7,
+  "r2Cron": "37 * * * *",
+  "r2LiveCleanupResult": "scheduled; first execution not observed during this session",
+  "gatewayCron": "17 * * * *",
+  "gatewayStatus": "implemented and tested, not deployed; missing required dedicated credential",
+  "gatewaySafetyChecksPassed": 12,
+  "r2TestsPassed": true,
+  "existingWorkerProviderPrivacyConcurrencyChecks": "passed",
+  "newGatewayPromptLogging": false,
+  "legacyGatewayLogCountLastObserved": 3005,
+  "privacyPageVerified": true,
+  "reminder": "17 October 2026 20:00 Europe/London",
+  "iosBuildModified": false
+}

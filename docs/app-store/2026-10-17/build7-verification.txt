@@ -107,3 +107,7 @@ Retention migration follow-up:
 - R2 expiry, Worker/provider, privacy/account deletion and report-race checks passed.
 - Native Gateway migration unavailable for existing account; old Gateway logs
   still require dedicated access. See docs/operations/log-retention.txt.
+
+Final retention deployment: e8890cfb-3d60-48d7-8616-94aa7c782ea7, source2ed0462.
+CI and Pages passed; R2 hourly trigger accepted. First live sweep not observed.
+Evidence: docs/operations/log-retention-verification.json.

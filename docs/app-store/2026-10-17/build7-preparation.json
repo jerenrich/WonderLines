@@ -12,7 +12,7 @@
   "distributionExported": true,
   "uploaded": false,
   "submitted": false,
-  "serverVersion": "19e608aa-aa3d-4024-8a3b-478979642dd1",
+  "serverVersion": "e8890cfb-3d60-48d7-8616-94aa7c782ea7",
   "macAvailability": false,
   "visionProAvailability": false,
   "archivePath": ".build/build7/Final/WonderLines-1.0-7.xcarchive",
@@ -99,5 +99,12 @@
     "legacyR2Cleanup": "active hourly at minute 37 UTC",
     "legacyGatewayCleanup": "implemented and tested; not deployed or active until dedicated credential and live dry run succeed",
     "operations": "docs/operations/log-retention.txt"
+  },
+  "retentionDeployment": {
+    "sourceCommit": "2ed04622eb2c14c0ee37006132e23ee4a2d0129e",
+    "ci": "https://github.com/jerenrich/WonderLines/actions/runs/39032503867",
+    "status": "success",
+    "legacyR2Sweep": "hourly :37 UTC, deployed",
+    "legacyGatewaySweep": "not deployed; dedicated credential missing"
   }
 }
