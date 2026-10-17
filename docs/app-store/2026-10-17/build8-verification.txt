@@ -30,9 +30,12 @@ Export compliance saved using the previously approved unchanged answer.
 TestFlight now shows build8 Ready to Submit.
 
 Submission
-Prior build7 remains Waiting for Review while review-note wording approval is pending.
-Build8 is processed and selectable; no replacement has been made yet.
-Current App Store Connect text saved privately in .build/build8/metadata-before.json.
-Listing wording/settings are to be preserved. Only two top-level reviewer-note
-build-number references proposed for change7->8; user approval requested.
-No separate App Review message sent.
+Build7 submission39e2f8b5-da20-411b-86f2-b17edacae9b9 canceled as authorized.
+Build8 submitted17Oct2026 at16:50 Europe/London; Waiting for Review.
+Submission5f204859-39b1-47fe-87ce-01e4d224d02a.
+Public listing text matches the pre-replacement baseline exactly.
+Automatic release after approval preserved.
+App Review Notes: exactly the two approved main references changed7->8.
+Historical build7 testing/manifests wording unchanged;3981 characters.
+No separate App Review message sent. Screenshot:build8-submitted.png.
+Monitor reference updated tobuild8; existing PAUSED status preserved.

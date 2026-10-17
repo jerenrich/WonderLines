@@ -35,10 +35,10 @@
   "freshPaidGenerationRequests": 0,
   "physicalBuild8Run": false,
   "reviewNotesDraft": "build8-review-notes-draft.txt",
-  "reviewWordingApproval": "pending only two build-number replacements",
+  "reviewWordingApproval": "Approved by Jordan: only the two main build-number references 7 to 8",
   "metadataBaseline": ".build/build8/metadata-before.json",
   "uploaded": true,
-  "submitted": false,
+  "submitted": true,
   "previousSubmission": "39e2f8b5-da20-411b-86f2-b17edacae9b9",
   "backendDeploymentCI": "https://github.com/jerenrich/WonderLines/actions/runs/39043822353",
   "backendCIStatus": "success",
@@ -54,5 +54,8 @@
     "basis": "Previously approved answer; build8 has no encryption changes",
     "saved": true
   },
-  "submissionBlocker": "Awaiting approval for two build-number replacements in App Review Notes; build7 remains Waiting for Review"
+  "submissionID": "5f204859-39b1-47fe-87ce-01e4d224d02a",
+  "submissionURL": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/5f204859-39b1-47fe-87ce-01e4d224d02a",
+  "submittedAt": "2026-10-17T16:50:00+01:00",
+  "status": "Waiting for Review"
 }

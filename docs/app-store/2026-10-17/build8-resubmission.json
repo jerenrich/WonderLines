@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "build": 8,
+  "uploadedAt": "2026-10-17T16:23:00+01:00",
+  "submittedAt": "2026-10-17T16:50:00+01:00",
+  "submissionID": "5f204859-39b1-47fe-87ce-01e4d224d02a",
+  "submissionURL": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/5f204859-39b1-47fe-87ce-01e4d224d02a",
+  "status": "Waiting for Review",
+  "previousBuild": 7,
+  "previousSubmission": "39e2f8b5-da20-411b-86f2-b17edacae9b9",
+  "previousSubmissionAction": "Canceled to replace with build 8, as authorized",
+  "replyDelivery": "App Review Notes; only two approved main build-number references changed from 7 to 8. No separate conversation message.",
+  "notesLength": 3981,
+  "notesFile": "build8-review-notes.txt",
+  "publicListingTextPreserved": true,
+  "releaseSettingPreserved": "Automatic release after approval",
+  "proof": "build8-submitted.png",
+  "monitorStatus": "PAUSED, unchanged"
+}
