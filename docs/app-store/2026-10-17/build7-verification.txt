@@ -79,3 +79,11 @@ https://github.com/jerenrich/WonderLines/actions/runs/39028068990
 
 Current production deployment verified via Wrangler deployments list:
 43d8b1e4-6d0d-4d63-be7e-2737d6aa503f (100%), source e6ddda8.
+
+Approval follow-up:
+- User approved the build 7 reply and historical log cleanup. Approved wording saved
+  verbatim as build7-approved-reply.txt; no App Review message sent.
+- Existing Wrangler sign-in returned HTTP403/code10000 on the first Gateway read.
+  No logs were deleted. A temporary Gateway Write token setup has been prepared
+  for user creation, expiring 18 October 2026; token creation is pending.
+- Final synthetic privacy/report/deletion regression checks repeated and passed.

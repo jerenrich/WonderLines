@@ -51,7 +51,7 @@
     "initialQueueCheck": "2026-10-17 12:43 Europe/London: no reports/ objects; public access disabled"
   },
   "remaining": [
-    "Historical Gateway log deletion awaiting approval; privacy publication pending cleanup",
+    "Historical Gateway deletion approved, needs a credential with AI Gateway Write permission; privacy publication pending cleanup",
     "Older iOS 17.5 and 18.5 simulator runtimes unavailable from current Xcode catalogue"
   ],
   "sourceCommit": "e6ddda87669fbb8ca24d81e9669a8e272e76fc48",
@@ -73,6 +73,11 @@
     "defaultCollection": false,
     "verifiedAfterReload": true,
     "historicalLogCount": 3005,
-    "historicalPurge": "awaiting explicit approval"
+    "historicalPurge": "approved; blocked by CLI credential lacking AI Gateway access (HTTP 403, code 10000); nothing deleted"
+  },
+  "reviewReply": {
+    "approved": true,
+    "sent": false,
+    "file": "docs/app-store/2026-10-17/build7-approved-reply.txt"
   }
 }
