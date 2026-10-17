@@ -1,0 +1,93 @@
+Wonder Lines diagnostic log retention — 17 October 2026
+
+Policy and scope
+- New AI Gateway generation/recovery/moderation log collection is disabled.
+  App descriptions and image bodies are excluded from new Worker diagnostics.
+- Operational diagnostics use Cloudflare Workers Logs: seven days on the current
+  Workers Paid plan (three days on Free until the announced pricing transition).
+- Account job metrics and saved sheets are application records, not diagnostic
+  logs. This change does not expire accounts, job records, sheets or reports.
+- Duplicate fal usage diagnostics are no longer written as .usage.json in R2.
+  The generation Worker sweeps old copies hourly at minute 37 UTC. It deletes
+  only account-UUID/generation-UUID.usage.json objects uploaded more than seven
+  days ago. Images and reports cannot match that pattern. No object contents
+  are read. A run scans at most 100 pages; any incomplete scan or storage error
+  fails visibly in Worker logs. R2 list/delete metadata and aggregate counts
+  are used, without copying diagnostic bodies to another store.
+
+Cloudflare native logging changes
+Cloudflare introduced Workers Logs retention for accounts whose first AI
+Gateway was created on or after 24 September 2026. This existing account uses
+Legacy Logs. Its automatic DELETE_OLDEST setting is capacity-based, not an age
+limit. Creating another gateway in the same account does not meet the
+first-gateway eligibility condition. The current dashboard exposes no migration
+control; its Observability dataset list lacks AI Gateway. Add more datasets
+opens an unrelated paid Log Explorer checkout, which was not purchased.
+Do not claim this account's historical Gateway logs expire natively.
+
+Legacy Gateway age-based retention
+The separate coloring-sheets-log-retention Worker is implemented and tested.
+It has no public routes or storage/account bindings. Its endpoint and account
+are fixed in source to coloring-sheets in account
+994f60c144bd9dd9bc2333bd3abba832; it cannot select the unrelated default gateway.
+The management credential is kept outside the public generation Worker.
+Target: delete Gateway logs strictly older than seven days, hourly at minute
+17 UTC, with at most 10,000 deletions per run. During normal operation this
+means a seven-day target plus up to an hour for the next successful sweep.
+Cloudflare/API outages can delay cleanup and generate a fixed failure code.
+All historical content ages out after seven days once enforcement runs.
+This does not erase independent AI provider logs or account audit records.
+
+Activation status
+NOT ACTIVE: the existing Wrangler credential was denied AI Gateway management
+access (HTTP403/code10000). No new management credential has been created or
+persisted. The initial deployment safely refused because the required secret
+CLOUDFLARE_LOG_RETENTION_TOKEN is missing. Dry-run is the checked-in default.
+The CI deployment step is gated by LOG_RETENTION_WORKER_READY=true and remains
+skipped until the initial secret-bearing deployment succeeds. Tests always run.
+The existing 3,005 historical Gateway logs have not been deleted.
+
+One-time activation procedure (authorized operator)
+1. Create a dedicated Cloudflare account token with only AI Gateway Write in
+   this account. This permission is account-wide, so it can manage all gateways;
+   the cleanup code fixes its destination to coloring-sheets. Protect and rotate
+   this credential. Use a realistic expiry and track the rotation date.
+2. Supply it to the Worker as an encrypted secret using Wrangler's documented
+   --secrets-file bootstrap. Do not put credentials in Git, chat, shell command
+   arguments or diagnostics. A user-saved temporary file can be read privately
+   by a helper and piped to Wrangler without printing its value. Remove that
+   temporary copy after confirmed installation. Do not reuse a provider key,
+   run-only Gateway token, or the GitHub deployment credential.
+3. Run runRetention with RETENTION_MODE=dry-run against the real API. The module
+   first tests date-filter parsing with a pre-Gateway timestamp, then validates
+   the selected metadata. Confirm counts and the seven-day cutoff. No request
+   or response bodies are fetched. Official Cloudflare SDK query encoding is
+   used (dot notation and repeated array values, with exactly one date filter).
+4. Once the live dry run passes, change workers/log-retention/wrangler.jsonc to
+   RETENTION_MODE=enforce. Deploy and verify the first expired-log reduction.
+   A DELETE success alone is insufficient: the next GET must show progress.
+5. Set repository variable LOG_RETENTION_WORKER_READY=true so normal CI keeps
+   deploying this Worker. Confirm its hourly Cron Trigger in Cloudflare.
+6. Update the privacy policy and release evidence only after live verification.
+   Keep the historical-log exception while activation or initial cleanup is
+   pending. Tonight's requested reminder stays in place until this is resolved.
+
+Tests
+node workers/log-retention/tests/worker.mjs
+node Scripts/test_diagnostic_retention.mjs
+node Scripts/test_worker.mjs
+node Scripts/test_privacy.mjs
+node Scripts/test_reporting_concurrency.mjs
+Gateway tests cover cutoff boundaries, dry runs, ignored/unsafe filters,
+malformed metadata, missing credentials, permission failures, verified progress,
+bounded batches, HTTP isolation and redacted failures. R2 tests cover exact key
+scope, cutoff boundaries, pagination, idempotency, storage failures and preservation
+of sheets and reports. Production Gateway activation still needs a live test.
+
+Primary sources
+https://developers.cloudflare.com/ai-gateway/observability/logging/
+https://developers.cloudflare.com/ai-gateway/observability/logging/legacy-logs/
+https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+https://developers.cloudflare.com/observability/logs/datasets/
+https://developers.cloudflare.com/api/resources/ai_gateway/subresources/logs/methods/delete/
+https://developers.cloudflare.com/workers/configuration/cron-triggers/

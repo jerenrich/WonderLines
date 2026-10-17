@@ -1,0 +1,18 @@
+{
+  "name": "coloring-sheets-log-retention",
+  "main": "src/index.mjs",
+  "account_id": "994f60c144bd9dd9bc2333bd3abba832",
+  "compatibility_date": "2026-10-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": {"crons": ["17 * * * *"]},
+  "vars": {
+    // Change to enforce only after the dedicated credential and live dry run pass.
+    "RETENTION_MODE": "dry-run"
+  },
+  "secrets": {"required": ["CLOUDFLARE_LOG_RETENTION_TOKEN"]},
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

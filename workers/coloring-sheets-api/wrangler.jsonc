@@ -3,6 +3,7 @@
   "main": "src/index.mjs",
   "compatibility_date": "2026-09-20",
   "workers_dev": true,
+  "triggers": {"crons": ["37 * * * *"]},
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "images": { "binding": "IMAGES" },
   "ai": { "binding": "AI" },

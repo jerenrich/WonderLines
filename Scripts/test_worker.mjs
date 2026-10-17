@@ -344,7 +344,8 @@ try {
   assert.equal(reconciled.reportedCostUsd, 0.01); assert.equal(reconciled.estimatedTotalUsd, 0.01);
   assert.equal(reconciled.costStatus, 'reported'); assert.equal(submitted, 1);
   const auditKey = falIdentity.accountId + '/' + falID + '.usage.json';
-  const audit = JSON.parse(falEnv.GENERATIONS.values.get(auditKey));
+  assert.equal(falEnv.GENERATIONS.values.has(auditKey), false, 'Diagnostics must not be duplicated indefinitely in R2.');
+  const audit = auditLogs.findLast(log => log.event === 'fal_usage');
   assert.equal(audit.providerRequestID, 'fal-job-1'); assert.equal(audit.reportedDiscountUsd, 0.0025);
   assert.equal(audit.inferenceSteps, 30); assert.equal(audit.billableUnits, 12.5);
   const serializedLogs = JSON.stringify(auditLogs);

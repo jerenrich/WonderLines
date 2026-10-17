@@ -96,3 +96,14 @@ No historical logs deleted. Approved reply retained verbatim and unsent.
 Privacy publication passed: https://github.com/jerenrich/WonderLines/actions/runs/39031249880
 Live browser verified the new historical-log disclosure and seven-day Worker
 retention text at https://jerenrich.github.io/WonderLines/privacy.html.
+
+Retention migration follow-up:
+- Future duplicate R2 fal usage diagnostics now use native Workers Logs only.
+- Old UUID/UUID.usage.json copies expire through hourly minute-37 UTC sweeps
+  after seven days. No images, reports or account job metrics are expired.
+- Backend version 19e608aa-aa3d-4024-8a3b-478979642dd1 deployed; Cron Trigger confirmed.
+- Gateway seven-day purge Worker: 12 synthetic checks passed; deployment refused
+  safely because its management credential is absent. NOT active.
+- R2 expiry, Worker/provider, privacy/account deletion and report-race checks passed.
+- Native Gateway migration unavailable for existing account; old Gateway logs
+  still require dedicated access. See docs/operations/log-retention.txt.

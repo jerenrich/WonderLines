@@ -1,6 +1,7 @@
 // Public v1 API. An account is a random UUID; no sign-in or personal profile exists.
 import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
+import {cleanLegacyUsageLogs} from './diagnostic-retention.mjs';
 import {falCostData} from './fal-cost.mjs';
 import {structuredComposition, isUUID} from './composition.mjs';
 import {moderateSubject, ModerationError, moderationModel, MODERATION_POLICY} from './moderation.mjs';
@@ -502,11 +503,8 @@ export class Account {
       inferenceSteps: request.payload?.num_inference_steps ?? job.metrics?.inferenceSteps ?? 30};
     const audit = {event: 'fal_usage', generationID: job.id, state: job.state, errorCode: job.errorCode ?? null,
       createdAt: job.createdAt, completedAt: job.completedAt, ...job.metrics};
-    const account = await this.state.storage.get('account');
-    // Stable key: repeat status reads update one ledger entry, never another charge.
-    try { await this.env.GENERATIONS.put(account.id + '/' + job.id + '.usage.json', JSON.stringify(audit),
-      {httpMetadata: {contentType: 'application/json'}}); }
-    catch { console.warn(JSON.stringify({event: 'fal_usage_storage_failed', generationID: job.id})); }
+    // Operational diagnostics belong in the native seven-day Workers log store.
+    // The job already contains billing metrics; do not duplicate them forever in R2.
     console.info(JSON.stringify(audit));
   }
   async usage({generationId}) {
@@ -651,7 +649,15 @@ function bindingRejection(request) {
   return fail('invalid_assertion', 'Invalid App Attest request binding.', 403);
 }
 
-export default { async fetch(request, env) {
+export default {
+  async scheduled(_event, env) {
+    try { console.info(JSON.stringify(await cleanLegacyUsageLogs(env.GENERATIONS))); }
+    catch {
+      console.error(JSON.stringify({event: 'legacy_usage_log_retention_failed'}));
+      throw new Error('legacy_usage_log_retention_failed');
+    }
+  },
+  async fetch(request, env) {
   const url = new URL(request.url);
   if (!env.ACCOUNT_TOKEN_SECRET) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
   if (url.pathname === '/v1/installations') { if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400); const id = crypto.randomUUID(), made = await call(env, id, '/initialize', {accountId: id}); if (made.status !== 201) return fail('service_unavailable', 'Could not create an anonymous account.', 503); return reply({accountId: id, accessToken: await token(id, made.value.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: made.value.access}, 201); }

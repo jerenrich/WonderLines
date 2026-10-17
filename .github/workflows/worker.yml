@@ -8,6 +8,7 @@ on:
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
+      - 'Scripts/test_diagnostic_retention.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -21,6 +22,7 @@ on:
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
+      - 'Scripts/test_diagnostic_retention.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -70,6 +72,8 @@ jobs:
           node Scripts/test_batch_moderation.mjs
           node Scripts/test_moderation.mjs
           node workers/moderation-lab/tests/worker.mjs
+          node workers/log-retention/tests/worker.mjs
+          node Scripts/test_diagnostic_retention.mjs
           node --check workers/moderation-lab/public/app.js
 
       - name: Check deployment credentials
@@ -103,6 +107,17 @@ jobs:
           wranglerVersion: '4.136.3'
           command: deploy --keep-vars --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
+      - name: Deploy isolated Gateway log retention
+        # Bootstrap with the dedicated secret before enabling this repository variable.
+        if: github.event_name != 'pull_request' && vars.LOG_RETENTION_WORKER_READY == 'true'
+        uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/log-retention
+          wranglerVersion: '4.136.3'
+          command: deploy --message "GitHub main ${{ steps.revision.outputs.sha }}"
+
       - name: Summarize deployment
         if: github.event_name != 'pull_request'
         env:
@@ -112,5 +127,6 @@ jobs:
             echo '### API and moderation lab deployed'
             echo "Workers: coloring-sheets-api, coloring-sheets-moderation-lab"
             echo "Commit: [$DEPLOYED_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$DEPLOYED_SHA)"
-            echo 'Dashboard-managed variables and existing Worker secrets are preserved.'
+            echo 'API/lab dashboard variables and existing Worker secrets are preserved.'
+            echo 'R2 diagnostic cleanup: hourly, seven-day policy. Gateway cleanup requires its dedicated credential and bootstrap.'
           } >> "$GITHUB_STEP_SUMMARY"
