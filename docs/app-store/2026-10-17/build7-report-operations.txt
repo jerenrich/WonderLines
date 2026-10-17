@@ -36,3 +36,8 @@ Automation ID: review-wonder-lines-safety-reports (ACTIVE). It does not email
 anyone, copy user content, make moderation decisions, or delete reports.
 Manual Cloudflare review is the fallback if monitoring cannot access the queue.
 Do not rely on an automation alert as evidence that a report has been reviewed.
+
+Initial live check: 17 October 2026, 12:43 Europe/London. The reports/ prefix
+contained no objects and the bucket Public Access setting was Disabled.
+Queue URL: https://dash.cloudflare.com/994f60c144bd9dd9bc2333bd3abba832/r2/default/buckets/coloring-sheets-generations
+Baseline: safety-report-monitor-state.json in this directory.

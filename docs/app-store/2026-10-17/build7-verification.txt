@@ -6,7 +6,7 @@ Implemented
    reported sheet stays blocked from recovery in either concurrency ordering.
 2. Future app moderation/generation/recovery calls disable Gateway request logs.
    Worker moderation logs exclude raw descriptions. Historical Gateway cleanup
-   and dashboard configuration verification remain pending Cloudflare sign-in.
+   remains pending explicit deletion approval. Gateway default logging is now off.
    Privacy-policy edits are local pending that verification; not yet published.
 3. Published customer website copy removes prototype/demo/server-setup language. Redmond
    is excluded from the picker after its one-sheet live check returned HTTP502.
@@ -16,7 +16,7 @@ Implemented
    cost displays identify the developer as payer.
 5. Active daily report-queue monitor at 09:00 Europe/London. Owner: Jordan
    Erenrich. It alerts here for new or overdue reports; a person handles them.
-   Initial queue access verification awaits Cloudflare sign-in. Instructions:
+   Initial queue check found no reports; public access is disabled. Instructions:
    build7-report-operations.txt.
 6. Mac and Vision Pro availability disabled in App Store Connect, saved and
    verified after reload. Physical-iPad coverage added. iOS17 remains supported;
@@ -42,9 +42,9 @@ Tests
 Release
 Final archive: .build/build7/Final/WonderLines-1.0-7.xcarchive
 Live service configuration, build7, manifest bundled. Archive succeeds.
-App Store IPA export is blocked by expired Xcode account credentials; only a
-Development signing identity is currently available. Release tests temporarily
-used ENABLE_TESTABILITY=YES; the distribution archive does not enable it.
+App Store IPA exported successfully with Cloud Managed Apple Distribution signing.
+Release tests temporarily used ENABLE_TESTABILITY=YES; the distribution archive
+does not enable it.
 Server deployed directly with Wrangler, preserving existing variables/secrets:
 b43ee807-132a-44da-be79-0b204a4f3a06.
 Build7 has not been uploaded or submitted. Build6 remains the active submission.
@@ -65,3 +65,17 @@ passed. No production entitlement or signing setting was weakened.
 Source e6ddda8 pushed. Worker CI/deployment and Pages publication both passed:
 https://github.com/jerenrich/WonderLines/actions/runs/39028069498
 https://github.com/jerenrich/WonderLines/actions/runs/39028068990
+
+17 October 2026 export verification:
+- Final archive exported locally after Xcode Apple Account sign-in. No upload.
+- IPA 1.0 (7), iPhone/iPad, minimum iOS 17.0, live service and mock=false.
+- PrivacyInfo.xcprivacy bundled. Cloud Managed Apple Distribution signature verified
+  with codesign --verify --deep --strict using the host trust store.
+- App Attest environment production; get-task-allow=false.
+- SHA256: e96004eaebda6b18be291763ad208f08e460afc3ee2d2dd259c9936c3eccfa66
+- Cloudflare coloring-sheets Collect Logs switch disabled and verified after reload.
+- Private R2 reports/ prefix empty; public access disabled. Daily monitor baseline saved.
+- Historical Gateway logs: 3,005; permanent cleanup awaiting user approval.
+
+Current production deployment verified via Wrangler deployments list:
+43d8b1e4-6d0d-4d63-be7e-2737d6aa503f (100%), source e6ddda8.

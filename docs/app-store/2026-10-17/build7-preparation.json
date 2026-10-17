@@ -9,10 +9,10 @@
   },
   "privacyManifestBundled": true,
   "archiveCreated": true,
-  "distributionExported": false,
+  "distributionExported": true,
   "uploaded": false,
   "submitted": false,
-  "serverVersion": "b43ee807-132a-44da-be79-0b204a4f3a06",
+  "serverVersion": "43d8b1e4-6d0d-4d63-be7e-2737d6aa503f",
   "macAvailability": false,
   "visionProAvailability": false,
   "archivePath": ".build/build7/Final/WonderLines-1.0-7.xcarchive",
@@ -48,16 +48,31 @@
     "id": "review-wonder-lines-safety-reports",
     "status": "ACTIVE",
     "schedule": "09:00 Europe/London daily",
-    "initialQueueCheck": "pending Cloudflare sign-in"
+    "initialQueueCheck": "2026-10-17 12:43 Europe/London: no reports/ objects; public access disabled"
   },
   "remaining": [
-    "Historical Gateway log cleanup and settings verification require Cloudflare sign-in",
-    "App Store distribution export requires Xcode account reauthentication",
+    "Historical Gateway log deletion awaiting approval; privacy publication pending cleanup",
     "Older iOS 17.5 and 18.5 simulator runtimes unavailable from current Xcode catalogue"
   ],
   "sourceCommit": "e6ddda87669fbb8ca24d81e9669a8e272e76fc48",
   "ciDeployment": "https://github.com/jerenrich/WonderLines/actions/runs/39028069498",
   "ciStatus": "success",
   "websiteDeployment": "https://github.com/jerenrich/WonderLines/actions/runs/39028068990",
-  "websiteStatus": "published"
+  "websiteStatus": "published",
+  "ipaPath": ".build/build7/Final/Export/ColoringSheets.ipa",
+  "ipaSHA256": "e96004eaebda6b18be291763ad208f08e460afc3ee2d2dd259c9936c3eccfa66",
+  "distributionSigning": {
+    "type": "Cloud Managed Apple Distribution",
+    "team": "9PG633BF3R",
+    "appAttestEnvironment": "production",
+    "getTaskAllow": false,
+    "strictSignatureVerified": true
+  },
+  "gatewayLogging": {
+    "gateway": "coloring-sheets",
+    "defaultCollection": false,
+    "verifiedAfterReload": true,
+    "historicalLogCount": 3005,
+    "historicalPurge": "awaiting explicit approval"
+  }
 }

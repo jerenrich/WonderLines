@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-17T12:43:00+01:00",
+  "bucket": "coloring-sheets-generations",
+  "prefix": "reports/",
+  "publicAccess": "Disabled",
+  "pendingReportCount": 0,
+  "pendingReportObjects": [],
+  "accessIssueNotified": false,
+  "queueURL": "https://dash.cloudflare.com/994f60c144bd9dd9bc2333bd3abba832/r2/default/buckets/coloring-sheets-generations",
+  "evidence": "Authenticated R2 prefix search: No objects matched your search."
+}
