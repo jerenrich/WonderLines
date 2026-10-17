@@ -21,5 +21,10 @@
   "iosBuildModified": false,
   "legacyGatewayAggregateCounterLastObserved": 3005,
   "legacyGatewayCleanup": "Completed 17 October 2026; DELETE accepted, empty unfiltered API results and full-range dashboard verified",
-  "temporaryCleanupToken": "Revoked; HTTP401 verified; local copy removed"
+  "temporaryCleanupToken": "Revoked; HTTP401 verified; local copy removed",
+  "historicalCleanupPrivacyPublication": {
+    "commit": "45c527e",
+    "status": "published and verified",
+    "deployment": "https://github.com/jerenrich/WonderLines/actions/runs/39043758463"
+  }
 }

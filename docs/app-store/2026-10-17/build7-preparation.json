@@ -94,10 +94,11 @@
   "privacyPublication": {
     "sourceCommit": "fbf38603f61e2350d18291d0e561b524dd9ff0e1",
     "status": "published and verified in browser",
-    "disclosesPendingHistoricalLogs": true,
+    "disclosesPendingHistoricalLogs": false,
     "url": "https://jerenrich.github.io/WonderLines/privacy.html",
     "deployment": "https://github.com/jerenrich/WonderLines/actions/runs/39031249880",
-    "cleanupUpdate": "Local wording updated; publication pending"
+    "cleanupUpdate": "Published and browser verified; 45c527e",
+    "cleanupDeployment": "https://github.com/jerenrich/WonderLines/actions/runs/39043758463"
   },
   "diagnosticRetention": {
     "days": 7,
