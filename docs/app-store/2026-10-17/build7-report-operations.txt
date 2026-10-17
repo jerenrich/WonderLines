@@ -1,0 +1,38 @@
+Wonder Lines — reported-sheet handling
+Owner: Jordan Erenrich
+
+The in-app report route saves a private report to Cloudflare R2 and immediately
+blocks that sheet from recovery. It does not email anyone. Reports must be
+reviewed by the operator; adding the button alone does not provide human review.
+
+Daily review owner: Jordan Erenrich.
+An active Codex automation, Review Wonder Lines safety reports, checks at 09:00
+Europe/London and alerts Jordan here to new or overdue reports. It reads only
+queue metadata. A human must inspect the reported output and handle it.
+If the monitor reports expired Cloudflare access, sign in to restore monitoring.
+
+Operating procedure (check daily while the service is available):
+1. In the existing Cloudflare account, open R2 > coloring-sheets-generations.
+2. Browse the reports/ prefix. Each report JSON contains an account ID,
+   generation ID, reason, timestamp, model and objectKey for the saved image.
+3. Open a report and inspect its referenced image using the authenticated R2
+   dashboard. Do not make the bucket public or share a permanent public URL.
+4. For inappropriate output, delete the referenced PNG from R2 immediately.
+   Investigate the model and safety checks; disable the affected model route if
+   necessary. The reported job remains blocked, so removing the queue entry
+   does not allow the image to reappear in recovery.
+5. Remove the processed report JSON from reports/. For appropriate output,
+   retain no unnecessary report; its recovery remains blocked because the
+   reporting user asked to remove it. The user can generate a different sheet.
+6. If account deletion has already removed the report or image, no further
+   action is needed. Account deletion includes the whole reports/accountID/
+   prefix, so don't export a separate permanent copy of the queue.
+7. Monitor the published support email for reports from older app versions or
+   failed in-app submissions. Never ask a user for an account access token.
+
+Handle new safety reports within 24 hours where possible. Remove inappropriate
+output promptly and investigate its provider/model safety controls.
+Automation ID: review-wonder-lines-safety-reports (ACTIVE). It does not email
+anyone, copy user content, make moderation decisions, or delete reports.
+Manual Cloudflare review is the fallback if monitoring cannot access the queue.
+Do not rely on an automation alert as evidence that a report has been reviewed.

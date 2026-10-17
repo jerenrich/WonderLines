@@ -7,6 +7,7 @@ on:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_privacy.mjs'
+      - 'Scripts/test_reporting_concurrency.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -19,6 +20,7 @@ on:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_privacy.mjs'
+      - 'Scripts/test_reporting_concurrency.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -64,6 +66,7 @@ jobs:
         run: |
           node Scripts/test_worker.mjs
           node Scripts/test_privacy.mjs
+          node Scripts/test_reporting_concurrency.mjs
           node Scripts/test_batch_moderation.mjs
           node Scripts/test_moderation.mjs
           node workers/moderation-lab/tests/worker.mjs

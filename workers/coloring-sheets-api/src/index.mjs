@@ -99,7 +99,7 @@ export class Budget {
       const usage = await this.state.storage.get('fal-usage');
       const falUsed = usage?.day === day ? usage.used : 0;
       if (falLimit === null) return fail('service_unavailable', 'The fal trial limit is not configured.', 503);
-      if (falUsed >= falLimit) return fail('service_budget_exhausted', 'The fal daily trial limit has been reached. Choose another model.', 429);
+      if (falUsed >= falLimit) return fail('service_budget_exhausted', 'This model’s daily service limit has been reached. Choose another model.', 429);
       await this.state.storage.put('fal-usage', {day, used: falUsed + 1});
     }
     await this.state.storage.put('usage', {day, used: used + 1});
@@ -236,7 +236,11 @@ export class Account {
     try {
       await this.env.GENERATIONS.put('reports/' + account.id + '/' + generationId + '.json', JSON.stringify(report),
         {httpMetadata: {contentType: 'application/json'}});
-      await this.state.storage.put('job:' + generationId, {...job, reported: true});
+      await this.state.storage.transaction(async storage => {
+        const current = await storage.get('job:' + generationId);
+        if (!current) throw new Error('Report record unavailable');
+        await storage.put('job:' + generationId, {...current, reported: true});
+      });
     } catch { return fail('report_unavailable', 'The report could not be confirmed. Please retry.', 503); }
     console.info(JSON.stringify({event: 'sheet_report_received', generationID: generationId, reason}));
     return reply({reported: true}, 201);
@@ -264,7 +268,7 @@ export class Account {
     const current = [...entries].filter(([, value]) => value.expires > Date.now());
     for (const [key, value] of entries) if (value.expires <= Date.now()) await this.state.storage.delete(key);
     if (current.length >= 64) {
-      console.info(JSON.stringify({event: 'description_moderation', batchID, description, model: moderationModelForLog(this.env),
+      console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(this.env),
         policy: MODERATION_POLICY, outcome: 'moderation_unavailable', failure: 'batch_limit'}));
       return fail('moderation_unavailable', 'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503);
     }
@@ -276,7 +280,7 @@ export class Account {
       error = {code: caught.code, message: caught.message, status: caught.status, reasonCodes: caught.reasonCodes};
     }
     await this.state.storage.put(name, {fingerprint, expires: Date.now() + 600000, ...(error ? {error} : {})});
-    console.info(JSON.stringify({event: 'description_moderation', batchID, description, model: moderationModelForLog(this.env),
+    console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(this.env),
       policy: MODERATION_POLICY, outcome: error?.code ?? 'approved', ...diagnostics, reasonCodes: error?.reasonCodes ?? []}));
     return error ? fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes}) : reply({approved: true});
   }
@@ -390,7 +394,7 @@ export class Account {
         await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics: job.metrics}});
         await this.state.storage.delete('image:' + id);
       } else {
-        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. Generation may have been charged; check usage before generating again.');
+        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. You have not been charged. Check unfinished sheets before generating again.');
       }
       return;
     }
@@ -421,7 +425,7 @@ export class Account {
         throw error;
       }
       await finishFailure(error instanceof ImageProviderError ? error.code : 'result_save_failed',
-        error instanceof ImageProviderError ? error.message : 'The generated image could not be saved. Generation may have been charged.');
+        error instanceof ImageProviderError ? error.message : 'The generated image could not be saved. You have not been charged.');
     }
   }
   async advanceFal(id) {
@@ -432,11 +436,11 @@ export class Account {
       await this.state.storage.delete('fal:' + id);
     };
     if (Date.now() - job.createdAt > 30 * 60 * 1000) {
-      await finishFailure('provider_timeout', 'The fal job could not be recovered within 30 minutes. Generation may have been charged; check provider usage before generating again.');
+      await finishFailure('provider_timeout', 'The fal job could not be recovered within 30 minutes. You have not been charged. Check unfinished sheets before generating again.');
       return;
     }
     if (job.fal.stage === 'submitting') {
-      await finishFailure('provider_connection_failed', 'The fal submission was interrupted before its job ID could be saved. Generation may have been charged; check provider usage before generating again.');
+      await finishFailure('provider_connection_failed', 'The fal submission was interrupted before its job ID could be saved. You have not been charged. Check unfinished sheets before generating again.');
       return;
     }
     if (job.fal.stage === 'queued') {
@@ -446,7 +450,7 @@ export class Account {
       try { requestID = await submitFalRequest(this.env, job.fal.request); }
       catch (error) {
         await finishFailure(error instanceof ImageProviderError ? error.code : 'provider_connection_failed',
-          error instanceof ImageProviderError ? error.message : 'The fal submission could not be confirmed. Generation may have been charged.');
+          error instanceof ImageProviderError ? error.message : 'The fal submission could not be confirmed. You have not been charged.');
         return;
       }
       job.fal.requestID = requestID;
@@ -483,7 +487,7 @@ export class Account {
     if (job?.state === 'processing' && !job.fal && !job.imageTask && Date.now() - job.createdAt > 600000) {
       // Old synchronous requests cannot finish indefinitely after disconnection.
       await this.complete({generationId, result: {state: 'failed', errorCode: 'provider_timeout',
-        message: 'This earlier request was interrupted before its image was saved. Generation may have been charged; check usage before generating again.'}});
+        message: 'This earlier request was interrupted before its image was saved. You have not been charged. Check unfinished sheets before generating again.'}});
       job = await this.state.storage.get('job:' + generationId);
     }
     return job ? reply({job, access: await this.access()}) : fail('not_found', 'Generation not found.', 404);
@@ -522,9 +526,16 @@ export class Account {
         job.metrics = {...job.metrics, billableUnits: await falBillableUnits(this.env, job.fal.requestID)};
       }
       await this.recordFalUsage(job);
-      delete job.fal.request.payload;
-      await this.state.storage.put('job:' + job.id, job);
-      return job;
+      // Billing awaits yield to reporting. Merge only billing fields into the
+      // current record so an older snapshot cannot undo a safety decision.
+      return this.state.storage.transaction(async storage => {
+        const current = await storage.get('job:' + job.id);
+        if (!current) return job;
+        current.metrics = {...current.metrics, ...job.metrics};
+        if (current.fal?.request) delete current.fal.request.payload;
+        await storage.put('job:' + job.id, current);
+        return current;
+      });
     })();
     this.usageUpdates.set(job.id, update);
     try { return await update; }
@@ -592,12 +603,12 @@ async function generate(request, env, account) {
     }
   } else try {
     const diagnostics = await moderateSubject(env, subject);
-    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId, description: subject,
+    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
       model: moderationModelForLog(env), policy: MODERATION_POLICY, outcome: 'approved', ...diagnostics, reasonCodes: []}));
   }
   catch (error) {
     if (!(error instanceof ModerationError)) throw error;
-    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId, description: subject,
+    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
       model: moderationModelForLog(env), policy: MODERATION_POLICY, outcome: error.code, ...error.diagnostics, reasonCodes: error.reasonCodes}));
     return fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes});
   }

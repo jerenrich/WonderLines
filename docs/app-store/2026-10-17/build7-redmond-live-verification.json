@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-10-17T11:10:04.070Z",
+  "generationSubmissions": 1,
+  "checks": [
+    {
+      "name": "register temporary account",
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "name": "one live generated sheet",
+      "actual": 502,
+      "expected": 200
+    }
+  ],
+  "passed": false,
+  "error": "one live generated sheet\n\n502 !== 200\n",
+  "cleanupStatus": 200,
+  "temporaryAccountDeleted": true,
+  "finishedAt": "2026-10-17T11:12:14.511Z"
+}

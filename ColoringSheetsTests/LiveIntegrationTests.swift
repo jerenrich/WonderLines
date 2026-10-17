@@ -4,6 +4,71 @@ import XCTest
 /// Opt-in only. Standard test runs skip this test and never send paid requests.
 final class LiveIntegrationTests: XCTestCase {
     @MainActor
+    func testExplicitBuild7GenerationReportingAndDeletion() async throws {
+        guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_BUILD7_CHECK"] == "one-sheet" else {
+            throw XCTSkip("Build 7 live verification requires explicit opt-in.")
+        }
+        let configuration = AppConfiguration.load()
+        XCTAssertFalse(configuration.mock)
+        guard !configuration.mock else { return }
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("LiveVerification", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let claim = directory.appendingPathComponent("build7-one-sheet-claimed")
+        guard !FileManager.default.fileExists(atPath: claim.path) else {
+            throw XCTSkip("This installation has already claimed its build 7 live check.")
+        }
+        try Data("claimed".utf8).write(to: claim, options: .withoutOverwriting)
+        let suite = "Build7Live-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        // Isolate credentials, pending work and gallery from the user's account.
+        let identities = AnonymousIdentityStore(service: suite)
+        let client = WorkerClient(serviceURL: configuration.serviceURL, identities: identities,
+                                  pendingStore: PendingGenerationStore(defaults: defaults))
+        let gallery = GalleryStore(url: directory.appendingPathComponent("build7-test-gallery.json"))
+        defer { try? gallery.remove() }
+        let store = ColoringViewModel(service: client, isMock: false, defaults: defaults, galleryStore: gallery)
+        store.description = "A friendly flower in a garden"
+        store.setImageCount(1)
+        store.generate()
+        XCTAssertTrue(store.showsConsent)
+        let beforeConsent = await identities.session()
+        XCTAssertNil(beforeConsent)
+        store.acceptConsent()
+        let deadline = ContinuousClock.now + .seconds(240)
+        while store.isGenerating && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        do {
+            XCTAssertFalse(store.isGenerating)
+            let result = try XCTUnwrap(store.result, "Live generation must return a sheet: \(store.phase)")
+            let id = try XCTUnwrap(result.generationID)
+            let attachment = XCTAttachment(image: result.image)
+            attachment.name = "Build 7 physical iPad live sheet"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            XCTAssertTrue(store.hasConsent)
+            let relaunched = ColoringViewModel(service: client, isMock: false, defaults: defaults, galleryStore: gallery)
+            XCTAssertTrue(relaunched.hasConsent, "Consent must survive relaunch without another prompt.")
+            await store.reportSelectedSheet(reason: .other)
+            XCTAssertTrue(store.results.isEmpty)
+            do {
+                _ = try await client.recoverPending(PendingGeneration(id: id, model: result.requestedModel, createdAt: Date()))
+                XCTFail("Reported sheets must remain unavailable for recovery.")
+            } catch { /* Expected: the service blocks the reported sheet. */ }
+            try await client.deleteAccount()
+            let saved = await identities.session()
+            XCTAssertNil(saved)
+            try await client.deleteAccount() // Idempotent; must not register again.
+        } catch {
+            store.cancel()
+            try? await client.deleteAccount()
+            throw error
+        }
+    }
+
+    @MainActor
     func testExplicitOneGenerationThroughFirstUseState() async throws {
         guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_LIVE_CHECK"] == "one-generation" else {
             throw XCTSkip("One live first-use generation requires explicit opt-in.")

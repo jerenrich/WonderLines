@@ -41,7 +41,7 @@ Existing generation IDs recover their original job before moderation, preserving
    With `--validation`, this makes up to 74 billed text-only moderation requests, never generates images, does not log descriptions or credentials, and stops at the first upstream failure. Review incorrect classifications before activation. The cases cover benign fantasy, Halloween, children, medicine, age complexity, multilingual text, adult themes, violence, and bypass attempts. A passing sample corpus is evidence, not a guarantee for arbitrary prompts. Use `--cases=pirate,weapon` to run a specific subset after a relevant failure; a final policy change still needs the complete corpus.
 3. Run `node Scripts/test_worker.mjs` and `python3 Scripts/test_configuration.py`. Deploy with `npx wrangler deploy --keep-vars --var AI_GATEWAY_ID:coloring-sheets --var MODERATION_GATEWAY_ID:coloring-sheets` only after live access and the policy cases pass. Preserve `ACCOUNT_TOKEN_SECRET`, image-provider secrets, Gateway secrets and dashboard-managed limits. The explicit variable override switches existing deployments from `default` while preserving other dashboard-managed variables; the GitHub deployment applies the same override. No Durable Object migration is required. The updated app displays the moderation-specific messages after rebuilding; older apps retain their generic description-validation message.
 
-AI Gateway logging is explicitly enabled for moderation with `collectLog: true`, and caching is skipped. New moderation calls appear in the `coloring-sheets` gateway Logs view, including requests rejected by the moderation policy; request and response payload storage follows the gateway settings. The text-only comparison and policy-check scripts also enable Gateway logging, so their Jev and Clef calls can appear alongside production Clef calls. Worker moderation logs contain the generation or batch ID, model, policy version, fixed outcome code, the description submitted to moderation, and all seven validated numeric scores for approvals and policy rejections. Unavailable checks omit scores. Batch logs include the original description; legacy logs include the full subject, including any client composition guidance. Raw model responses are excluded from Worker logs. Descriptions and scores are not retained in moderation Durable Object storage or returned to clients. Existing image-generation logging follows its existing settings. The privacy-policy source now identifies TypeSafe moderation; publish that update alongside activation.
+Build 7 privacy configuration disables Gateway request logging for moderation (`collectLog: false`) and all generation/recovery transports (`cf-aig-collect-log: false`). Worker moderation logs retain fixed outcomes, policy/model identifiers, validated numeric scores and timing; they exclude descriptions and raw provider responses. Tests assert that approved, rejected and unavailable checks never log submitted descriptions. Historical deployment notes below describe earlier versions and are superseded by this configuration. Independent provider processing follows the provider account settings.
 
 ### Verification status — 4 October 2026
 
@@ -386,3 +386,22 @@ Follow-up review on 5 October 2026 deployed Worker version `5db80224-6a5a-4b97-a
 Policy `all-ages-v7` (6 October 2026) raises every content limit below 30% to 30% across Jev, Clef and Clef-flash. Higher limits and minimum overall suitability scores are preserved. The policy revision changes the batch cache fingerprint, and the moderation lab imports these same limits. This threshold change has been checked offline; earlier live calibration results describe their original policy revisions.
 
 Clef permissive calibration (6 October 2026): policy `all-ages-v8` lowers minimum overall suitability from 73% to 40%. Maximum scores are sexual 65%, violence 45%, hate 50%, adult 60%, frightening 50%, bypass 60%. Jev and Clef-flash keep their v7 profiles. This threshold-only change approved 137/139 labelled harmless evaluations versus 115/139 for v7, with all 125 labelled unsafe evaluations rejected. The harmless count includes six repeated BMW/Bugatti regression checks; without repeats, 131/133 harmless cases passed. Remaining harmless rejections are a robot using a punching bag and ordinary bikini swimwear. A broader discarded profile allowed “A smiling person kicking a dog” and unclear gibberish. Scores are model outputs, not calibrated probabilities; recorded results do not guarantee future behavior. Full scores, approved descriptions, rejected descriptions, and profile comparisons are in `docs/moderation/2026-10-06-clef-permissive-report.json`. Reproduce the analysis with `node Scripts/report_permissive_calibration.mjs`. Live scoring is opt-in via `Scripts/evaluate_moderation_corpus.mjs` and Wrangler's remote AI binding.
+
+
+Build 7 reporting and privacy update (17 October 2026)
+
+Delayed fal billing now transactionally merges only metrics into the current job,
+preserving reported-sheet blocks. Reporting likewise preserves newer billing
+metadata. The offline reporting-concurrency regression covers the original race
+and concurrent deletion.
+
+Report handling is assigned to Jordan Erenrich, with a daily Codex metadata-only
+queue check and notification for new or overdue reports. See
+`docs/app-store/2026-10-17/build7-report-operations.txt`. The operator must inspect
+and act on reports; the monitor never moderates or deletes user content.
+
+Build 7 release model decision: an explicit Redmond live check on 17 October
+returned HTTP502 after about two minutes. Its temporary test account was deleted.
+Redmond is excluded from the build7 picker until provider reliability is verified.
+It remains decodable for existing sheets/recovery and the backend reporting fix
+also applies to those older jobs. No paid retry was attempted.

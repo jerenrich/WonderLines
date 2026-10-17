@@ -339,6 +339,7 @@ final class GalleryUITests: XCTestCase {
         }
         app.buttons["usage"].tap()
         XCTAssertTrue(app.navigationBars["Usage & cost"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Generation is free for you.")).firstMatch.exists)
         XCTAssertTrue(app.buttons["Done"].isHittable)
         let usage = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         usage.name = "Portrait usage fits the display"

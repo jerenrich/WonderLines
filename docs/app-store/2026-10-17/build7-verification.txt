@@ -1,0 +1,63 @@
+Wonder Lines 1.0 (7) — preparation and verification
+17 October 2026
+
+Implemented
+1. Billing and reporting transactionally merge into the latest saved job. A
+   reported sheet stays blocked from recovery in either concurrency ordering.
+2. Future app moderation/generation/recovery calls disable Gateway request logs.
+   Worker moderation logs exclude raw descriptions. Historical Gateway cleanup
+   and dashboard configuration verification remain pending Cloudflare sign-in.
+   Privacy-policy edits are local pending that verification; not yet published.
+3. Customer website copy removes prototype/demo/server-setup language. Redmond
+   is excluded from the picker after its one-sheet live check returned HTTP502.
+   Older Redmond data remains decodable; restored preferences safely fall back
+   to Sunburst without resetting consent.
+4. Usage and error copy explicitly says generation is free for users. Provider
+   cost displays identify the developer as payer.
+5. Active daily report-queue monitor at 09:00 Europe/London. Owner: Jordan
+   Erenrich. It alerts here for new or overdue reports; a person handles them.
+   Initial queue access verification awaits Cloudflare sign-in. Instructions:
+   build7-report-operations.txt.
+6. Mac and Vision Pro availability disabled in App Store Connect, saved and
+   verified after reload. Physical-iPad coverage added. iOS17 remains supported;
+   older 17.5 and 18.5 runtimes were unavailable in the current Xcode catalogue,
+   so older-OS runtime testing remains a recorded limitation.
+
+Tests
+- Final unit suite: 83 tests, 78 passed, 5 opt-in live checks skipped, no failures.
+- 12 unique UI checks passed: six each on iPad Air 11-inch M3 and iPhone17e,
+   OS27.0 (first launch, consent/withdrawal/deletion, reporting, Settings, rotation
+   and keyboard/gallery, accessibility text). Final Settings test repeated after
+   excluding Redmond; passed. Usage screenshot inspected and free-cost copy visible.
+- Physical iPad9 live test: one real default-model sheet, consent initially blocks
+   account creation; acceptance permits generation, consent survives relaunch,
+   reporting removes it and blocks recovery, isolated account deletion succeeds
+   and is idempotent. No existing user account/gallery was used or deleted.
+- One separate Redmond live request failed HTTP502; temporary account cleanup
+   confirmed. No paid retry attempted. Model removed from build7 picker.
+- Worker/provider/App Attest/image-cost, moderation, batch moderation, privacy,
+   concurrent reporting/billing/deletion, moderation-lab and configuration checks
+   passed with synthetic data and no network/provider calls.
+
+Release
+Final archive: .build/build7/Final/WonderLines-1.0-7.xcarchive
+Live service configuration, build7, manifest bundled. Archive succeeds.
+App Store IPA export is blocked by expired Xcode account credentials; only a
+Development signing identity is currently available. Release tests temporarily
+used ENABLE_TESTABILITY=YES; the distribution archive does not enable it.
+Server deployed directly with Wrangler, preserving existing variables/secrets:
+b43ee807-132a-44da-be79-0b204a4f3a06.
+Build7 has not been uploaded or submitted. Build6 remains the active submission.
+The reply in build7-review-reply-draft.txt has not been approved or sent.
+
+Local evidence under .build/build7/
+final-ipad.xcresult, ipad.xcresult, phone.xcresult, ipad-layouts.xcresult,
+physical-live-2.xcresult and exported physical/phone attachments;
+report-concurrency.json; worker/privacy/batch/lab/configuration test logs;
+archive/export/runtime-download logs. Redmond result:
+docs/app-store/2026-10-17/build7-redmond-live-verification.json.
+
+Resolved test setup issue
+Release unit tests initially could not import the app's internal module. The
+physical test invocation enabled testability only for that test build, then
+passed. No production entitlement or signing setting was weakened.

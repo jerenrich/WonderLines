@@ -65,6 +65,7 @@ function transport(env, provider) {
         !secret(env.AI_GATEWAY_TOKEN) || !['worker', 'gateway'].includes(keySource)) throw new Error('Invalid gateway configuration');
     base = `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/${provider}`;
     headers['cf-aig-authorization'] = 'Bearer ' + env.AI_GATEWAY_TOKEN;
+    headers['cf-aig-collect-log'] = 'false';
     // Each new job should produce a fresh sheet and consume at most one attempt.
     headers['cf-aig-skip-cache'] = 'true';
     headers['cf-aig-max-attempts'] = '1';
@@ -117,7 +118,7 @@ export function imageRequest(env, route, subject, size) {
       url: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/workers-ai/${route.model}`,
       headers: {...(config.multipart ? {} : {'Content-Type': 'application/json'}),
         Authorization: 'Bearer ' + token, 'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN,
-        'cf-aig-skip-cache': 'true', 'cf-aig-max-attempts': '1'}};
+        'cf-aig-skip-cache': 'true', 'cf-aig-max-attempts': '1', 'cf-aig-collect-log': 'false'}};
   }
   const {base, headers, viaGateway} = transport(env, route.provider);
   const path = route.provider === 'openai' ? '/images/generations' : `/v1/models/${route.model}:generateContent`;
@@ -188,7 +189,7 @@ function providerFailure(request, status, body) {
     return failure('provider_rate_limited', `${name} or AI Gateway has reached a request or usage limit. Wait before retrying, or check the provider’s limits`);
   }
   if (status === 408 || status === 504) {
-    return failure('provider_timeout', `${name} timed out. Generation may have been charged; check usage before starting another request`);
+    return failure('provider_timeout', `${name} timed out. You have not been charged. Check unfinished sheets before generating again`);
   }
   if (status >= 500) return failure('provider_unavailable', `${name} or AI Gateway is temporarily unavailable. Try again later`);
   if ([400, 413, 422].includes(status)) {
@@ -223,7 +224,7 @@ export async function runImageRequest(request) {
       body: request.payload instanceof FormData ? request.payload : JSON.stringify(request.payload), redirect: 'manual', signal: AbortSignal.timeout(180000)});
   } catch (error) {
     const timeout = error?.name === 'TimeoutError' || error?.name === 'AbortError';
-    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. Generation may have been charged; check usage before starting another request.`,
+    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. You have not been charged. Check unfinished sheets before generating again.`,
       timeout ? 'provider_timeout' : 'provider_connection_failed');
   }
   if (!response.ok) throw providerFailure(request, response.status, await errorBody(response));
@@ -294,7 +295,7 @@ function falTransport(env, target) {
   return {url: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/fal`,
     headers: {'Content-Type': 'application/json', Authorization: 'Key ' + env.FAL_KEY,
       'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN, 'cf-aig-skip-cache': 'true',
-      'cf-aig-max-attempts': '1', 'x-fal-target-url': target}};
+      'cf-aig-max-attempts': '1', 'cf-aig-collect-log': 'false', 'x-fal-target-url': target}};
 }
 function falImageRequest(env, subject, size) {
   falTransport(env, FAL_QUEUE); // Validate before consuming any allowance.
@@ -347,7 +348,7 @@ async function falJSON(env, target, payload) {
 export async function submitFalRequest(env, request) {
   const {data: result} = await falJSON(env, FAL_QUEUE, request.payload);
   if (typeof result.request_id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(result.request_id)) {
-    throw new ImageProviderError('fal.ai did not return a usable job ID. Generation may have been charged.', 'provider_invalid_response');
+    throw new ImageProviderError('fal.ai did not return a usable job ID. You have not been charged.', 'provider_invalid_response');
   }
   return result.request_id;
 }

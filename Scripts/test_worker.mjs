@@ -8,7 +8,7 @@ import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.
 import {falCostData} from '../workers/coloring-sheets-api/src/fal-cost.mjs';
 import {modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';
 
-// A picker option must have a server route, and every built-in route is selectable.
+// All decodable model IDs need a server route, including retired recovery-only models.
 const swiftModels = readFileSync(new URL('../ColoringSheets/Core/Generation.swift', import.meta.url), 'utf8')
   .split('// App-owned page policy:')[0];
 const pickerIDs = [...swiftModels.matchAll(/case \w+ = "([^"]+)"/g)].map(match => match[1]);
@@ -95,7 +95,7 @@ try {
   assert.equal(rejectedAudit.gateway, 'synthetic-gateway');
   assert.deepEqual(rejectedAudit.reasonCodes, ['sexual']);
   assert.ok(rejectedAudit.elapsedMs >= 0);
-  assert.equal(rejectedAudit.description, 'Unsuitable synthetic request');
+  assert.equal(rejectedAudit.description, undefined);
   assert.equal(rejectedAudit.scores.sexual, 0.99);
   assert.deepEqual(await accountBeforeModeration.access(), accessBeforeModeration, 'Moderation must not consume allowance or credits.');
   assert.equal(await accountBeforeModeration.state.storage.get('job:' + rejectedID), undefined);
@@ -257,6 +257,7 @@ try {
     assert.equal(headers.get('Authorization'), 'Key synthetic-fal-key');
     assert.equal(headers.get('cf-aig-max-attempts'), '1');
     assert.equal(headers.get('cf-aig-skip-cache'), 'true');
+    assert.equal(headers.get('cf-aig-collect-log'), 'false');
     const target = headers.get('x-fal-target-url');
     if (init.method === 'POST') {
       submitted++;
@@ -348,7 +349,8 @@ try {
   assert.equal(audit.inferenceSteps, 30); assert.equal(audit.billableUnits, 12.5);
   const serializedLogs = JSON.stringify(auditLogs);
   assert.ok(!serializedLogs.includes('synthetic-fal-key'));
-  assert.ok(auditLogs.some(log => log.event === 'description_moderation' && log.description === 'A test flower. Complexity: simple outlines'));
+  assert.ok(auditLogs.some(log => log.event === 'description_moderation'));
+  assert.ok(!serializedLogs.includes('A test flower'), 'Descriptions must never reach Worker logs.');
   assert.ok(!JSON.stringify(auditLogs.filter(log => log.event !== 'description_moderation')).includes('A test flower'));
   assert.ok(auditLogs.some(log => log.event === 'fal_submitted'));
   assert.ok(auditLogs.some(log => log.event === 'fal_usage' && log.costStatus === 'reported'));
@@ -443,6 +445,7 @@ try {
   assert.equal(gatewayHeaders.get('cf-aig-authorization'), 'Bearer synthetic-gateway-token');
   assert.equal(gatewayHeaders.get('cf-aig-skip-cache'), 'true');
   assert.equal(gatewayHeaders.get('cf-aig-max-attempts'), '1');
+  assert.equal(gatewayHeaders.get('cf-aig-collect-log'), 'false', 'Gateway must not retain prompts or images.');
   assert.equal(gatewayPayload.size, '1456x1024');
   assert.equal(gatewayPayload.quality, 'low');
   assert.equal(gatewayPayload.output_format, 'png');
@@ -623,6 +626,7 @@ try {
     assert.equal(nativeOptions.headers['cf-aig-authorization'], 'Bearer synthetic-gateway-token');
     assert.equal(nativeOptions.headers['cf-aig-max-attempts'], '1');
     assert.equal(nativeOptions.headers['cf-aig-skip-cache'], 'true');
+    assert.equal(nativeOptions.headers['cf-aig-collect-log'], 'false');
     assert.equal(nativeOptions.headers['Content-Type'], undefined, 'fetch must supply the multipart boundary');
     assert.equal(nativeOptions.redirect, 'manual');
     assert.ok(nativeOptions.signal instanceof AbortSignal);

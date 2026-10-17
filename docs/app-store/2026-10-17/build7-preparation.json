@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "build": "7",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "minimumOS": "17.0",
+  "configuration": {
+    "mock": false,
+    "serviceURL": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+  },
+  "privacyManifestBundled": true,
+  "archiveCreated": true,
+  "distributionExported": false,
+  "uploaded": false,
+  "submitted": false,
+  "serverVersion": "b43ee807-132a-44da-be79-0b204a4f3a06",
+  "macAvailability": false,
+  "visionProAvailability": false,
+  "archivePath": ".build/build7/Final/WonderLines-1.0-7.xcarchive",
+  "models": [
+    "Flare",
+    "Sunburst",
+    "FLUX.2 Klein 4B",
+    "FLUX.2 Klein 9B",
+    "Phoenix 1.0"
+  ],
+  "redmondExcluded": true,
+  "unitTests": {
+    "passed": 78,
+    "skipped": 5,
+    "failed": 0
+  },
+  "simulatorUITests": {
+    "uniquePassed": 12,
+    "failed": 0
+  },
+  "physicalLiveTest": {
+    "passed": true,
+    "generationSubmissions": 1,
+    "temporaryAccountDeleted": true
+  },
+  "redmondLiveTest": {
+    "passed": false,
+    "httpStatus": 502,
+    "generationSubmissions": 1,
+    "temporaryAccountDeleted": true
+  },
+  "reportMonitor": {
+    "id": "review-wonder-lines-safety-reports",
+    "status": "ACTIVE",
+    "schedule": "09:00 Europe/London daily",
+    "initialQueueCheck": "pending Cloudflare sign-in"
+  },
+  "remaining": [
+    "Historical Gateway log cleanup and settings verification require Cloudflare sign-in",
+    "App Store distribution export requires Xcode account reauthentication",
+    "Older iOS 17.5 and 18.5 simulator runtimes unavailable from current Xcode catalogue"
+  ]
+}

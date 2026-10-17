@@ -241,7 +241,7 @@ final class GenerationTests: XCTestCase {
     func testSelectableModelsExcludeRetiredChoices() {
         XCTAssertEqual(ImageModel.selectable.map(\.rawValue), [
             "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
-            "flux-2-klein-4b", "flux-2-klein-9b", "phoenix-1.0", "coloringbook-redmond-v2"
+            "flux-2-klein-4b", "flux-2-klein-9b", "phoenix-1.0"
         ])
     }
 
@@ -1229,6 +1229,17 @@ final class ControlledService: GenerationServing {
 
 @MainActor
 final class StateTests: XCTestCase {
+    func testRetiredModelPreferenceFallsBackWithoutResettingConsent() {
+        let suite = "RetiredModel-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(ImageModel.redmond.rawValue, forKey: "generationModel")
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
+        let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+        XCTAssertEqual(store.model, .sunburst)
+        XCTAssertTrue(store.hasConsent)
+    }
+
     func waitFor(timeout: TimeInterval = 1, _ condition: @escaping () -> Bool) async {
         let deadline = ContinuousClock.now + .seconds(timeout)
         while ContinuousClock.now < deadline {

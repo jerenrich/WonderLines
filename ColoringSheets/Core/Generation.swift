@@ -17,12 +17,12 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case redmond = "coloringbook-redmond-v2"
     // Keep older cases decodable so unfinished generations can still be recovered.
     static let selectable: [ImageModel] = [
-        .flare, .sunburst, .fluxKlein4B, .fluxKlein9B, .phoenix, .redmond
+        .flare, .sunburst, .fluxKlein4B, .fluxKlein9B, .phoenix
     ]
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .redmond: return "ColoringBook.Redmond V2 (Beta)"
+        case .redmond: return "ColoringBook.Redmond V2"
         case .flare: return "Flare"
         case .sunburst: return "Sunburst"
         case .fluxKlein4B: return "FLUX.2 Klein 4B"
@@ -31,8 +31,8 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
         case .fluxSchnell: return "FLUX.1 Schnell"
         case .lucidOrigin: return "Lucid Origin"
         case .phoenix: return "Phoenix 1.0"
-        case .sdxl: return "Stable Diffusion XL (Beta)"
-        case .sdxlLightning: return "SDXL Lightning (Beta)"
+        case .sdxl: return "Stable Diffusion XL"
+        case .sdxlLightning: return "SDXL Lightning"
         case .dreamShaper: return "DreamShaper 8 LCM"
         }
     }
@@ -245,9 +245,9 @@ enum GenerationError: LocalizedError, Equatable {
         case .allowance: return "Today’s image allowance has been used. Please try again after midnight UTC."
         case .serviceBudget: return "The coloring service has reached today’s limit. Please try again after it resets."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
-        case .invalidImage: return "The service did not return a valid PNG. Generation may have been charged. Check usage before trying again."
-        case .uncertain: return "The connection was interrupted or timed out. Generation may still finish and be charged. Check usage before choosing to generate again."
-        case .cancelled: return "Stopped waiting. The server may still generate and charge for this sheet. Check usage before choosing to generate again."
+        case .invalidImage: return "The service did not return a usable sheet. You have not been charged. Check unfinished sheets before generating again."
+        case .uncertain: return "The connection was interrupted or timed out. Your sheet may still finish. You have not been charged. Check unfinished sheets before generating again."
+        case .cancelled: return "Stopped waiting. Your sheet may still finish. You have not been charged. Check unfinished sheets before generating again."
         case .resultMissing: return "The service has no saved job for this sheet, so it cannot be recovered. No new generation was started automatically."
         }
     }

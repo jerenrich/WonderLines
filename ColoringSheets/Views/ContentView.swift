@@ -589,8 +589,8 @@ struct ContentView: View {
                 Section("Gallery") {
                     metric("Sheets available", "\(store.results.count)")
                     let estimates = store.results.compactMap { $0.metrics?.estimatedTotalUsd }
-                    metric("Returned costs combined", estimates.isEmpty ? "Unavailable" : String(format: "$%.6f USD", estimates.reduce(0, +)))
-                    Text("Includes reported charges and estimates for returned images. Failed or unfinished generations may also be charged.")
+                    metric("Developer’s service cost", estimates.isEmpty ? "Unavailable" : String(format: "$%.6f USD", estimates.reduce(0, +)))
+                    Text("Generation is free for you. These are provider costs paid by the developer, including estimates. Failed or unfinished requests may also incur costs for the developer.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if let result = store.result {
@@ -617,7 +617,7 @@ struct ContentView: View {
                                 metric("fal request ID", requestID)
                             }
                         }
-                        Text(result.metrics?.estimateBasis ?? "Usage details were not returned. This does not mean the generation was free.")
+                        Text(result.metrics?.estimateBasis ?? "Provider cost details are unavailable. Generation is still free for you.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                 }
