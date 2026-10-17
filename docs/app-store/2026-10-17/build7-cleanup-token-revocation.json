@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-17T15:06:45.148Z",
+  "httpStatus": 401,
+  "success": false,
+  "tokenStatus": null,
+  "errorCodes": [
+    1000
+  ],
+  "tokenValuePrinted": false
+}

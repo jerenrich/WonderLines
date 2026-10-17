@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-17T15:05:05.902Z",
+  "gateway": "coloring-sheets",
+  "approval": "User approved historical deletion and CLI credential use on 17 October 2026",
+  "before": 3005,
+  "after": 0,
+  "deleteSuccess": true,
+  "gatewayStillPresent": true,
+  "collectLogs": false,
+  "unrelatedDefaultBefore": 202,
+  "unrelatedDefaultAfter": 202,
+  "temporaryCredentialUsed": true,
+  "credentialPrinted": false,
+  "rawInitialTotalCountAfterDelete": 3005,
+  "verifiedAt": "2026-10-17T15:08:08.489995+00:00",
+  "verification": "Unfiltered API returned zero entries on two subsequent reads; full 30-day dashboard showed No logs to show. Aggregate total_count still reported the historical 3005.",
+  "aggregateTotalCountAfterDelete": 3005,
+  "tokenRevoked": true,
+  "tokenRevocationHTTPStatus": 401,
+  "temporaryLocalCredentialRemoved": true,
+  "defaultUnchanged": true,
+  "proof": "build7-gateway-logs-empty.png"
+}

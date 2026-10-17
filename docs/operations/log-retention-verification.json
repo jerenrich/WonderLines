@@ -15,8 +15,11 @@
   "r2TestsPassed": true,
   "existingWorkerProviderPrivacyConcurrencyChecks": "passed",
   "newGatewayPromptLogging": false,
-  "legacyGatewayLogCountLastObserved": 3005,
+  "legacyGatewayLogCountLastObserved": 0,
   "privacyPageVerified": true,
-  "reminder": "17 October 2026 20:00 Europe/London",
-  "iosBuildModified": false
+  "reminder": "PAUSED - historical cleanup completed",
+  "iosBuildModified": false,
+  "legacyGatewayAggregateCounterLastObserved": 3005,
+  "legacyGatewayCleanup": "Completed 17 October 2026; DELETE accepted, empty unfiltered API results and full-range dashboard verified",
+  "temporaryCleanupToken": "Revoked; HTTP401 verified; local copy removed"
 }

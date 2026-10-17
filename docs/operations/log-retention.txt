@@ -45,7 +45,13 @@ persisted. The initial deployment safely refused because the required secret
 CLOUDFLARE_LOG_RETENTION_TOKEN is missing. Dry-run is the checked-in default.
 The CI deployment step is gated by LOG_RETENTION_WORKER_READY=true and remains
 skipped until the initial secret-bearing deployment succeeds. Tests always run.
-The existing 3,005 historical Gateway logs have not been deleted.
+The 3,005 historical Gateway logs were deleted on 17 October 2026. Two
+subsequent unfiltered API list requests returned zero entries; the full 30-day
+dashboard showed No logs to show. The API aggregate total_count still reported
+the historical 3,005. Do not treat this counter as accessible log entries.
+The default gateway retained 202 entries. New collection remained disabled.
+The temporary cleanup token was revoked and confirmed invalid (HTTP401), and its
+local copy was removed. No ongoing management credential was created.
 
 One-time activation procedure (authorized operator)
 1. Create a dedicated Cloudflare account token with only AI Gateway Write in
@@ -69,8 +75,9 @@ One-time activation procedure (authorized operator)
 5. Set repository variable LOG_RETENTION_WORKER_READY=true so normal CI keeps
    deploying this Worker. Confirm its hourly Cron Trigger in Cloudflare.
 6. Update the privacy policy and release evidence only after live verification.
-   Keep the historical-log exception while activation or initial cleanup is
-   pending. Tonight's requested reminder stays in place until this is resolved.
+   Historical cleanup is now complete; the policy records its completion.
+   Tonight's cleanup reminder has been paused. Automatic Gateway age-based
+   retention remains inactive; do not imply it was activated by the one-off purge.
 
 Tests
 node workers/log-retention/tests/worker.mjs

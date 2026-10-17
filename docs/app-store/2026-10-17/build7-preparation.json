@@ -10,8 +10,8 @@
   "privacyManifestBundled": true,
   "archiveCreated": true,
   "distributionExported": true,
-  "uploaded": false,
-  "submitted": false,
+  "uploaded": true,
+  "submitted": true,
   "serverVersion": "e8890cfb-3d60-48d7-8616-94aa7c782ea7",
   "macAvailability": false,
   "visionProAvailability": false,
@@ -51,8 +51,8 @@
     "initialQueueCheck": "2026-10-17 12:43 Europe/London: no reports/ objects; public access disabled"
   },
   "remaining": [
-    "Legacy Gateway cleanup activation needs dedicated AI Gateway Write credential; 20:00 reminder retained",
-    "Older iOS 17.5 and 18.5 simulator runtimes unavailable from current Xcode catalogue"
+    "Older iOS 17.5 and 18.5 simulator runtimes unavailable from current Xcode catalogue",
+    "Optional automatic Legacy Gateway retention remains inactive; no ongoing credential created. New Gateway logging is disabled and historical entries have been removed."
   ],
   "sourceCommit": "e6ddda87669fbb8ca24d81e9669a8e272e76fc48",
   "ciDeployment": "https://github.com/jerenrich/WonderLines/actions/runs/39028069498",
@@ -72,25 +72,32 @@
     "gateway": "coloring-sheets",
     "defaultCollection": false,
     "verifiedAfterReload": true,
-    "historicalLogCount": 3005,
-    "historicalPurge": "User deferred cleanup until tonight; 3,005 historical logs remain; new logging disabled"
+    "historicalLogCount": 0,
+    "historicalPurge": "Completed 17 October 2026; empty API list and full-range dashboard verified; historical aggregate counter remains 3005",
+    "cleanupEvidence": "docs/app-store/2026-10-17/build7-gateway-cleanup.json",
+    "temporaryTokenRevoked": true
   },
   "reviewReply": {
     "approved": true,
-    "sent": false,
-    "file": "docs/app-store/2026-10-17/build7-approved-reply.txt"
+    "sent": true,
+    "file": "docs/app-store/2026-10-17/build7-approved-reply.txt",
+    "delivery": "App Review Notes, approved wording verbatim at the top, followed by reviewer instructions; persisted value verified after reload",
+    "notesSaved": true,
+    "separateConversationMessage": false
   },
   "logCleanupReminder": {
     "id": "finish-wonder-lines-log-cleanup-tonight",
     "at": "2026-10-17 20:00 Europe/London",
-    "oneOff": true
+    "oneOff": true,
+    "status": "PAUSED - cleanup completed"
   },
   "privacyPublication": {
     "sourceCommit": "fbf38603f61e2350d18291d0e561b524dd9ff0e1",
     "status": "published and verified in browser",
     "disclosesPendingHistoricalLogs": true,
     "url": "https://jerenrich.github.io/WonderLines/privacy.html",
-    "deployment": "https://github.com/jerenrich/WonderLines/actions/runs/39031249880"
+    "deployment": "https://github.com/jerenrich/WonderLines/actions/runs/39031249880",
+    "cleanupUpdate": "Local wording updated; publication pending"
   },
   "diagnosticRetention": {
     "days": 7,
@@ -106,5 +113,25 @@
     "status": "success",
     "legacyR2Sweep": "hourly :37 UTC, deployed",
     "legacyGatewaySweep": "not deployed; dedicated credential missing"
+  },
+  "upload": {
+    "status": "Upload succeeded; Apple processing complete",
+    "at": "2026-10-17 15:06 Europe/London",
+    "buildID": "38c52fbc-d3b1-494a-8049-4e0461145a2f",
+    "log": ".build/build7/Final/upload.log"
+  },
+  "previousSubmission": {
+    "id": "59d8d2cf-8431-4049-81b7-d40f94b5263c",
+    "build": "6",
+    "action": "Canceled as authorized to replace with build 7"
+  },
+  "submission": {
+    "id": "39e2f8b5-da20-411b-86f2-b17edacae9b9",
+    "url": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/39e2f8b5-da20-411b-86f2-b17edacae9b9",
+    "at": "2026-10-17T15:12:00+01:00",
+    "status": "Waiting for Review",
+    "buildID": "38c52fbc-d3b1-494a-8049-4e0461145a2f",
+    "encryptionAnswer": "None of the algorithms mentioned above; same previously approved answer, Apple OS encryption only",
+    "proof": "docs/app-store/2026-10-17/build7-submitted.png"
   }
 }

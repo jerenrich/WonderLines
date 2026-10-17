@@ -47,8 +47,8 @@ Release tests temporarily used ENABLE_TESTABILITY=YES; the distribution archive
 does not enable it.
 Server deployed directly with Wrangler, preserving existing variables/secrets:
 b43ee807-132a-44da-be79-0b204a4f3a06.
-Build7 has not been uploaded or submitted. Build6 remains the active submission.
-The reply in build7-review-reply-draft.txt has not been approved or sent.
+At initial preparation, build7 had not been uploaded or submitted and build6 was active.
+The reply was subsequently approved; see the 15:12 resubmission record below.
 
 Local evidence under .build/build7/
 final-ipad.xcresult, ipad.xcresult, phone.xcresult, ipad-layouts.xcresult,
@@ -111,3 +111,24 @@ Retention migration follow-up:
 Final retention deployment: e8890cfb-3d60-48d7-8616-94aa7c782ea7, source2ed0462.
 CI and Pages passed; R2 hourly trigger accepted. First live sweep not observed.
 Evidence: docs/operations/log-retention-verification.json.
+
+17 October 2026 15:12 Europe/London submission follow-up:
+- User explicitly authorized upload and resubmission of build7 with the approved reply.
+- Final tested archive uploaded with Xcode; upload succeeded at 15:06, processing complete.
+- Same previously approved encryption answer saved; no custom encryption added.
+- Build6 review submission canceled and replaced with 1.0 (7).
+- Approved reply saved verbatim at the top of App Review Notes; no separate Reply control.
+- Saved notes compared exactly with the 3,981-character draft after reload.
+- App Store Connect confirms Waiting for Review, submission 39e2f8b5-da20-411b-86f2-b17edacae9b9.
+- Confirmation screenshot: build7-submitted.png; action record: build7-resubmission.json.
+- Cloudflare support draft was never sent and is closed. User already contacted Cloudflare.
+- Weekly migration availability check active: Saturdays 10:00 Europe/London.
+- Historical Gateway cleanup remains deferred; tonight's reminder remains active.
+
+17 October 2026 historical Gateway cleanup:
+- User approved temporary token creation, permanent deletion of 3,005 coloring-sheets logs, and immediate token revocation.
+- Cloudflare accepted DELETE. Initial total_count remained 3,005; two later unfiltered API lists returned zero records and full 30-day dashboard showed No logs to show.
+- Default gateway remained unchanged at 202 entries. Coloring-sheets gateway remains present with collection off.
+- Temporary token deleted in browser; API confirms HTTP401. Local credential removed.
+- Tonight cleanup reminder paused. No permanent credential or active Gateway cron created.
+- Privacy wording updated to reflect completed historical cleanup.
