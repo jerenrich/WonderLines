@@ -87,3 +87,12 @@ Approval follow-up:
   No logs were deleted. A temporary Gateway Write token setup has been prepared
   for user creation, expiring 18 October 2026; token creation is pending.
 - Final synthetic privacy/report/deletion regression checks repeated and passed.
+
+User deferred historical cleanup until tonight. One-off reminder set for
+17 October 2026 at 20:00 Europe/London (finish-wonder-lines-log-cleanup-tonight).
+Privacy policy updated to describe disabled new logging, pending historical
+Gateway records, the account-deletion exception, and seven-day Worker logs.
+No historical logs deleted. Approved reply retained verbatim and unsent.
+Privacy publication passed: https://github.com/jerenrich/WonderLines/actions/runs/39031249880
+Live browser verified the new historical-log disclosure and seven-day Worker
+retention text at https://jerenrich.github.io/WonderLines/privacy.html.

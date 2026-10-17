@@ -51,7 +51,7 @@
     "initialQueueCheck": "2026-10-17 12:43 Europe/London: no reports/ objects; public access disabled"
   },
   "remaining": [
-    "Historical Gateway deletion approved, needs a credential with AI Gateway Write permission; privacy publication pending cleanup",
+    "Historical Gateway cleanup deferred by user to tonight; reminder set for 20:00 Europe/London",
     "Older iOS 17.5 and 18.5 simulator runtimes unavailable from current Xcode catalogue"
   ],
   "sourceCommit": "e6ddda87669fbb8ca24d81e9669a8e272e76fc48",
@@ -73,11 +73,23 @@
     "defaultCollection": false,
     "verifiedAfterReload": true,
     "historicalLogCount": 3005,
-    "historicalPurge": "approved; blocked by CLI credential lacking AI Gateway access (HTTP 403, code 10000); nothing deleted"
+    "historicalPurge": "User deferred cleanup until tonight; 3,005 historical logs remain; new logging disabled"
   },
   "reviewReply": {
     "approved": true,
     "sent": false,
     "file": "docs/app-store/2026-10-17/build7-approved-reply.txt"
+  },
+  "logCleanupReminder": {
+    "id": "finish-wonder-lines-log-cleanup-tonight",
+    "at": "2026-10-17 20:00 Europe/London",
+    "oneOff": true
+  },
+  "privacyPublication": {
+    "sourceCommit": "fbf38603f61e2350d18291d0e561b524dd9ff0e1",
+    "status": "published and verified in browser",
+    "disclosesPendingHistoricalLogs": true,
+    "url": "https://jerenrich.github.io/WonderLines/privacy.html",
+    "deployment": "https://github.com/jerenrich/WonderLines/actions/runs/39031249880"
   }
 }
