@@ -78,6 +78,7 @@ class Storage {
   values = new Map();
   async get(key) { return structuredClone(this.values.get(key)); }
   async put(key, value) { this.values.set(key, structuredClone(value)); }
+  async transaction(operation) { return operation(this); }
 }
 class Accounts {
   objects = new Map();
@@ -139,4 +140,28 @@ try {
   await worker.fetch(badBinding, env);
   assert.deepEqual(warnings.pop(), {event: 'app_attest_rejected', reason: 'Invalid request binding'});
 } finally { console.warn = originalWarn; }
+// Only the verified-attestation public route calls this internal method.
+// A valid replacement keeps the anonymous account and spent allowance, resets
+// the key's replay window, and makes signatures from the old key invalid.
+const preservedAccount = await object.state.storage.get('account');
+const attestationChallenge = await worker.fetch(new Request(base + '/v1/app-attest/challenge', {
+  method: 'POST', headers: {...auth, 'Content-Type': 'application/json'}, body: '{"purpose":"attestation"}'
+}), env);
+const validChallenge = (await attestationChallenge.json()).challenge;
+const originalEnrollment = await object.state.storage.get('app-attest');
+assert.equal((await worker.fetch(new Request(base + '/v1/app-attest/attest', {
+  method: 'POST', headers: {...auth, 'Content-Type': 'application/json'},
+  body: JSON.stringify({challenge: validChallenge, keyID: 'forged-key', attestation: 'forged-attestation'})
+}), env)).status, 403, 'Even with a valid account challenge, a replacement needs a verified Apple attestation.');
+assert.deepEqual(await object.state.storage.get('app-attest'), originalEnrollment);
+await object.state.storage.put('generation:retained', {state: 'completed'});
+assert.equal((await object.registerAttestation({keyID: 'test', publicKey: pem})).status, 200);
+assert.equal((await object.state.storage.get('app-attest')).counter, 1, 'Same-key reenrollment must not reset replay protection.');
+const replacementKey = generateKeyPairSync('ec', {namedCurve: 'prime256v1'}).publicKey.export({type: 'spki', format: 'pem'});
+assert.equal((await object.registerAttestation({keyID: 'replacement', publicKey: replacementKey})).status, 200);
+assert.deepEqual(await object.state.storage.get('account'), preservedAccount);
+assert.deepEqual(await object.state.storage.get('generation:retained'), {state: 'completed'});
+assert.deepEqual(await object.state.storage.get('app-attest'), {keyID: 'replacement', publicKey: replacementKey, counter: 0, seen: '0'});
+assert.equal((await object.assertion({assertion: proof, clientData: b64url(data), generationID: id})).status, 403,
+  'The old device key must no longer authorize generation.');
 console.log('PASS: App Attest assertion signature, request binding, account policy, replay window, and challenge scope; no network.');

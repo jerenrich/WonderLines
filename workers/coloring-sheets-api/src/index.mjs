@@ -178,11 +178,14 @@ export class Account {
   async registerAttestation(input) {
     if (typeof input.keyID !== 'string' || typeof input.publicKey !== 'string' || input.publicKey.length > 1024) return fail('invalid_request', 'Invalid attestation.', 400);
     const previous = await this.state.storage.get('app-attest');
-    if (previous && previous.keyID !== input.keyID) return fail('attestation_conflict', 'This installation already has an attested key.', 409);
     const account = await this.state.storage.get('account');
-    if (!previous || !account.appAttested) {
+    // The public route verifies a fresh Apple attestation and an account-bound
+    // challenge before reaching this method. Reinstall/restore can legitimately
+    // replace the device key; retain the account, quota, and generation history.
+    const replacement = !previous || previous.keyID !== input.keyID;
+    if (replacement || !account.appAttested) {
       await this.state.storage.transaction(async storage => {
-        if (!previous) await storage.put('app-attest', {keyID: input.keyID, publicKey: input.publicKey, counter: 0, seen: '0'});
+        if (replacement) await storage.put('app-attest', {keyID: input.keyID, publicKey: input.publicKey, counter: 0, seen: '0'});
         if (!account.appAttested) await storage.put('account', {...account, appAttested: true});
       });
     }
