@@ -43,8 +43,16 @@
   "backendDeploymentCI": "https://github.com/jerenrich/WonderLines/actions/runs/39043822353",
   "backendCIStatus": "success",
   "upload": {
-    "status": "Upload succeeded; Apple processing",
+    "status": "Ready to Submit",
     "at": "2026-10-17T16:23:00+01:00",
-    "log": ".build/build8/upload.log"
-  }
+    "log": ".build/build8/upload.log",
+    "buildID": "77372d2f-2259-41f1-b02d-48f623adfd15"
+  },
+  "sourceCommit": "a5e7e84",
+  "exportCompliance": {
+    "answer": "None of the algorithms mentioned above",
+    "basis": "Previously approved answer; build8 has no encryption changes",
+    "saved": true
+  },
+  "submissionBlocker": "Awaiting approval for two build-number replacements in App Review Notes; build7 remains Waiting for Review"
 }
