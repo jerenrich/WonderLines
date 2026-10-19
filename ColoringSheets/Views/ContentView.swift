@@ -396,15 +396,10 @@ struct ContentView: View {
                         get: { store.selectedResultID },
                         set: { if !descriptionFocused { store.selectResult(id: $0) } })) {
                         ForEach(Array(store.results.enumerated()), id: \.element.id) { index, result in
-                            Image(uiImage: result.image).resizable().scaledToFit()
-                                .frame(width: page.width, height: page.height)
-                                .background(.white)
-                                .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
+                            ZoomableSheetPreview(image: result.image, pageSize: page,
+                                                 isSelected: store.selectedResultID == result.id,
+                                                 position: "Sheet \(index + 1) of \(store.results.count)")
                                 .frame(width: canvas.size.width, height: canvas.size.height)
-                                .accessibilityLabel("Generated coloring sheet preview")
-                                .accessibilityValue("Sheet \(index + 1) of \(store.results.count)")
-                                .accessibilityHint("Swipe left or right to choose a sheet")
-                                .accessibilityIdentifier("sheetPreview")
                                 .tag(Optional(result.id))
                         }
                     }
@@ -657,6 +652,102 @@ struct ContentView: View {
             case .success: photoSaveConfirmation = "The coloring sheet is now in your Photos library."
             case .failure(let error): exportError = error.localizedDescription
             }
+        }
+    }
+}
+
+/// UIKit keeps the pinch centered under the fingers and bounds panning to the sheet.
+private struct ZoomableSheetPreview: UIViewRepresentable {
+    let image: UIImage
+    let pageSize: CGSize
+    let isSelected: Bool
+    let position: String
+
+    func makeUIView(context: Context) -> SheetZoomView { SheetZoomView() }
+
+    func updateUIView(_ view: SheetZoomView, context: Context) {
+        view.imageView.image = image
+        view.position = position
+        view.pageSize = pageSize
+        if !isSelected { view.setZoomScale(1, animated: false) }
+        view.setNeedsLayout()
+        view.updateAccessibility()
+    }
+}
+
+private final class SheetZoomView: UIScrollView, UIScrollViewDelegate {
+    let imageView = UIImageView()
+    var pageSize: CGSize = .zero
+    var position = ""
+    private var previousSize: CGSize = .zero
+    private var previousPageSize: CGSize = .zero
+
+    init() {
+        super.init(frame: .zero)
+        delegate = self
+        minimumZoomScale = 1
+        maximumZoomScale = 5
+        showsHorizontalScrollIndicator = false
+        showsVerticalScrollIndicator = false
+        contentInsetAdjustmentBehavior = .never
+        // At full size, one-finger swipes belong to the gallery.
+        panGestureRecognizer.isEnabled = false
+        imageView.contentMode = .scaleAspectFit
+        imageView.backgroundColor = .white
+        imageView.isAccessibilityElement = true
+        imageView.accessibilityIdentifier = "sheetPreview"
+        imageView.accessibilityLabel = "Generated coloring sheet preview"
+        imageView.accessibilityHint = "Pinch to zoom, then drag to explore. Double-tap to zoom in or out. Swipe left or right at full size to choose a sheet."
+        addSubview(imageView)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleZoom(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTap)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0, bounds.height > 0, pageSize.width > 0, pageSize.height > 0 else { return }
+        if previousSize != bounds.size || previousPageSize != pageSize {
+            previousSize = bounds.size
+            previousPageSize = pageSize
+            // Fit again after rotation, keyboard changes, or window resizing.
+            setZoomScale(1, animated: false)
+            imageView.frame = CGRect(origin: .zero, size: pageSize)
+            contentSize = pageSize
+        }
+        centerSheet()
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        panGestureRecognizer.isEnabled = zoomScale > 1
+        centerSheet()
+        updateAccessibility()
+    }
+
+    private func centerSheet() {
+        imageView.center = CGPoint(x: max(contentSize.width, bounds.width) / 2,
+                                   y: max(contentSize.height, bounds.height) / 2)
+    }
+
+    func updateAccessibility() {
+        imageView.accessibilityValue = zoomScale > 1.01
+            ? "\(position), \(Int((zoomScale * 100).rounded())) percent zoom"
+            : position
+    }
+
+    @objc private func toggleZoom(_ gesture: UITapGestureRecognizer) {
+        let animated = !UIAccessibility.isReduceMotionEnabled
+        if zoomScale > 1.01 {
+            setZoomScale(1, animated: animated)
+        } else {
+            let point = gesture.location(in: imageView)
+            let size = CGSize(width: bounds.width / 2, height: bounds.height / 2)
+            zoom(to: CGRect(x: point.x - size.width / 2, y: point.y - size.height / 2,
+                            width: size.width, height: size.height), animated: animated)
         }
     }
 }

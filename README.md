@@ -15,6 +15,7 @@ Created by Jordan Erenrich. Built with SwiftUI for iOS and iPadOS 17 and later.
 - Creates 1–3 sheets from a description, with a choice of image models.
 - Adjusts detail for ages 3–18, from simple shapes to finer outlines.
 - Lets you swipe through results and save, share, or print A4 landscape sheets.
+- Pinch to zoom up to 5× and drag to explore details; double-tap to zoom in or return to the full sheet.
 - Saves your description draft and gallery locally, and recovers unfinished live generations.
 - Works on iPhone and iPad, with no sign-in required.
 

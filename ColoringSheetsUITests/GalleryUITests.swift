@@ -2,6 +2,39 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
+    func testPinchZoomPanResetAndGalleryNavigation() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "-descriptionDraft", "A flower", "-imageCount", "3"]
+        app.launch()
+        app.buttons["generate"].tap()
+        let position = app.staticTexts["sheetPosition"]
+        XCTAssertTrue(position.waitForExistence(timeout: 10))
+        let preview = app.images.matching(identifier: "sheetPreview").matching(NSPredicate(format: "value BEGINSWITH %@", "Sheet 1 of 3")).firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        preview.pinch(withScale: 2.5, velocity: 1)
+        let zoomed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@", "percent zoom"), object: preview)
+        XCTAssertEqual(XCTWaiter.wait(for: [zoomed], timeout: 5), .completed)
+        preview.swipeLeft()
+        XCTAssertEqual(position.label, "Sheet 1 of 3", "Dragging a zoomed sheet must pan without selecting another sheet")
+        preview.doubleTap()
+        let fitted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "Sheet 1 of 3"), object: preview)
+        XCTAssertEqual(XCTWaiter.wait(for: [fitted], timeout: 5), .completed)
+        let gallery = app.descendants(matching: .any).matching(identifier: "sheetGallery").firstMatch
+        gallery.swipeLeft()
+        let next = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Sheet 2 of 3"), object: position)
+        XCTAssertEqual(XCTWaiter.wait(for: [next], timeout: 5), .completed)
+        app.buttons["previousSheet"].tap()
+        XCTAssertEqual(preview.value as? String, "Sheet 1 of 3")
+        preview.doubleTap()
+        let zoomedAgain = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@", "percent zoom"), object: preview)
+        XCTAssertEqual(XCTWaiter.wait(for: [zoomedAgain], timeout: 5), .completed)
+        app.buttons["nextSheet"].tap()
+        app.buttons["previousSheet"].tap()
+        XCTAssertEqual(preview.value as? String, "Sheet 1 of 3", "Leaving a sheet resets its zoom")
+    }
+
+    @MainActor
     func testFirstLaunchGeneratesWithoutOpeningSettings() {
         continueAfterFailure = false
         let app = XCUIApplication()
