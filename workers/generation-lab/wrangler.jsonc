@@ -1,0 +1,21 @@
+{
+  "name": "wonderlines-compare",
+  "main": "src/index.mjs",
+  "account_id": "994f60c144bd9dd9bc2333bd3abba832",
+  "compatibility_date": "2026-10-21",
+  "workers_dev": true,
+  "assets": {"directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"]},
+  "durable_objects": {"bindings": [
+    {"name": "ACCOUNTS", "class_name": "Account", "script_name": "coloring-sheets-api"},
+    {"name": "LIBRARY", "class_name": "ComparisonLibrary"}
+  ]},
+  "migrations": [{"tag":"v1-comparison-library", "new_sqlite_classes":["ComparisonLibrary"]}],
+  "r2_buckets": [{"binding": "GENERATIONS", "bucket_name": "coloring-sheets-generations"}],
+  "ratelimits": [
+    {"name": "LOGIN_LIMITER", "namespace_id": "1006", "simple": {"limit": 10, "period": 60}},
+    {"name": "GENERATION_LIMITER", "namespace_id": "1007", "simple": {"limit": 80, "period": 60}}
+  ],
+  "vars": {"LAB_ACCOUNT_ID": "f66c3047-7ae6-4a1d-9144-7514e7a44961"},
+  "secrets": {"required": ["LAB_ACCESS_KEY"]},
+  "observability": {"enabled": false}
+}

@@ -11,17 +11,20 @@
   "vars": {
     "MODERATION_MODEL": "clef",
     "FREE_DAILY_ALLOWANCE": "100",
+    "COMPARISON_ACCOUNT_ID": "f66c3047-7ae6-4a1d-9144-7514e7a44961",
     "AI_GATEWAY_ID": "coloring-sheets",
     "MODERATION_GATEWAY_ID": "coloring-sheets"
   },
   "durable_objects": {
     "bindings": [
       { "name": "ACCOUNTS", "class_name": "Account" },
-      { "name": "BUDGET", "class_name": "Budget" }
+      { "name": "BUDGET", "class_name": "Budget" },
+      { "name": "COMPARISON_RUNNERS", "class_name": "ComparisonImageRunner" }
     ]
   },
   "migrations": [
-    { "tag": "v1-anonymous-accounts", "new_sqlite_classes": ["Account", "Budget"] }
+    { "tag": "v1-anonymous-accounts", "new_sqlite_classes": ["Account", "Budget"] },
+    { "tag": "v2-comparison-image-runners", "new_sqlite_classes": ["ComparisonImageRunner"] }
   ],
   "r2_buckets": [
     { "binding": "GENERATIONS", "bucket_name": "coloring-sheets-generations" }

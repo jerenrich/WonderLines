@@ -6,6 +6,7 @@ Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated i
 
 - `src/index.mjs` — dependency-free Worker entry point and Durable Object account ledger.
 - `src/image-provider.mjs` — model allowlist, AI Gateway authentication, provider request adapters, and PNG/usage normalization.
+- `src/generation-start.mjs` — shared request validation, server prompt composition, saved-job recovery, moderation and reservation for the app API and comparison studio. Recovery accepts both existing fingerprint encodings.
 - `src/image-cost.mjs` — provider/model-specific inference estimates and the date their rates were checked.
 - `src/fal-cost.mjs` — bounded, read-only fal pricing and per-request billing lookups.
 - `src/moderation.mjs` — Jev description moderation with a server-owned all-ages policy.
@@ -434,3 +435,7 @@ returned HTTP502 after about two minutes. Its temporary test account was deleted
 Redmond is excluded from the build7 picker until provider reliability is verified.
 It remains decodable for existing sheets/recovery and the backend reporting fix
 also applies to those older jobs. No paid retry was attempted.
+
+## Comparison studio execution
+
+`COMPARISON_ACCOUNT_ID` identifies the private comparison studio account. Only this account uses up to 50 independent `ComparisonImageRunner` Durable Objects via `COMPARISON_RUNNERS`. Reservations, moderation, idempotency and daily/global budgets remain in Account/Budget. Each image handoff returns promptly; its runner alarm performs inference and reports the saved result back to Account. Stable, durable slot ownership prevents late UUIDs or overlapping watchdogs from exceeding 50 active tasks. Ordinary app accounts retain their existing three-image queue. `v2-comparison-image-runners` provisions the runner namespace; retain it in subsequent deployments. Runners never automatically repeat an ambiguous provider submission and retain only a compact idempotency receipt after completion. Tests: `node Scripts/test_comparison_queue.mjs` and `node Scripts/test_comparison_runner.mjs`.

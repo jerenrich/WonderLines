@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
 import {structuredComposition} from '../workers/coloring-sheets-api/src/composition.mjs';
+import {prepareGeneration, startGeneration} from '../workers/coloring-sheets-api/src/generation-start.mjs';
 import {safeModerationResult} from './test_moderation.mjs';
 class Storage {
   values = new Map();
@@ -100,3 +101,47 @@ try {
   assert.equal(structuredComposition({...options, description: 'x'.repeat(500), composition: 'side'}), null);
 } finally { globalThis.fetch = fetchBefore; console.info = infoBefore; }
 console.log('PASS: original-only batch moderation, concurrency/restart deduplication, shared rejection/outage, binding, trusted composition, privacy and recovery; no network.');
+
+// Both entry points must reserve the same server-composed task, and must
+// recover either historical fingerprint encoding without another paid call.
+{
+  const generationId=crypto.randomUUID();
+  const input={description:'A friendly flower',age:7,composition:'wide',batchID:crypto.randomUUID(),model:'gpt-image-2.5-flare',width:1456,height:1024};
+  const prepared=await prepareGeneration(input,generationId);
+  const reservations=[];
+  for(const web of [false,true]) {
+    const calls=[];
+    const result=await startGeneration(prepared,{
+      env:{OPENAI_API_KEY:'synthetic'},queueImages:true,validateProvider:!web,fingerprintFormat:web?'hex':'base64url',
+      call:async(path,value)=>{
+        calls.push(path);
+        if(path==='/job')return {status:404,value:{}};
+        if(path==='/moderate-batch'){assert.equal(value.description,input.description);return {status:200,value:{approved:true}};}
+        assert.equal(path,'/reserve');reservations.push(value);
+        return {status:201,value:{job:{id:generationId,state:'processing',imageTask:value.imageTask},access:{}}};
+      }
+    });
+    assert.equal(result.status,201);assert.deepEqual(calls,['/job','/moderate-batch','/reserve']);
+  }
+  assert.deepEqual(reservations[0].imageTask,reservations[1].imageTask);
+  assert.match(reservations[0].imageTask.subject,/Complexity: simple clear outlines/);
+  assert.match(reservations[0].imageTask.subject,/Composition preference: wide view/);
+  for(const fingerprint of Object.values(prepared.fingerprints)) {
+    let lookups=0;
+    const result=await startGeneration(prepared,{
+      env:{IMAGE_MODEL_ROUTES:'invalid json'},
+      call:async(path)=>{assert.equal(path,'/job');lookups++;return {status:200,value:{job:{id:generationId,state:'completed',fingerprint},access:{}}};}
+    });
+    assert.equal(result.recovered,true);assert.equal(lookups,1);
+  }
+  let reserved=false;
+  const denied=await startGeneration(prepared,{
+    env:{},validateProvider:false,queueImages:true,
+    beforeReserve:async()=>{reserved=true;},
+    call:async(path)=>path==='/job'?{status:404,value:{}}:{status:400,value:{error:{code:'description_not_suitable',message:'Choose another description.'}}}
+  });
+  assert.equal(denied.value.error.code,'description_not_suitable');assert.equal(reserved,false);
+  const invalid=await prepareGeneration({...input,description:'x'.repeat(500)},generationId);
+  assert.equal(invalid.status,400,'The shared server owns expanded-prompt length validation.');
+  console.log('PASS: app/web task parity, server-only prompt construction, legacy fingerprint recovery before configuration checks, and rejection before reservation; no network.');
+}

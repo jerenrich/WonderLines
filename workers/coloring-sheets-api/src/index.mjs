@@ -1,22 +1,18 @@
 // Public v1 API. An account is a random UUID; no sign-in or personal profile exists.
-import {DEFAULT_MODEL, modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
+import {modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
+export {ComparisonImageRunner} from './comparison-image-runner.mjs';
 import {cleanLegacyUsageLogs} from './diagnostic-retention.mjs';
 import {falCostData} from './fal-cost.mjs';
-import {structuredComposition, isUUID} from './composition.mjs';
+import {isUUID} from './composition.mjs';
+import {prepareGeneration, startGeneration} from './generation-start.mjs';
 import {moderateSubject, ModerationError, moderationModel, MODERATION_POLICY} from './moderation.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
-const DEFAULT = {width: 1024, height: 1456}, TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
+const TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status, details = {}) => reply({error: {code, message, ...details}}, status);
-function dimensions(input) {
-  const {width, height} = input ?? {};
-  if (width === undefined && height === undefined) return DEFAULT;
-  return Number.isSafeInteger(width) && Number.isSafeInteger(height) && width > 0 && height > 0 && width <= 3840 && height <= 3840 &&
-    width % 16 === 0 && height % 16 === 0 && width / height >= 1 / 3 && width / height <= 3 && width * height >= 655360 && width * height <= 3686400 ? {width, height} : null;
-}
 // This is a dashboard-managed Worker variable, not source configuration. Invalid
 // or absent values fail closed instead of risking spend.
 function globalDailyGenerationLimit(value) {
@@ -153,7 +149,7 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); this.activeOperations = new Set(); this.deletionWork = null; }
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); this.activeOperations = new Set(); this.deletionWork = null; this.comparisonAdmissions = Promise.resolve(); }
   track(operation) {
     const pending = Promise.resolve().then(operation);
     this.activeOperations.add(pending);
@@ -406,7 +402,12 @@ export class Account {
   }
   async runAlarm() {
     const pending = await this.state.storage.list({prefix: 'fal:', limit: 5});
-    const images = await this.state.storage.list({prefix: 'image:', limit: 3});
+    const account = await this.state.storage.get('account');
+    const comparison = !!account?.id && account.id === this.env.COMPARISON_ACCOUNT_ID;
+    const imageConcurrency = comparison ? 50 : 3;
+    const images = comparison && this.env.COMPARISON_RUNNERS
+      ? await this.comparisonSlots()
+      : await this.state.storage.list({prefix: 'image:', limit: imageConcurrency});
     if (!pending.size && !images.size) return;
     // Schedule a watchdog before network IO. Alarm retries only poll recorded IDs;
     // they must never repeat an ambiguous submission after a crash.
@@ -421,11 +422,44 @@ export class Account {
       await this.state.storage.setAlarm(Date.now() + 5000);
     }
   }
+  comparisonSlots() {
+    const admission = this.comparisonAdmissions.then(async () => {
+      const previous = (await this.state.storage.get('comparison-active')) ?? [];
+      const active = [];
+      for (const id of previous) if (await this.state.storage.get('image:' + id)) active.push(id);
+      const queued = await this.state.storage.list({prefix:'image:',limit:150});
+      for (const id of queued.values()) {
+        if (active.length >= 50) break;
+        if (!active.includes(id)) active.push(id);
+      }
+      // Keep explicit slots: newly arriving UUIDs must not displace an already
+      // running task just because they sort earlier in the queue.
+      await this.state.storage.put('comparison-active',active);
+      return new Map(active.map(id=>['image:'+id,id]));
+    });
+    this.comparisonAdmissions=admission.catch(()=>{});return admission;
+  }
   async advanceImage(id) {
     const job = await this.state.storage.get('job:' + id);
     if (!job || job.state !== 'processing') { await this.state.storage.delete('image:' + id); return; }
     const account = await this.state.storage.get('account');
     const objectKey = account.id + '/' + id + '.png';
+    if (account.id === this.env.COMPARISON_ACCOUNT_ID && this.env.COMPARISON_RUNNERS && ['queued','delegated'].includes(job.imageTask.stage)) {
+      // Return after a durable handoff. Each runner's own alarm performs one
+      // inference, outside this account's shared outgoing-connection limit.
+      if (job.imageTask.stage !== 'delegated') {
+        job.imageTask.stage = 'delegated';
+        await this.state.storage.put('job:' + id, job);
+      }
+      const runner = this.env.COMPARISON_RUNNERS.get(this.env.COMPARISON_RUNNERS.idFromName(account.id + ':' + id));
+      const accepted = await runner.fetch('https://runner/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+        id,accountId:account.id,fingerprint:job.fingerprint,createdAt:job.createdAt,
+        route:job.imageTask.route,subject:job.imageTask.subject,size:job.imageTask.size,publicModel:job.imageTask.publicModel
+      })});
+      await accepted.body?.cancel();
+      if (!accepted.ok) throw new Error('Comparison runner handoff failed');
+      return;
+    }
     const finishFailure = async (code, message) => {
       await this.complete({generationId: id, result: {state: 'failed', errorCode: code, message}});
       await this.state.storage.delete('image:' + id);
@@ -584,6 +618,7 @@ export class Account {
   async complete({generationId, result}) {
     const k = 'job:' + generationId, job = await this.state.storage.get(k);
     if (!job || job.state !== 'processing') return fail('not_found', 'Generation not found.', 404);
+    const comparisonImage = !!job.imageTask && !!this.env.COMPARISON_RUNNERS && (await this.state.storage.get('account'))?.id === this.env.COMPARISON_ACCOUNT_ID;
     Object.assign(job, result, {completedAt: Date.now()});
     // Publish the saved image before optional billing network lookups. Readers
     // must not keep receiving "processing" while pricing/billing services stall.
@@ -596,6 +631,10 @@ export class Account {
     }
     if (ready.imageTask) delete ready.imageTask;
     await this.state.storage.put(k, ready);
+    if (comparisonImage) {
+      await this.state.storage.delete('image:' + generationId);
+      await this.state.storage.setAlarm(Date.now() + 1);
+    }
     // Completion and concurrent usage reads share one update, so a slow lookup
     // cannot overwrite newer billing metadata or duplicate external requests.
     if (ready.fal?.request) await this.updateFalUsage(ready);
@@ -612,55 +651,19 @@ async function saved(env, job, access) {
 }
 async function generate(request, env, account, raw) {
   const input = await body(request, 4096, raw), generationId = request.headers.get('Idempotency-Key');
-  if (!input || !/^[0-9a-f-]{36}$/.test(generationId ?? '')) return fail('invalid_request', 'Send JSON and a UUID Idempotency-Key.', 400);
-  const size = dimensions(input);
-  const structured = Object.hasOwn(input, 'batchID') || Object.hasOwn(input, 'description');
-  const composed = structured ? structuredComposition(input) : null;
-  if (structured && !composed) return fail('invalid_request', 'Invalid description or composition.', 400);
-  const subject = composed?.subject ?? input.subject;
-  if (typeof subject !== 'string' || !subject.trim() || subject.length > 500 || !size) return fail('invalid_request', 'Description or dimensions are invalid.', 400);
-  // A retry identifies the original public request, not today's provider route.
-  // Recover it before validating configuration so rotations cannot strand jobs.
-  const model = input.model ?? env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
-  const fingerprint = await digest(JSON.stringify({subject, model, ...size}));
-  const existing = await call(env, account.id, '/job', {generationId});
-  if (existing.status === 200) return existing.value.job.fingerprint === fingerprint
-    ? saved(env, existing.value.job, existing.value.access)
-    : fail('idempotency_conflict', 'Generation ID was already used.', 409);
-  if (existing.status !== 404) return fail('service_unavailable', 'Could not check generation.', 503);
-  let catalog, upstreamRequest;
-  try { catalog = modelCatalog(env); }
-  catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
-  if (typeof model !== 'string' || !Object.hasOwn(catalog.routes, model)) return fail('invalid_request', 'Model is invalid.', 400);
-  try { upstreamRequest = imageRequest(env, catalog.routes[model], subject, size); }
-  catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
-  if (composed) {
-    const decision = await call(env, account.id, '/moderate-batch', {batchID: composed.batchID, description: composed.description});
-    if (decision.status !== 200) {
-      console.info(JSON.stringify({event: 'moderation_gate', generationID: generationId, batchID: composed.batchID,
-        outcome: decision.value.error?.code, status: decision.status}));
-      return reply(decision.value, decision.status);
+  const prepared = await prepareGeneration(input,generationId,env);
+  const reservation = await startGeneration(prepared,{
+    env,call:(path,value)=>call(env,account.id,path,value),
+    queueImages:request.headers.get('X-Coloring-API-Version')==='2',
+    onModeration:event=>{
+      if(event.structured)console.info(JSON.stringify({event:'moderation_gate',generationID:event.generationId,batchID:event.batchID,outcome:event.outcome,status:event.status}));
+      else console.info(JSON.stringify({event:'description_moderation',generationID:event.generationId,model:moderationModelForLog(env),policy:MODERATION_POLICY,outcome:event.outcome,...event.diagnostics,reasonCodes:event.reasonCodes}));
     }
-  } else try {
-    const diagnostics = await moderateSubject(env, subject);
-    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
-      model: moderationModelForLog(env), policy: MODERATION_POLICY, outcome: 'approved', ...diagnostics, reasonCodes: []}));
-  }
-  catch (error) {
-    if (!(error instanceof ModerationError)) throw error;
-    console.info(JSON.stringify({event: 'description_moderation', generationID: generationId,
-      model: moderationModelForLog(env), policy: MODERATION_POLICY, outcome: error.code, ...error.diagnostics, reasonCodes: error.reasonCodes}));
-    return fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes});
-  }
-  const reservation = await call(env, account.id, '/reserve', {generationId, fingerprint,
-    ...(upstreamRequest.provider === 'fal' ? {falTask: {request: upstreamRequest, publicModel: model,
-      requestedSize: size.width + 'x' + size.height}} :
-      request.headers.get('X-Coloring-API-Version') === '2'
-        ? {imageTask: {route: catalog.routes[model], subject, size, publicModel: model}} : {})});
-  if (reservation.status === 429) return reply(reservation.value, 429);
-  if (reservation.status >= 400) return fail('generation_unavailable', 'Could not start generation.', reservation.status);
-  if (reservation.status === 200 || reservation.value.job.state !== 'processing') return saved(env, reservation.value.job, reservation.value.access);
-  if (upstreamRequest.provider === 'fal' || reservation.value.job.imageTask) return saved(env, reservation.value.job, reservation.value.access);
+  });
+  if(reservation.value?.error)return reply(reservation.value,reservation.status);
+  const {job,access,upstreamRequest}=reservation;
+  if(reservation.recovered||job.state!=='processing'||job.fal||job.imageTask)return saved(env,job,access);
+  const {model,size}=prepared;
   try {
     const started = Date.now(), result = await runImageRequest(upstreamRequest);
     const {image, size: actualSize, inputTokens, textInputTokens, imageInputTokens, outputTokens, totalTokens} = result;

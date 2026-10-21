@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef">
+  <meta name="description" content="Compare WonderLines colouring sheets across image models and ages.">
+  <title>Compare · WonderLines</title>
+  <link rel="icon" href="/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="WonderLines home"><img src="/mark.svg" alt="" width="34" height="34"><span>WonderLines<span class="brand-divider">/</span><span class="brand-section">Compare</span></span></a>
+    <div class="top-actions"><span class="private-badge"><span></span> Private workspace</span><button id="logout" class="text-button" hidden>Lock workspace <span aria-hidden="true">↗</span></button></div>
+  </header>
+
+  <main id="login-view" class="login-view">
+    <div class="login-art" aria-hidden="true"><svg viewBox="0 0 200 130"><path d="M24 104h152M45 104V67l36-26 35 26v37M60 104V80h21v24M93 78h10V67H93zM134 103V77m0 8c-28-4-24-30-12-35 14-6 23 9 20 15 14-18 30-3 23 8-5 9-19 13-31 12M48 25l3-9m-21 21-9-3m52-8 7-7M55 36a10 10 0 1 0-20 0 10 10 0 1 0 20 0"/></svg></div>
+    <span class="eyebrow">THE WONDERLINES PLAYGROUND</span>
+    <h1>Good ideas deserve<br>a few different takes.</h1>
+    <p>One prompt, different models and ages.<br>Find the lines you love, side by side.</p>
+    <form id="login-form" class="login-card">
+      <label for="access-key">Your workspace access key</label>
+      <div class="key-field"><input id="access-key" type="password" autocomplete="current-password" placeholder="Enter your private key" required maxlength="256"><button id="show-key" type="button" class="text-button" aria-label="Show access key">Show</button></div>
+      <label class="remember"><input id="remember" type="checkbox" checked> Remember me for 30 days</label>
+      <p id="login-error" role="alert" class="error" hidden></p>
+      <button class="primary" id="unlock" type="submit">Open workspace <span aria-hidden="true">→</span></button>
+      <p class="login-note">Your key is exchanged for a secure browser session.</p>
+    </form>
+    <span class="login-footer">A small space for big imaginations.</span>
+  </main>
+
+  <main id="workspace" hidden>
+    <nav class="workspace-nav" aria-label="Workspace views"><button id="studio-tab" class="view-tab" aria-current="page">Studio</button><button id="library-tab" class="view-tab">Library <span id="library-count">0</span></button></nav>
+    <div id="studio-view">
+    <section class="page-heading"><div><div class="eyebrow"><span class="little-star">✳</span> THE COMPARISON STUDIO</div><h1>Same idea. <em>Different lines.</em></h1><p>Explore how a prompt changes with each model and age.</p></div><div class="allowance"><span id="remaining">—</span><div>sheets available today<small>Resets at midnight UTC</small></div></div></section>
+    <div class="studio">
+      <aside class="sidebar">
+        <form id="compare-form" class="settings-card">
+          <div class="section-title"><span class="step">01</span><h2>Start with an idea</h2></div>
+          <label for="prompt" class="sr-only">Describe your colouring sheet</label>
+          <textarea id="prompt" rows="4" maxlength="240" placeholder="A friendly dinosaur tending a little garden on the moon…" required></textarea>
+          <div class="field-footer"><span>Keep it imaginative. Keep it kind.</span><span id="prompt-count">0/240</span></div>
+          <div class="example-buttons" aria-label="Example prompts"><button type="button" data-example="A friendly dinosaur tending a little garden on the moon">Moon garden <span>↗</span></button><button type="button" data-example="A cosy treehouse library with a fox reading a book">Treehouse library <span>↗</span></button></div>
+          <div class="section-title"><span class="step">02</span><h2>Pick your models</h2><button id="select-all-models" type="button" class="text-button">Select all</button></div>
+          <div id="model-options" class="model-options"></div>
+          <details class="more-models"><summary>More models</summary><div id="extra-model-options" class="model-options"></div></details>
+          <div class="section-title"><span class="step">03</span><h2>Choose ages</h2></div>
+          <p class="field-hint">Age changes the detail, from bold shapes to fine lines.</p>
+          <div class="age-options" id="age-options"></div>
+          <details class="custom-ages"><summary>Choose exact ages <span>3–18 years</span></summary><div id="exact-ages" class="exact-ages"></div></details>
+          <div class="composition-row"><label for="composition">Viewpoint</label><select id="composition"><option value="front">Front view</option><option value="side">Side view</option><option value="wide">Wide scene</option><option value="close">Close view</option><option value="elevated">From above</option></select></div>
+          <div class="run-summary"><span id="combination-count">2 models × 4 ages</span><strong id="image-count">8 sheets</strong></div>
+          <p id="form-error" role="alert" class="error" hidden></p>
+          <button class="primary" id="compare" type="submit"><span class="button-icon" aria-hidden="true">✳</span><span id="compare-label">Generate comparison</span><span aria-hidden="true">→</span></button>
+          <p class="cost-note">Each sheet uses a paid generation. Up to 80 per run.<br>A4 landscape · Same prompt and viewpoint throughout</p>
+        </form>
+        <section class="history-card"><div class="history-title"><h2>Recent comparisons</h2><button id="browse-library" class="text-button" type="button">Browse library ↗</button></div><div id="history-list"><p class="field-hint">Your next great idea starts here.</p></div></section>
+      </aside>
+      <section class="results-panel" aria-label="Comparison results">
+        <div class="results-toolbar"><div class="results-heading"><h2>Your comparison</h2><span id="result-count" class="count-badge">0 sheets</span><span id="total-cost" class="total-cost" hidden></span></div><div class="result-actions"><button id="resume-comparison" type="button" class="secondary" hidden>Resume generation</button><span class="layout-label" aria-hidden="true">▦ <span>Model × age</span></span><button id="export" type="button" class="secondary" disabled>Export details <span>↓</span></button></div></div>
+        <p id="library-status" class="library-status" role="status" hidden></p>
+        <p id="run-prompt" class="run-prompt" hidden></p>
+        <div id="progress" class="progress" role="status" aria-live="polite" hidden><span class="spinner"></span><span id="progress-label"></span></div>
+        <div id="empty-state" class="empty-state"><div class="empty-art" aria-hidden="true"><svg viewBox="0 0 230 160"><rect class="back-paper" x="46" y="22" width="110" height="116" rx="9" transform="rotate(-12 100 80)"/><rect class="front-paper" x="76" y="20" width="110" height="126" rx="9" transform="rotate(8 131 83)"/><g transform="rotate(8 131 83)"><circle cx="151" cy="53" r="10"/><path d="m92 113 22-29 17 19 11-12 27 27M106 63l8-5 8 5m-25 58h64"/></g><path class="spark" d="M194 24v16m-8-8h16M32 90v12m-6-6h12M190 127l6 6m0-6-6 6"/></svg></div><span class="eyebrow">A FRESH SHEET OF POSSIBILITIES</span><h3>Let’s see what your idea can become.</h3><p>Add a prompt, pick a few models and ages,<br>and your sheets will appear right here.</p><div class="empty-legend"><span><i></i> Models down the side</span><span><i></i> Ages across the top</span></div></div>
+        <div id="comparison-grid" class="comparison-grid" hidden></div>
+        <div class="results-footnote"><span class="little-star">✳</span><span>Age adjusts drawing complexity. Every sheet follows the same all-ages safety policy.</span></div>
+      </section>
+    </div>
+    </div>
+    <section id="library-view" hidden aria-labelledby="library-heading">
+      <div class="library-heading"><div><div class="eyebrow">YOUR SAVED IDEAS</div><h1 id="library-heading">The comparison library.</h1><p>Every prompt, every grid. The newest 100 comparisons are kept automatically.</p></div><label class="library-search"><span class="sr-only">Search saved prompts</span><input id="library-search" type="search" placeholder="Search prompts or models…"></label></div>
+      <p id="library-error" class="error" role="alert" hidden></p><div id="library-grid" class="library-grid"></div>
+    </section>
+    <footer class="page-footer"><span>Made for curious minds.</span><span>WonderLines <span>↗</span></span></footer>
+  </main>
+  <dialog id="image-dialog" aria-labelledby="dialog-title"><div class="dialog-toolbar"><span id="dialog-title"></span><button id="close-dialog" aria-label="Close image preview">×</button></div><img id="dialog-image" alt=""></dialog>
+  <dialog id="details-dialog" aria-labelledby="details-title"><div class="dialog-toolbar"><span id="details-title"></span><button id="close-details" aria-label="Close image details">×</button></div><div class="details-content"><dl id="details-list"></dl><p id="details-note">Costs are estimates unless marked as provider-reported.</p><div id="details-actions"></div></div></dialog>
+</body>
+</html>
