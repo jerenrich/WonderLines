@@ -1,6 +1,6 @@
 import {imageRequest,runImageRequest,ImageProviderError} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
-import {isUUID} from './composition.mjs';
+import {isUUID,MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
 
 // One durable runner per comparison image gives inference its own I/O context.
 // Account still owns moderation, idempotency, all budget reservations and results.
@@ -9,7 +9,7 @@ export class ComparisonImageRunner {
   fetch(request){
     const result=this.queue.then(async()=>{
       const input=await request.json().catch(()=>null);
-      if(!input||request.method!=='POST'||!isUUID(input.id)||input.accountId!==this.env.COMPARISON_ACCOUNT_ID||!isUUID(input.accountId)||typeof input.fingerprint!=='string'||!Number.isSafeInteger(input.createdAt)||typeof input.subject!=='string'||input.subject.length>500||!input.route||!input.size)return Response.json({error:'Invalid task'},{status:400});
+      if(!input||request.method!=='POST'||!isUUID(input.id)||input.accountId!==this.env.COMPARISON_ACCOUNT_ID||!isUUID(input.accountId)||typeof input.fingerprint!=='string'||!Number.isSafeInteger(input.createdAt)||typeof input.subject!=='string'||input.subject.length>MAX_COMPOSED_SUBJECT_LENGTH||!input.route||!input.size)return Response.json({error:'Invalid task'},{status:400});
       const previous=await this.state.storage.get('task');
       if(previous)return Response.json({accepted:previous.id===input.id&&previous.accountId===input.accountId&&previous.fingerprint===input.fingerprint},{status:previous.id===input.id&&previous.accountId===input.accountId&&previous.fingerprint===input.fingerprint?202:409});
       await this.state.storage.transaction(async storage=>{await storage.put('task',{...input,stage:'queued'});await storage.setAlarm(Date.now()+1);});

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {ComparisonImageRunner} from '../workers/coloring-sheets-api/src/comparison-image-runner.mjs';
+import {structuredComposition,MAX_COMPOSED_SUBJECT_LENGTH} from '../workers/coloring-sheets-api/src/composition.mjs';
 class Storage {
   constructor(){this.values=new Map();this.alarm=null;}
   async get(key){return structuredClone(this.values.get(key));}
@@ -49,5 +50,13 @@ try{
   const slowWork=slow.alarm();await new Promise(resolve=>setImmediate(resolve));
   const duplicateWatchdog=slow.alarm();await fast.alarm();assert.equal(calls,3);assert.ok(jobs.has(fastId));assert.ok(!jobs.has(slowId));
   slowRelease();await Promise.all([slowWork,duplicateWatchdog]);assert.equal(calls,3);
+  // A full-length app description must also fit the internal handoff after
+  // trusted guidance is added. Keep an explicit bound on internal tasks.
+  const composed=structuredComposition({description:'x'.repeat(500),age:13,composition:'close',batchID:crypto.randomUUID()});
+  assert.ok(composed.subject.length>500);
+  const longId=crypto.randomUUID(),longRunner=new ComparisonImageRunner({storage:new Storage()},env);
+  assert.equal((await longRunner.fetch(request({...task,id:longId,subject:'x'.repeat(MAX_COMPOSED_SUBJECT_LENGTH+1)}))).status,400);
+  assert.equal((await longRunner.fetch(request({...task,id:longId,subject:composed.subject}))).status,202);
+  await longRunner.alarm();assert.equal(calls,4);assert.equal(jobs.get(longId).state,'completed');
   console.log('PASS: independent image execution, durable handoff, one inference per ID, watchdog deduplication, ambiguous-submission safety, saved-image recovery, completion retries, and prompt removal; no network.');
 }finally{globalThis.fetch=originalFetch;}

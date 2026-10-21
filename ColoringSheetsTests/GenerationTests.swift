@@ -245,19 +245,25 @@ final class GenerationTests: XCTestCase {
         ])
     }
 
-    func testAgeGuidanceAndWireContract() throws {
+    func testAgeChoicesAndStructuredWireContract() throws {
         for model in ImageModel.allCases {
-            let young = try GenerationRequest(description: "A test flower", age: 3, model: model)
+            let batch = UUID()
+            let young = try GenerationRequest(description: "A test flower", age: 3, model: model, batchID: batch)
             let older = try GenerationRequest(description: "A test flower", age: 18, model: model)
-            XCTAssertNotEqual(young.subject, older.subject)
-            XCTAssertFalse(young.subject.contains("3"))
-            XCTAssertFalse(older.subject.contains("18"))
+            XCTAssertEqual(young.originalDescription, older.originalDescription)
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: young.encoded()) as? [String: Any])
-            XCTAssertEqual(Set(json.keys), ["subject", "model", "width", "height"])
+            XCTAssertEqual(Set(json.keys), ["description", "age", "composition", "batchID", "model", "width", "height"])
+            XCTAssertEqual(json["description"] as? String, "A test flower")
+            XCTAssertEqual(json["age"] as? Int, 3)
+            XCTAssertEqual(json["composition"] as? String, "front")
+            XCTAssertEqual(json["batchID"] as? String, batch.uuidString.lowercased())
+            XCTAssertNil(json["subject"])
             XCTAssertEqual(json["model"] as? String, model.rawValue)
             XCTAssertEqual(json["width"] as? Int, 1456)
             XCTAssertEqual(json["height"] as? Int, 1024)
-            XCTAssertEqual(try GenerationRequest(description: "A test flower", age: 3, model: model), young)
+            XCTAssertEqual(try GenerationRequest(description: "A test flower", age: 3, model: model, batchID: batch), young)
+            let repeated = try XCTUnwrap(JSONSerialization.jsonObject(with: older.encoded()) as? [String: Any])
+            XCTAssertEqual(repeated["batchID"] as? String, older.batchID.uuidString.lowercased(), "Implicit batch IDs must stay stable across encodings.")
         }
     }
     func testPageSizingAcrossLayoutsAndPixelScales() throws {
@@ -287,14 +293,14 @@ final class GenerationTests: XCTestCase {
         XCTAssertEqual(mock.cgImage?.height, size.height)
     }
     func testUTF16BoundaryAndValidation() throws {
-        let overhead = try GenerationRequest.guidance(age: 3).utf16.count + 2
-        let maximum = String(repeating: "a", count: 500 - overhead)
-        XCTAssertEqual(try GenerationRequest(description: maximum, age: 3, model: .flare).subject.utf16.count, 500)
+        let maximum = String(repeating: "a", count: 500)
+        XCTAssertEqual(try GenerationRequest(description: maximum, age: 3, model: .flare).originalDescription.utf16.count, 500)
         XCTAssertThrowsError(try GenerationRequest(description: maximum + "a", age: 3, model: .flare))
-        XCTAssertThrowsError(try GenerationRequest(description: String(repeating: "😀", count: 250), age: 3, model: .flare))
+        XCTAssertNoThrow(try GenerationRequest(description: String(repeating: "😀", count: 250), age: 3, model: .flare))
+        XCTAssertThrowsError(try GenerationRequest(description: String(repeating: "😀", count: 251), age: 3, model: .flare))
         XCTAssertThrowsError(try GenerationRequest(description: " \n ", age: 3, model: .flare))
         for age in [0, 2, 19] { XCTAssertThrowsError(try GenerationRequest(description: "Flower", age: age, model: .flare)) }
-        // JSON escaping is counted too, independently of Swift Character count.
+        // JSON escaping is counted independently of Swift Character count.
         XCTAssertLessThanOrEqual(try GenerationRequest(description: String(repeating: "\u{0001}", count: 300), age: 3, model: .flare).encoded().count, 4096)
     }
     func response(_ status: Int = 200, type: String = "image/png", metrics: String? = nil, headers extraHeaders: [String: String] = [:]) -> HTTPURLResponse {
@@ -1229,6 +1235,52 @@ final class ControlledService: GenerationServing {
 
 @MainActor
 final class StateTests: XCTestCase {
+    func testRecentEditAfterLongActiveSessionSurvivesImmediateRelaunch() async throws {
+        let suite = "ActiveDraftRelaunch-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        var time = Date()
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        store.description = "A fox"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        service.succeed()
+        await waitFor { store.phase == .result }
+        let imageID = try XCTUnwrap(store.result?.id)
+
+        time += ColoringViewModel.sessionTimeout * 2
+        store.description = "A fox I just finished describing"
+        // A crash or unexpected exit can skip enteredBackground().
+        let relaunched = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        XCTAssertEqual(relaunched.description, store.description)
+        XCTAssertEqual(relaunched.result?.id, imageID)
+
+        time += ColoringViewModel.sessionTimeout
+        let expired = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        XCTAssertEqual(expired.description, "")
+        XCTAssertTrue(expired.results.isEmpty, "A real 15-minute absence still starts a fresh session")
+    }
+
+    func testBackgroundDraftUpdateDoesNotExtendSession() async throws {
+        let suite = "BackgroundDraftClock-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var time = Date()
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults, now: { time })
+        store.description = "A fox"
+        store.enteredBackground()
+        time += ColoringViewModel.sessionTimeout - 1
+        store.description = "An update while the app is in the background"
+        time += 1
+        await store.enteredForeground()
+        XCTAssertEqual(store.description, "")
+        XCTAssertEqual(store.phase, .idle)
+    }
+
     func testShortReturnKeepsWorkAndFifteenMinuteReturnStartsFresh() async throws {
         let suite = "SessionReturn-\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -1915,14 +1967,12 @@ final class StateTests: XCTestCase {
         await waitFor { service.calls == ColoringViewModel.batchSize }
         XCTAssertEqual(service.pendingCount, ColoringViewModel.batchSize, "All requests start before any completes")
         XCTAssertEqual(ColoringViewModel.batchSize, 3)
-        XCTAssertEqual(Set(service.captured.map(\.subject)).count, 3)
+        XCTAssertEqual(Set(service.captured.map(\.originalDescription)), ["Synthetic flower"])
         XCTAssertTrue(service.captured.allSatisfy {
-            $0.subject.hasPrefix("Synthetic flower\n\n") && $0.subject.contains("very simple") &&
-            $0.model == .sunburst && $0.width == 1200 && $0.height == 848
+            $0.age == 3 && $0.model == .sunburst && $0.width == 1200 && $0.height == 848
         })
-        XCTAssertEqual(Set(service.captured.map(\.subject)), Set(SheetComposition.allCases.prefix(3).map {
-            "Synthetic flower\n\n" + (try! GenerationRequest.guidance(age: 3)) + "\n\n" + $0.guidance
-        }))
+        XCTAssertEqual(service.captured.map(\.composition), Array(SheetComposition.allCases.prefix(3)))
+        XCTAssertEqual(Set(service.captured.map(\.batchID)).count, 1)
         XCTAssertEqual(store.description, "Synthetic flower", "Composition guidance must not change the editable prompt")
         XCTAssertEqual(service.captured[0].model, .sunburst)
         XCTAssertEqual(service.captured[0].width, 1200)
@@ -1930,7 +1980,7 @@ final class StateTests: XCTestCase {
         store.updatePreview(size: CGSize(width: 380, height: 890), displayScale: 2)
         XCTAssertEqual(service.captured[0].width, 1200, "Resizing must not change an in-flight request")
         store.age = 18; store.description = "Synthetic tree"
-        XCTAssertTrue(service.captured[0].subject.contains("very simple"))
+        XCTAssertEqual(service.captured[0].age, 3, "Editing the age must not change an in-flight request")
         service.succeed()
         await waitFor { store.phase == .result }
         let previous = store.result?.data
@@ -2020,7 +2070,7 @@ final class StateTests: XCTestCase {
         await waitFor { service.pendingCount == ColoringViewModel.batchSize }
         XCTAssertEqual(Set(service.captured.map(\.batchID)).count, 1)
         XCTAssertNotNil(service.captured.first?.batchID)
-        XCTAssertEqual(Set(service.captured.compactMap { $0.composition?.rawValue }), ["side", "front", "wide"])
+        XCTAssertEqual(Set(service.captured.compactMap { $0.composition.rawValue }), ["side", "front", "wide"])
         service.succeed(at: 2)
         await waitFor { store.readyCount == 1 }
         XCTAssertTrue(store.results.isEmpty)
@@ -2133,7 +2183,7 @@ final class StateTests: XCTestCase {
         XCTAssertTrue(store.results.isEmpty)
     }
 
-    func testAllCompositionsValidateBeforeAnyRequestStarts() async throws {
+    func testAllCompositionsSendChoicesWithoutLocalPromptWording() async throws {
         let name = "CompositionValidationTests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
         defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
@@ -2141,22 +2191,21 @@ final class StateTests: XCTestCase {
         let service = ControlledService()
         let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
         store.age = 6
-        let longest = try XCTUnwrap(SheetComposition.allCases.prefix(3).max { $0.guidance.utf16.count < $1.guidance.utf16.count })
-        let overhead = try GenerationRequest.guidance(age: 6).utf16.count + longest.guidance.utf16.count + 4
-        let limit = 500 - overhead
-        let valid = String(repeating: "😀", count: limit / 2) + (limit % 2 == 1 ? "x" : "")
-        let request = try GenerationRequest(description: valid, age: 6, model: .sunburst, composition: longest)
-        XCTAssertEqual(request.subject.utf16.count, 500)
-        XCTAssertLessThanOrEqual(try request.encoded().count, 4096)
+        let valid = String(repeating: "😀", count: 250)
+        for composition in SheetComposition.allCases {
+            let request = try GenerationRequest(description: valid, age: 6, model: .sunburst, composition: composition)
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.encoded()) as? [String: Any])
+            XCTAssertEqual(body["description"] as? String, valid)
+            XCTAssertEqual(body["composition"] as? String, composition.rawValue)
+            XCTAssertNil(body["subject"], "The server alone composes prompt instructions.")
+        }
         store.description = valid
         XCTAssertNil(store.validationMessage)
         store.description += "x"
-        // The first composition fits, but a later one exceeds the limit.
-        XCTAssertNoThrow(try GenerationRequest(description: store.description, age: 6, model: .sunburst, composition: .side))
         XCTAssertNotNil(store.validationMessage)
         store.generate()
         try await Task.sleep(for: .milliseconds(50))
-        XCTAssertEqual(service.calls, 0, "A later invalid composition must prevent the entire paid batch")
+        XCTAssertEqual(service.calls, 0, "Oversized user input must prevent the entire paid batch")
         XCTAssertFalse(store.isGenerating)
         XCTAssertEqual(store.description, valid + "x", "Never silently truncate a user's description")
     }

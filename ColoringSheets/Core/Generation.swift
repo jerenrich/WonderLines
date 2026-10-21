@@ -108,67 +108,40 @@ struct GenerationSize: Equatable {
 
 enum SheetComposition: String, CaseIterable {
     case side, front, wide, close, elevated
-    var guidance: String {
-        let view: String
-        switch self {
-        case .side: view = "side view, full subject in profile"
-        case .front: view = "front view, subject facing the viewer"
-        case .wide: view = "wide view, smaller subject within its surroundings"
-        case .close: view = "close view, subject filling most of the page, no cropping"
-        case .elevated: view = "elevated view, looking down at the scene"
-        }
-        return "Composition preference: \(view). Preserve the subject; explicit user instructions take priority."
-    }
 }
 
 struct GenerationRequest: Encodable, Equatable {
-    let subject: String
     let originalDescription: String
     let age: Int
-    let composition: SheetComposition?
-    let batchID: UUID?
+    let composition: SheetComposition
+    let batchID: UUID
     let model: ImageModel
     let width: Int
     let height: Int
 
-    static func guidance(age: Int) throws -> String {
-        switch age {
-        case 3...5: return "Complexity: very simple outlines, a few large enclosed coloring areas, few objects, minimal background detail."
-        case 6...8: return "Complexity: simple clear outlines, large enclosed coloring areas, several objects, light background detail."
-        case 9...12: return "Complexity: moderately detailed outlines, varied medium coloring areas, several objects and a detailed background."
-        case 13...18: return "Complexity: intricate outlines, smaller enclosed coloring areas, many fine details and a rich, layered scene."
-        default: throw GenerationError.validation("Choose a child’s age from 3 to 18.")
-        }
-    }
-
     init(description: String, age: Int, model: ImageModel, size: GenerationSize = .a4Default,
          composition: SheetComposition? = nil, batchID: UUID? = nil) throws {
         guard size.isValid else { throw GenerationError.validation("The page size is unsupported. Choose a smaller page size.") }
-        width = size.width; height = size.height
+        guard (3...18).contains(age) else { throw GenerationError.validation("Choose a child’s age from 3 to 18.") }
         let original = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !original.isEmpty else { throw GenerationError.validation("Describe what you’d like on the sheet.") }
-        originalDescription = original; self.age = age; self.composition = composition; self.batchID = batchID
-        subject = original + "\n\n" + (try Self.guidance(age: age)) +
-            (composition.map { "\n\n" + $0.guidance } ?? "")
-        self.model = model
-        guard subject.utf16.count <= 500 else {
-            throw GenerationError.validation("Please shorten the description. It must fit within 500 characters including the complexity guidance.")
+        guard original.utf16.count <= 500 else {
+            throw GenerationError.validation("Please shorten the description to 500 characters or fewer.")
         }
+        originalDescription = original; self.age = age; self.model = model
+        self.composition = composition ?? .front; self.batchID = batchID ?? UUID()
+        width = size.width; height = size.height
         _ = try encoded()
     }
 
-    private enum CodingKeys: String, CodingKey { case subject, description, age, composition, batchID, model, width, height }
+    private enum CodingKeys: String, CodingKey { case description, age, composition, batchID, model, width, height }
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if let batchID {
-            guard let composition else { throw GenerationError.configuration }
-            try container.encode(originalDescription, forKey: .description)
-            try container.encode(age, forKey: .age)
-            try container.encode(composition.rawValue, forKey: .composition)
-            try container.encode(batchID.uuidString.lowercased(), forKey: .batchID)
-        } else {
-            try container.encode(subject, forKey: .subject)
-        }
+        // Prompt wording and the expanded prompt's length are owned by the server.
+        try container.encode(originalDescription, forKey: .description)
+        try container.encode(age, forKey: .age)
+        try container.encode(composition.rawValue, forKey: .composition)
+        try container.encode(batchID.uuidString.lowercased(), forKey: .batchID)
         try container.encode(model, forKey: .model)
         try container.encode(width, forKey: .width)
         try container.encode(height, forKey: .height)

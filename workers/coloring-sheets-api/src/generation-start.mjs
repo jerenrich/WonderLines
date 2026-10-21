@@ -1,5 +1,5 @@
 import {DEFAULT_MODEL, modelCatalog, imageRequest} from './image-provider.mjs';
-import {structuredComposition} from './composition.mjs';
+import {structuredComposition, MAX_DESCRIPTION_LENGTH, MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
 import {moderateSubject, ModerationError} from './moderation.mjs';
 
 const failure = (code,message,status,details={}) => ({status,value:{error:{code,message,...details}}});
@@ -28,7 +28,8 @@ export async function prepareGeneration(input,generationId,env={}) {
   const composed=structured?structuredComposition(input):null;
   if(structured&&!composed)return failure('invalid_request','Invalid description or composition.',400);
   const subject=composed?.subject??input.subject;
-  if(typeof subject!=='string'||!subject.trim()||subject.length>500||!size)return failure('invalid_request','Description or dimensions are invalid.',400);
+  const subjectLimit=composed?MAX_COMPOSED_SUBJECT_LENGTH:MAX_DESCRIPTION_LENGTH;
+  if(typeof subject!=='string'||!subject.trim()||subject.length>subjectLimit||!size)return failure('invalid_request','Description or dimensions are invalid.',400);
   const model=input.model??env.IMAGE_DEFAULT_MODEL??DEFAULT_MODEL;
   return {generationId,subject,model,size,composed,fingerprints:await generationFingerprints(subject,model,size)};
 }

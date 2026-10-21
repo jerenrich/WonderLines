@@ -98,7 +98,40 @@ try {
   assert.equal((await send({...options, composition: 'side'}, generationIDs[0])).status, 200);
   assert.equal(inputs.length, 3);
   for (const age of [3, 6, 9, 13]) assert.ok(structuredComposition({...options, composition: 'side', age}));
-  assert.equal(structuredComposition({...options, description: 'x'.repeat(500), composition: 'side'}), null);
+  assert.equal(structuredComposition({...options, description: 'x'.repeat(501), composition: 'side'}), null);
+
+  // The description limit is independent of age and composition instructions.
+  // Exercise the public API so moderation, reservation and provider dispatch
+  // cannot silently retain the old 500-character expanded-subject limit.
+  reject = false; unavailable = false;
+  const cases = [
+    [6, 'x'.repeat(255)], [6, 'A friendly fox in a garden. '.repeat(12).trim()],
+    ...[3, 6, 9, 13].map(age => [age, 'x'.repeat(500)]),
+    [6, '😀'.repeat(250)],
+  ];
+  const compositions = ['side', 'front', 'wide', 'close', 'elevated'];
+  for (const [age, longDescription] of cases) {
+    const beforePrompts = prompts.length, beforeModeration = inputs.length;
+    const batchID = crypto.randomUUID();
+    const responses = await Promise.all(compositions.map(composition =>
+      send({...options, age, batchID, description: longDescription, composition})));
+    assert.deepEqual(responses.map(response => response.status), compositions.map(() => 200),
+      `Every composition must accept the same ${longDescription.length}-character description at age ${age}.`);
+    assert.equal(inputs.length, beforeModeration + 1);
+    assert.equal(inputs.at(-1), longDescription, 'Moderation sees only the original description.');
+    assert.equal(prompts.length, beforePrompts + compositions.length);
+    assert.ok(prompts.slice(beforePrompts).every(prompt => prompt.includes(longDescription)), 'Never truncate user input.');
+  }
+  const beforeOversized = prompts.length, beforeModeration = inputs.length;
+  const beforeUsage = structuredClone(await object.state.storage.get('usage'));
+  for (const oversized of ['x'.repeat(501), '😀'.repeat(250) + 'x']) {
+    const responses = await Promise.all(compositions.map(composition =>
+      send({...options, batchID: crypto.randomUUID(), description: oversized, composition})));
+    assert.ok(responses.every(response => response.status === 400));
+  }
+  assert.equal(prompts.length, beforeOversized);
+  assert.equal(inputs.length, beforeModeration);
+  assert.deepEqual(await object.state.storage.get('usage'), beforeUsage, 'Oversized input must consume no allowance.');
 } finally { globalThis.fetch = fetchBefore; console.info = infoBefore; }
 console.log('PASS: original-only batch moderation, concurrency/restart deduplication, shared rejection/outage, binding, trusted composition, privacy and recovery; no network.');
 
@@ -141,7 +174,9 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
     call:async(path)=>path==='/job'?{status:404,value:{}}:{status:400,value:{error:{code:'description_not_suitable',message:'Choose another description.'}}}
   });
   assert.equal(denied.value.error.code,'description_not_suitable');assert.equal(reserved,false);
-  const invalid=await prepareGeneration({...input,description:'x'.repeat(500)},generationId);
-  assert.equal(invalid.status,400,'The shared server owns expanded-prompt length validation.');
+  const invalid=await prepareGeneration({...input,description:'x'.repeat(501)},generationId);
+  assert.equal(invalid.status,400,'The shared server enforces the original description limit.');
+  const oversizedLegacy=await prepareGeneration({subject:'x'.repeat(501)},generationId);
+  assert.equal(oversizedLegacy.status,400,'Legacy clients do not receive extra room for untrusted subject text.');
   console.log('PASS: app/web task parity, server-only prompt construction, legacy fingerprint recovery before configuration checks, and rejection before reservation; no network.');
 }

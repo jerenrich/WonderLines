@@ -61,7 +61,12 @@ final class ColoringViewModel: ObservableObject {
     private static let discardGalleryKey = "discardPreviousSessionGallery"
     @Published private(set) var sessionID = UUID()
     @Published var description: String {
-        didSet { defaults.set(description, forKey: "descriptionDraft") }
+        didSet {
+            defaults.set(description, forKey: "descriptionDraft")
+            // A saved edit is foreground activity even if no sheet is generated.
+            // Preserve it if the process exits before the background callback.
+            if !isInBackground { recordActivity() }
+        }
     }
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
     @Published var model: ImageModel { didSet { defaults.set(model.rawValue, forKey: "generationModel") } }
