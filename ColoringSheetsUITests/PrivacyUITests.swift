@@ -56,7 +56,7 @@ final class PrivacyUITests: XCTestCase {
         XCTAssertTrue(app.alerts["Privacy & safety"].waitForExistence(timeout: 10))
         app.alerts.buttons["OK"].tap()
         XCTAssertFalse(app.images["sheetPreview"].exists)
-        XCTAssertFalse(app.buttons["generate"].isEnabled)
+        XCTAssertTrue(app.buttons["surpriseMe"].isEnabled)
     }
     @MainActor
     func testReportSheetRemovesItOnlyAfterSending() {

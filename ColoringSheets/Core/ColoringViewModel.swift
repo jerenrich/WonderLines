@@ -38,6 +38,9 @@ final class GalleryStore {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(GallerySnapshot.self, from: data)
     }
+    var modificationDate: Date? {
+        try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+    }
     func remove() throws {
         if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
     }
@@ -53,6 +56,10 @@ final class ColoringViewModel: ObservableObject {
     static let batchSize = 3
     // Drawing complexity is a preference, not a prerequisite for first use.
     static let defaultAge = 6
+    static let sessionTimeout: TimeInterval = 15 * 60
+    private static let sessionActivityKey = "lastSessionActivityAt"
+    private static let discardGalleryKey = "discardPreviousSessionGallery"
+    @Published private(set) var sessionID = UUID()
     @Published var description: String {
         didSet { defaults.set(description, forKey: "descriptionDraft") }
     }
@@ -85,6 +92,8 @@ final class ColoringViewModel: ObservableObject {
     let isMock: Bool
     private let service: any GenerationServing
     private let defaults: UserDefaults
+    private let now: () -> Date
+    private var lastActiveAt: Date?
     private var tasks: [Task<Void, Never>] = []
     private var attempt = UUID()
     private var receivedFirstResult = false
@@ -104,20 +113,25 @@ final class ColoringViewModel: ObservableObject {
     private static let saveFailureMessage = "The sheets could not be saved on this device. Keep the app open; received jobs remain available for recovery."
 
     init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard,
-         galleryStore: GalleryStore? = nil, requiresConsent: Bool? = nil) {
+         galleryStore: GalleryStore? = nil, requiresConsent: Bool? = nil,
+         now: @escaping () -> Date = Date.init) {
         self.service = service; self.isMock = isMock; self.defaults = defaults
+        self.now = now
         self.requiresConsent = requiresConsent ?? !isMock
         hasConsent = defaults.integer(forKey: PrivacyConsent.key) == PrivacyConsent.currentVersion
         deletionPending = defaults.bool(forKey: PrivacyConsent.deletionKey)
         description = defaults.string(forKey: "descriptionDraft") ?? ""
         self.galleryStore = galleryStore ?? (!isMock && defaults === UserDefaults.standard ? GalleryStore() : nil)
+        // Existing installations can use the gallery date until their first
+        // foreground/background timestamp has been recorded.
+        lastActiveAt = defaults.object(forKey: Self.sessionActivityKey) as? Date ?? self.galleryStore?.modificationDate
         let stored = defaults.integer(forKey: "childAge")
         age = (3...18).contains(stored) ? stored : Self.defaultAge
         let storedModel = defaults.string(forKey: "generationModel")
         model = ImageModel.selectable.first(where: { $0.rawValue == storedModel }) ?? .sunburst
         let storedCount = defaults.object(forKey: "imageCount") == nil ? Self.batchSize : defaults.integer(forKey: "imageCount")
         imageCount = min(max(storedCount, 1), Self.batchSize)
-        if let saved = self.galleryStore?.load() {
+        if !sessionHasExpired, !defaults.bool(forKey: Self.discardGalleryKey), let saved = self.galleryStore?.load() {
             results = saved.sheets.compactMap(\.result)
             selectedResultID = results.first(where: { $0.id == saved.selectedID })?.id ?? results.first?.id
             pendingResults = saved.waitingToReveal.compactMap(\.result)
@@ -130,15 +144,19 @@ final class ColoringViewModel: ObservableObject {
             revealPendingResults()
             phase = results.isEmpty ? .idle : .result
         }
+        resetExpiredSessionIfNeeded()
+        recordActivity()
     }
 
     @discardableResult
     private func persistState() -> Bool {
+        if !isInBackground { recordActivity() }
         do {
             try galleryStore?.save(GallerySnapshot(sheets: results.map(GallerySnapshot.Sheet.init),
                 waitingToReveal: pendingResults.map(GallerySnapshot.Sheet.init), selectedID: selectedResultID,
                 hasRevealedResults: hasRevealedResults, generationBatchID: generationBatchID,
                 recoveringIDs: recoveringIDs, shouldResume: isGenerating || resumesAfterBackground))
+            defaults.removeObject(forKey: Self.discardGalleryKey)
             acknowledgeSavedResults()
             if localSaveFailed {
                 localSaveFailed = false
@@ -166,6 +184,7 @@ final class ColoringViewModel: ObservableObject {
     }
 
     var isGenerating: Bool { phase == .generating }
+    var isShowingPreviousBatch: Bool { isGenerating && !hasRevealedResults && !results.isEmpty }
     var result: ColoringResult? { results.first(where: { $0.id == selectedResultID }) ?? results.first }
     var selectedIndex: Int { results.firstIndex(where: { $0.id == selectedResultID }) ?? 0 }
     var readyCount: Int { completedCount - failedCount }
@@ -407,6 +426,7 @@ final class ColoringViewModel: ObservableObject {
         persistState()
     }
     func enteredBackground() {
+        if !isInBackground { recordActivity() }
         isInBackground = true
         if isGenerating {
             resumesAfterBackground = true
@@ -423,9 +443,11 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func enteredForeground() async {
-        guard canUseService else { await refreshUnfinishedSheets(); return }
         let returningFromBackground = isInBackground
         isInBackground = false
+        if returningFromBackground { resetExpiredSessionIfNeeded() }
+        recordActivity()
+        guard canUseService else { await refreshUnfinishedSheets(); return }
         if localSaveFailed { persistState() }
         let interruptedAttempt = attempt
         if returningFromBackground && isGenerating {
@@ -453,6 +475,37 @@ final class ColoringViewModel: ObservableObject {
         // Before the first new sheet arrives, the gallery still belongs to the
         // previous batch. Preserve replacement versus append across every unlock.
         recover(pending, appending: hasRevealedResults)
+        persistState()
+    }
+
+    private func recordActivity() {
+        lastActiveAt = now()
+        defaults.set(lastActiveAt, forKey: Self.sessionActivityKey)
+    }
+
+    private var sessionHasExpired: Bool {
+        lastActiveAt.map { now().timeIntervalSince($0) >= Self.sessionTimeout } ?? false
+    }
+
+    private func resetExpiredSessionIfNeeded() {
+        guard sessionHasExpired else { return }
+        // If clearing the snapshot fails, a quick relaunch must still ignore it.
+        defaults.set(true, forKey: Self.discardGalleryKey)
+        // Stop local waits and ignore late callbacks. Service recovery IDs remain
+        // available for an explicit check; opening the app starts no new requests.
+        attempt = UUID()
+        tasks.forEach { $0.cancel() }; tasks = []
+        revealTask?.cancel(); revealTask = nil
+        results = []; pendingResults = []
+        selectedResultID = nil
+        resumesAfterBackground = false; recoveringIDs = nil; generationBatchID = nil
+        hasRevealedResults = false; receivedFirstResult = false; revealsImmediately = false
+        completedCount = 0; failedCount = 0; activeBatchSize = 0
+        isRecovering = false; firstFailure = nil; batchMessage = nil
+        description = ""
+        showsConsent = false; consentForRecovery = false
+        phase = .idle
+        sessionID = UUID()
         persistState()
     }
 

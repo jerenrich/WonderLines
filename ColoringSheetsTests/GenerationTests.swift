@@ -1229,6 +1229,191 @@ final class ControlledService: GenerationServing {
 
 @MainActor
 final class StateTests: XCTestCase {
+    func testShortReturnKeepsWorkAndFifteenMinuteReturnStartsFresh() async throws {
+        let suite = "SessionReturn-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var time = Date()
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults, now: { time })
+        store.description = "A fox in a garden"; store.age = 9; store.model = .flare; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        service.succeed()
+        await waitFor { store.phase == .result }
+        let imageID = store.result?.id
+        let sessionID = store.sessionID
+        store.enteredBackground()
+        time += ColoringViewModel.sessionTimeout - 1
+        await store.enteredForeground()
+        XCTAssertEqual(store.result?.id, imageID)
+        XCTAssertEqual(store.description, "A fox in a garden")
+        XCTAssertEqual(store.sessionID, sessionID)
+        store.enteredBackground()
+        time += ColoringViewModel.sessionTimeout
+        await store.enteredForeground()
+        XCTAssertTrue(store.results.isEmpty)
+        XCTAssertNil(store.selectedResultID)
+        XCTAssertEqual(store.description, "")
+        XCTAssertEqual(store.phase, .idle)
+        XCTAssertNotEqual(store.sessionID, sessionID)
+        XCTAssertEqual(store.age, 9)
+        XCTAssertEqual(store.model, .flare)
+        XCTAssertEqual(store.imageCount, 1)
+        XCTAssertTrue(store.hasConsent)
+        XCTAssertEqual(service.calls, 1)
+    }
+
+    func testColdLaunchExpiresGalleryAndDraftButQuickRelaunchRestoresThem() async throws {
+        let suite = "SessionRelaunch-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        var time = Date()
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        store.description = "A fox"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        service.succeed()
+        await waitFor { store.phase == .result }
+        time += 30
+        let quick = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        XCTAssertEqual(quick.result?.id, store.result?.id)
+        XCTAssertEqual(quick.description, "A fox")
+        time += ColoringViewModel.sessionTimeout
+        let expired = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        XCTAssertTrue(expired.results.isEmpty, "Do not briefly restore an old sheet before the first foreground callback")
+        XCTAssertEqual(expired.description, "")
+        XCTAssertTrue(try XCTUnwrap(file.load()).sheets.isEmpty)
+        let reopened = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file, now: { time })
+        XCTAssertTrue(reopened.results.isEmpty, "The old gallery must not return on the next launch")
+    }
+
+    func testExpiredBufferedSnapshotDoesNotRevealOrAutoRecoverOnLaunch() async throws {
+        let suite = "ExpiredBufferedSession-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        let image = MockGenerator.sampleImage()
+        let sheet = ColoringResult(data: image.pngData()!, image: image, requestedModel: .sunburst, metrics: nil)
+        try file.save(GallerySnapshot(sheets: [], waitingToReveal: [GallerySnapshot.Sheet(sheet)],
+            selectedID: nil, hasRevealedResults: false, generationBatchID: UUID(), recoveringIDs: nil, shouldResume: true))
+        // A legacy gallery without a session timestamp uses its file date.
+        let time = Date().addingTimeInterval(ColoringViewModel.sessionTimeout + 1)
+        let service = ControlledService()
+        service.recoverable = [PendingGeneration(id: UUID(), model: .sunburst, createdAt: Date())]
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, galleryStore: file, now: { time })
+        XCTAssertTrue(store.results.isEmpty)
+        await store.enteredForeground()
+        XCTAssertEqual(store.unfinishedSheets.count, 1)
+        XCTAssertEqual(service.recoveryCalls, 0)
+        XCTAssertEqual(service.calls, 0)
+    }
+
+    func testLongBackgroundExpiresInFlightBatchAndKeepsManualRecovery() async throws {
+        let suite = "ExpiredInFlightSession-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var time = Date()
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, now: { time })
+        store.description = "A fox"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        let pending = PendingGeneration(id: UUID(), model: .sunburst, createdAt: time, batchID: service.captured[0].batchID)
+        service.recoverable = [pending]
+        store.enteredBackground()
+        time += ColoringViewModel.sessionTimeout
+        await store.enteredForeground()
+        XCTAssertEqual(store.phase, .idle)
+        XCTAssertEqual(store.description, "")
+        XCTAssertEqual(store.unfinishedSheets.map(\.id), [pending.id])
+        XCTAssertEqual(service.recoveryCalls, 0, "A fresh session must not automatically show old images")
+        service.succeed() // An old callback must not repopulate the fresh screen.
+        await Task.yield()
+        XCTAssertTrue(store.results.isEmpty)
+        store.recoverUnfinishedSheets()
+        await waitFor { store.phase == .result }
+        XCTAssertEqual(store.result?.generationID, pending.id)
+        XCTAssertEqual(service.calls, 1, "Manual recovery must not generate a replacement")
+    }
+
+    func testBackgroundCompletionDoesNotExtendSessionAndActiveUseDoesNotExpire() async throws {
+        let suite = "SessionClock-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var time = Date()
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults, now: { time })
+        store.description = "A fox"; store.setImageCount(1)
+        time += ColoringViewModel.sessionTimeout * 2
+        await store.enteredForeground()
+        XCTAssertEqual(store.description, "A fox", "Time spent using the app must not expire a session")
+        store.generate()
+        await waitFor { service.calls == 1 }
+        store.enteredBackground()
+        time += ColoringViewModel.sessionTimeout - 1
+        service.succeed()
+        await waitFor { store.phase == .result }
+        time += 1
+        await store.enteredForeground()
+        XCTAssertTrue(store.results.isEmpty, "Background downloads must not move the inactivity deadline")
+        XCTAssertEqual(store.description, "")
+    }
+
+    func testPreviousSheetsFadeOnlyUntilNewBatchIsRevealed() async throws {
+        let suite = "PreviousSheetFade-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let service = ControlledService()
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+        store.description = "A fox"; store.setImageCount(1)
+        store.generate()
+        await waitFor { service.calls == 1 }
+        XCTAssertFalse(store.isShowingPreviousBatch)
+        service.succeed()
+        await waitFor { store.phase == .result }
+        let oldID = store.result?.id
+        store.generate()
+        await waitFor { service.calls == 2 }
+        XCTAssertTrue(store.isShowingPreviousBatch)
+        XCTAssertEqual(store.result?.id, oldID)
+        service.fail()
+        await waitFor { !store.isGenerating }
+        XCTAssertFalse(store.isShowingPreviousBatch)
+        XCTAssertEqual(store.result?.id, oldID, "A failed batch restores the previous sheets at full contrast")
+        store.generate()
+        await waitFor { service.calls == 3 }
+        XCTAssertTrue(store.isShowingPreviousBatch)
+        store.cancel()
+        XCTAssertFalse(store.isShowingPreviousBatch)
+        service.succeed() // Drain the cancelled request.
+        store.generate()
+        await waitFor { service.calls == 4 }
+        service.succeed()
+        await waitFor { store.phase == .result }
+        XCTAssertFalse(store.isShowingPreviousBatch)
+        XCTAssertNotEqual(store.result?.id, oldID)
+        store.setImageCount(2)
+        store.generate()
+        await waitFor { service.calls == 6 }
+        XCTAssertTrue(store.isShowingPreviousBatch)
+        store.enteredBackground() // Resuming reveals each new sheet immediately.
+        await store.enteredForeground()
+        service.succeed(at: 4)
+        await waitFor { store.readyCount == 1 }
+        XCTAssertTrue(store.isGenerating)
+        XCTAssertFalse(store.isShowingPreviousBatch, "New sheets stay at full contrast while the rest finish")
+        service.succeed(at: 5)
+        await waitFor { store.phase == .result }
+    }
+
     func testRetiredModelPreferenceFallsBackWithoutResettingConsent() {
         let suite = "RetiredModel-\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
@@ -2167,12 +2352,6 @@ final class KeyboardFocusTests: XCTestCase {
         XCTAssertEqual(service.calls, ColoringViewModel.batchSize * 3)
         capture("Landscape sheet editing after generation", view: window)
         input.resignFirstResponder()
-    }
-
-    func testMinimizedPromptUsesOnlyItsFirstLine() {
-        XCTAssertEqual(ContentView.minimizedPrompt(from: "A dinosaur in a garden\nwith flowers"),
-                       "A dinosaur in a garden")
-        XCTAssertEqual(ContentView.minimizedPrompt(from: ""), "Edit description")
     }
 
     func testComposerFitsRecentIPadLandscapeSizesWithoutScrolling() async throws {

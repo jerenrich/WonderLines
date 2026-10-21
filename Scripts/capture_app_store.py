@@ -61,16 +61,12 @@ final class AppStoreCaptureTests: XCTestCase {
         generate.tap()
         XCTAssertTrue(app.staticTexts["sheetPosition"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["sheetPosition"].label, "Sheet 1 of 1")
-        let minimize = app.buttons["minimizeComposer"]
-        XCTAssertTrue(minimize.waitForExistence(timeout: 5))
-        minimize.tap()
-        XCTAssertTrue(app.buttons["expandComposer"].waitForExistence(timeout: 5))
         capture("01-dinosaur-gallery")
 
-        app.buttons["expandComposer"].tap()
+        app.descendants(matching: .any).matching(identifier: "subject").firstMatch.tap()
         XCTAssertTrue(app.buttons["dismissKeyboard"].waitForExistence(timeout: 5))
-        app.buttons["dismissKeyboard"].tap()
         capture("02-describe-your-idea")
+        app.buttons["dismissKeyboard"].tap()
 
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
@@ -78,7 +74,6 @@ final class AppStoreCaptureTests: XCTestCase {
         app.buttons["Done"].tap()
 
         if !tablet {
-            app.buttons["minimizeComposer"].tap()
             app.buttons["sheetActions"].tap()
             XCTAssertTrue(app.buttons["Print"].waitForExistence(timeout: 5))
             capture("04-save-share-and-print")

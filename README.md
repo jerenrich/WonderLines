@@ -16,7 +16,8 @@ Created by Jordan Erenrich. Built with SwiftUI for iOS and iPadOS 17 and later.
 - Adjusts detail for ages 3–18, from simple shapes to finer outlines.
 - Lets you swipe through results and save, share, or print A4 landscape sheets.
 - Pinch to zoom up to 5× and drag to explore details; double-tap to zoom in or return to the full sheet.
-- Saves your description draft and gallery locally, and recovers unfinished live generations.
+- Offers editable starter ideas for dinosaurs, space, animals, or a surprise.
+- Keeps your draft and sheets for quick returns; starts fresh after 15 minutes away, with unfinished live jobs available for recovery.
 - Works on iPhone and iPad, with no sign-in required.
 
 ## Start with the demo

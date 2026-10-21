@@ -2,6 +2,143 @@ import XCTest
 
 final class GalleryUITests: XCTestCase {
     @MainActor
+    func testSurpriseGenerateStopStatesPreserveSpaceAndExistingSheets() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "--slow-mock", "-descriptionDraft", "", "-imageCount", "1"]
+        app.launch()
+        let surprise = app.buttons["surpriseMe"]
+        XCTAssertTrue(surprise.waitForExistence(timeout: 5))
+        XCTAssertEqual(surprise.label, "Surprise me")
+        let buttonFrame = surprise.frame
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        let descriptionFrame = subject.frame
+        surprise.tap()
+        XCTAssertFalse((subject.value as? String ?? "").isEmpty)
+        XCTAssertFalse(app.staticTexts["generationProgress"].exists, "Surprise only fills an editable idea")
+        XCTAssertFalse(app.buttons["agreeToAI"].exists)
+        let generate = app.buttons["generate"]
+        XCTAssertTrue(generate.isEnabled)
+        app.buttons["dismissKeyboard"].tap()
+        assertSameFrame(generate.frame, buttonFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+        generate.tap()
+        let stop = app.buttons["stopGeneration"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        assertSameFrame(stop.frame, buttonFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+        XCTAssertTrue(generate.waitForExistence(timeout: 30))
+        assertSameFrame(generate.frame, buttonFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+        let preview = app.images["sheetPreview"]
+        XCTAssertTrue(preview.exists)
+        let selectedSheet = preview.value as? String
+        app.buttons["clearDescription"].tap()
+        XCTAssertTrue(surprise.isEnabled, "Surprise must remain available after generating sheets")
+        surprise.tap()
+        XCTAssertFalse((subject.value as? String ?? "").isEmpty)
+        XCTAssertEqual(preview.value as? String, selectedSheet)
+        XCTAssertFalse(app.staticTexts["generationProgress"].exists)
+        app.buttons["dismissKeyboard"].tap()
+        assertSameFrame(generate.frame, buttonFrame)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "A new surprise idea keeps the previous sheet"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        app.buttons["clearDescription"].tap()
+        subject.typeText("   ")
+        XCTAssertTrue(surprise.isEnabled, "Whitespace also offers a surprise")
+        surprise.tap()
+        XCTAssertFalse((subject.value as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        XCTAssertTrue(preview.exists)
+        XCTAssertFalse(app.staticTexts["generationProgress"].exists)
+    }
+
+    @MainActor
+    func testGenerateStopButtonKeepsItsFrame() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "--slow-mock", "-descriptionDraft", "A flower", "-imageCount", "1"]
+        app.launch()
+        let generate = app.buttons["generate"]
+        XCTAssertTrue(generate.waitForExistence(timeout: 5))
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        let buttonFrame = generate.frame
+        let descriptionFrame = subject.frame
+        generate.tap()
+        let stop = app.buttons["stopGeneration"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        assertSameFrame(stop.frame, buttonFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Generate becomes neutral STOP in the same space"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        XCTAssertTrue(generate.waitForExistence(timeout: 30))
+        assertSameFrame(generate.frame, buttonFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+    }
+
+    @MainActor
+    func testStarterIdeasAndGenerateStopControlKeepComposerStable() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "--slow-mock", "-descriptionDraft", "", "-imageCount", "1"]
+        app.launch()
+        let dinosaur = app.buttons["starterIdea.dinosaurs"]
+        XCTAssertTrue(dinosaur.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["starterIdea.space"].exists)
+        XCTAssertTrue(app.buttons["starterIdea.animals"].exists)
+        XCTAssertTrue(app.buttons["starterIdea.surprise"].exists)
+        let welcome = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        welcome.name = "Starter illustration and ideas"
+        welcome.lifetime = .keepAlways
+        add(welcome)
+        dinosaur.tap()
+        let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
+        XCTAssertEqual(subject.value as? String, "A friendly dinosaur riding a bicycle on the moon")
+        XCTAssertFalse(app.staticTexts["generationProgress"].exists, "Choosing an idea must not start generation")
+        subject.typeText(" with stars")
+        XCTAssertTrue((subject.value as? String)?.contains("with stars") == true)
+        app.buttons["dismissKeyboard"].tap()
+        let generateFrame = app.buttons["generate"].frame
+        let descriptionFrame = subject.frame
+        app.buttons["generate"].tap()
+        let stop = app.buttons["stopGeneration"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        assertSameFrame(stop.frame, generateFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+        XCTAssertTrue(app.staticTexts["sheetPosition"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons["generate"].waitForExistence(timeout: 5))
+        assertSameFrame(app.buttons["generate"].frame, generateFrame)
+        assertSameFrame(subject.frame, descriptionFrame)
+        app.buttons["generate"].tap()
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        XCTAssertEqual(stop.label, "Stop waiting")
+        assertSameFrame(stop.frame, generateFrame)
+        let waiting = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        waiting.name = "Neutral STOP replaces Generate without moving the composer"
+        waiting.lifetime = .keepAlways
+        add(waiting)
+        app.buttons["clearDescription"].tap()
+        XCTAssertTrue(stop.isEnabled, "Clearing the next description must not disable Stop")
+        stop.tap()
+        XCTAssertFalse(app.staticTexts["generationProgress"].exists)
+        XCTAssertTrue(app.images["sheetPreview"].exists, "Stopping must keep the previous sheet")
+        XCTAssertTrue(app.buttons["surpriseMe"].isEnabled, "An empty description offers another surprise")
+        subject.tap()
+        subject.typeText("A flower")
+        XCTAssertTrue(app.buttons["generate"].isEnabled)
+    }
+
+    private func assertSameFrame(_ actual: CGRect, _ expected: CGRect, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(actual.minX, expected.minX, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(actual.minY, expected.minY, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(actual.width, expected.width, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(actual.height, expected.height, accuracy: 1, file: file, line: line)
+    }
+
+    @MainActor
     func testPinchZoomPanResetAndGalleryNavigation() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -43,7 +180,7 @@ final class GalleryUITests: XCTestCase {
         app.launch()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["generate"].isEnabled, "An empty description cannot generate")
+        XCTAssertTrue(app.buttons["surpriseMe"].isEnabled, "An empty description offers a surprise without generating")
         subject.tap()
         subject.typeText("A friendly dinosaur riding a bicycle on the moon")
         app.buttons["dismissKeyboard"].tap()
@@ -226,7 +363,7 @@ final class GalleryUITests: XCTestCase {
     }
 
     @MainActor
-    func testMinimizedDescriptionPreservesTextAndOffersExplicitClear() {
+    func testDescriptionStaysVisibleAndOffersKeyboardDoneAfterResume() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["--mock", "-descriptionDraft", "", "-childAge", "6", "-imageCount", "1"]
@@ -239,22 +376,27 @@ final class GalleryUITests: XCTestCase {
         app.buttons["generate"].tap()
         XCTAssertTrue(app.staticTexts["sheetPosition"].waitForExistence(timeout: 10))
         let selectedSheet = app.staticTexts["sheetPosition"].label
-        app.buttons["minimizeComposer"].tap()
+        XCTAssertFalse(app.buttons["minimizeComposer"].exists)
+        XCTAssertFalse(app.buttons["expandComposer"].exists)
+        XCTAssertFalse(app.buttons["dismissKeyboard"].exists)
         XCUIDevice.shared.press(.home)
         app.activate()
-        waitUntilHittable(app.buttons["expandComposer"])
+        waitUntilHittable(subject)
         XCTAssertTrue(app.buttons["clearDescription"].isHittable)
-        app.buttons["expandComposer"].tap()
+        subject.tap()
+        XCTAssertTrue(app.buttons["dismissKeyboard"].waitForExistence(timeout: 5))
         let expanded = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        expanded.name = "Description reopened after resume"
+        expanded.name = "Editor stays visible with Done above the keyboard"
         expanded.lifetime = .keepAlways
         add(expanded)
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         XCTAssertEqual(subject.value as? String, "A fox")
         subject.typeText(" with stars")
-        XCTAssertEqual(subject.value as? String, "A fox with stars")
+        let editedDescription = subject.value as? String ?? ""
+        XCTAssertTrue(editedDescription.contains("A fox"))
+        XCTAssertTrue(editedDescription.contains(" with stars"))
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["minimizeComposer"].tap()
+        XCTAssertFalse(app.buttons["minimizeComposer"].exists)
         app.buttons["clearDescription"].tap()
         XCTAssertEqual(subject.value as? String, "")
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
@@ -326,7 +468,7 @@ final class GalleryUITests: XCTestCase {
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
         XCTAssertTrue(subject.waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Enter a description to begin"].exists)
-        XCTAssertFalse(app.staticTexts["What shall we draw?"].exists)
+        XCTAssertTrue(app.staticTexts["What shall we draw?"].exists)
         XCTAssertFalse(app.buttons["About generation and costs"].exists)
         XCTAssertFalse(app.buttons["clearDescription"].exists)
         XCTAssertEqual(subject.placeholderValue, "Describe your coloring sheet…")
@@ -404,10 +546,9 @@ final class GalleryUITests: XCTestCase {
         keyboard.lifetime = .keepAlways
         add(keyboard)
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["minimizeComposer"].tap()
-        XCTAssertTrue(app.buttons["expandComposer"].label.contains("and a moon"))
-        app.buttons["expandComposer"].tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "Manually collapsed descriptions must also open the keyboard in one tap")
+        XCTAssertTrue((subject.value as? String)?.contains("and a moon") == true)
+        subject.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "The description must reopen the keyboard in one tap")
         subject.typeText("!")
         app.buttons["dismissKeyboard"].tap()
         XCTAssertEqual(position.label, "Sheet 2 of 3")
@@ -423,7 +564,7 @@ final class GalleryUITests: XCTestCase {
         XCTAssertFalse(app.buttons["clearDescription"].exists)
         XCTAssertEqual(subject.frame.width, beforeClearSize.width, accuracy: 1)
         XCTAssertEqual(subject.frame.height, beforeClearSize.height, accuracy: 1)
-        XCTAssertFalse(app.buttons["generate"].isEnabled)
+        XCTAssertTrue(app.buttons["surpriseMe"].isEnabled)
         subject.typeText("A new idea")
         // On iPhone the keyboard can exist in accessibility before its entrance
         // animation finishes. Wait for it to be on screen before tapping the
@@ -570,9 +711,8 @@ final class GalleryUITests: XCTestCase {
         expectPage(3)
         XCTAssertTrue(gallery.exists)
         app.buttons["dismissKeyboard"].tap()
-        app.buttons["minimizeComposer"].tap()
         expectPage(3)
-        XCTAssertTrue(app.buttons["expandComposer"].label.contains("with stars"))
+        XCTAssertTrue((subject.value as? String)?.contains("with stars") == true)
         app.buttons["previousSheet"].tap()
         expectPage(2)
     }

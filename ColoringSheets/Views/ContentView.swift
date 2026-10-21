@@ -8,7 +8,6 @@ struct ContentView: View {
     @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var descriptionFocused: Bool
-    @State private var composerMinimized = false
     @State private var composerHeight: CGFloat = 240
     @State private var export: ExportItem?
     @State private var retainedExport: ExportItem?
@@ -26,6 +25,10 @@ struct ContentView: View {
     private let accent = Color(red: 0.12, green: 0.45, blue: 0.49)
     private var sheetCountLabel: String { "\(store.imageCount) \(store.imageCount == 1 ? "sheet" : "sheets")" }
     private var demoCountLabel: String { "\(store.imageCount) demo \(store.imageCount == 1 ? "sheet" : "sheets")" }
+    private var needsIdea: Bool { store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var generateTitle: String { store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)" }
+    private var primaryActionTitle: String { store.isGenerating ? "STOP" : (needsIdea ? "Surprise me" : generateTitle) }
+    private var primaryActionSymbol: String { store.isGenerating ? "stop.fill" : (needsIdea ? "shuffle" : "sparkles") }
 
     var body: some View {
         GeometryReader { geometry in
@@ -71,7 +74,8 @@ struct ContentView: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .frame(height: min(composerHeight, composerLimit))
                 .padding(.horizontal, inset)
-                .padding(.bottom, 8)
+                // Leave room for the floating keyboard toolbar while editing.
+                .padding(.bottom, descriptionFocused ? 44 : 8)
             }
             .foregroundStyle(ink)
         }
@@ -81,7 +85,20 @@ struct ContentView: View {
             startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea())
         .tint(accent)
         .preferredColorScheme(.light)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { descriptionFocused = false }
+                    .accessibilityIdentifier("dismissKeyboard")
+            }
+        }
         .task { await store.enteredForeground() }
+        .onChange(of: store.sessionID) { _, _ in
+            descriptionFocused = false
+            showSettings = false
+            showUsage = false
+            detailMessage = nil
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {
                 // The system can dismiss the keyboard while suspended. Start
@@ -200,47 +217,13 @@ struct ContentView: View {
         }
     }
 
-    private func setComposerMinimized(_ minimized: Bool) {
-        if minimized { descriptionFocused = false }
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-            composerMinimized = minimized
-        }
-    }
-
     private func composer(narrow: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Keep the native editor alive even when displaying its summary.
-            // Reopening must preserve text, selection, and responder identity.
             controls(narrow: narrow)
-                .frame(height: composerMinimized ? 0 : nil)
-                .opacity(composerMinimized ? 0 : 1)
-                .clipped()
-                .allowsHitTesting(!composerMinimized)
-            if composerMinimized {
-                HStack(spacing: 12) {
-                    Button {
-                        setComposerMinimized(false)
-                        descriptionFocused = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "square.and.pencil")
-                            Text(minimizedPrompt)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Edit description: \(minimizedPrompt)")
-                    .accessibilityHint("Opens the keyboard to edit the description")
-                    .accessibilityIdentifier("expandComposer")
-                    clearDescriptionButton()
-                }
-            }
             generationStatus
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, composerMinimized ? 6 : 12)
+        .padding(.vertical, 12)
         .background(.white, in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18)
             .strokeBorder(accent.opacity(descriptionFocused ? 0.45 : 0.15))
@@ -248,21 +231,9 @@ struct ContentView: View {
         .shadow(color: ink.opacity(0.06), radius: 8, y: 3)
     }
 
-    static func minimizedPrompt(from description: String) -> String {
-        let firstLine = description
-            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
-            .first
-            .map(String.init) ?? ""
-        return firstLine.isEmpty ? "Edit description" : firstLine
-    }
-
-    private var minimizedPrompt: String { Self.minimizedPrompt(from: store.description) }
-
-    private func clearDescriptionButton(hidden: Bool = false) -> some View {
+    private func clearDescriptionButton() -> some View {
         Button {
             store.description = ""
-            // Expand without animating an interactive field under the tap.
-            composerMinimized = false
             descriptionFocused = true
         } label: {
             Image(systemName: "xmark.circle.fill")
@@ -278,7 +249,7 @@ struct ContentView: View {
         .opacity(store.description.isEmpty ? 0 : 1)
         .allowsHitTesting(!store.description.isEmpty)
         .disabled(store.description.isEmpty)
-        .accessibilityHidden(hidden || store.description.isEmpty)
+        .accessibilityHidden(store.description.isEmpty)
     }
 
     private func controls(narrow: Bool) -> some View {
@@ -295,42 +266,44 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .accessibilityLabel("Description")
                         .accessibilityIdentifier("subject")
-                        .accessibilityHidden(composerMinimized)
-                    clearDescriptionButton(hidden: composerMinimized)
+                    clearDescriptionButton()
                 }
                 .background(accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
                 Button {
-                    descriptionFocused = false
-                    store.generate()
+                    if store.isGenerating {
+                        descriptionFocused = false
+                        store.cancel()
+                    } else if needsIdea {
+                        useStarterIdea(.surprise)
+                    } else {
+                        descriptionFocused = false
+                        store.generate()
+                    }
                 } label: {
                     Group {
                         if narrow {
-                            Image(systemName: "sparkles").frame(minWidth: 28, minHeight: 32)
+                            Image(systemName: primaryActionSymbol)
+                                .frame(minWidth: 28, minHeight: 32)
                         } else {
-                            Label(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)", systemImage: "sparkles")
-                                .frame(minHeight: 32)
+                            // Reserve the same space for all three actions.
+                            ZStack {
+                                Label(generateTitle, systemImage: "sparkles")
+                                Label("Surprise me", systemImage: "shuffle")
+                            }
+                            .opacity(0)
+                            .overlay { Label(primaryActionTitle, systemImage: primaryActionSymbol) }
+                            .frame(minHeight: 32)
                         }
                     }
-                    .foregroundStyle(store.isGenerating || store.validationMessage != nil ? ink : .white)
+                    .foregroundStyle(store.isGenerating || (!needsIdea && store.validationMessage != nil) ? ink : .white)
                 }
                 .fixedSize(horizontal: true, vertical: false)
                 .buttonStyle(.borderedProminent)
-                .disabled(store.isGenerating || store.validationMessage != nil || store.deletionPending || store.isReporting)
-                .accessibilityLabel(store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)")
-                .accessibilityIdentifier("generate")
-                .accessibilityHidden(composerMinimized)
-                Button {
-                    if descriptionFocused { descriptionFocused = false }
-                    else { setComposerMinimized(true) }
-                } label: {
-                    Image(systemName: descriptionFocused ? "keyboard.chevron.compact.down" : "chevron.down")
-                        .frame(width: 44, height: 44)
-                }
-                .accessibilityLabel(descriptionFocused ? "Done" : "Minimize description")
-                .accessibilityIdentifier(descriptionFocused ? "dismissKeyboard" : "minimizeComposer")
-                .opacity(descriptionFocused || store.result != nil ? 1 : 0)
-                .disabled(!descriptionFocused && store.result == nil)
-                .accessibilityHidden(composerMinimized || (!descriptionFocused && store.result == nil))
+                .tint(store.isGenerating ? Color(uiColor: .systemGray5) : accent)
+                .disabled((!store.isGenerating && !needsIdea && store.validationMessage != nil) || store.deletionPending || store.isReporting)
+                .accessibilityLabel(store.isGenerating ? "Stop waiting" : primaryActionTitle)
+                .accessibilityHint(store.isGenerating ? "Stops waiting for results. Sheets already requested may still finish." : (needsIdea ? "Fills the description so you can edit it before generating" : ""))
+                .accessibilityIdentifier(store.isGenerating ? "stopGeneration" : (needsIdea ? "surpriseMe" : "generate"))
             }
             Group {
                 if !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -343,7 +316,6 @@ struct ContentView: View {
                     .accessibilityIdentifier("validation")
                 }
             }
-            .accessibilityHidden(composerMinimized)
         }
     }
 
@@ -354,16 +326,7 @@ struct ContentView: View {
                 .accessibilityIdentifier("recoverGenerations")
                 .accessibilityHint("Checks existing generations without requesting new sheets")
         }
-        if store.isGenerating {
-            HStack {
-                ProgressView()
-                Text(store.progressText).font(.callout)
-                    .accessibilityIdentifier("generationProgress")
-                Spacer()
-                Button("Stop waiting", role: .cancel, action: store.cancel)
-            }
-            .accessibilityHint("Keep the app open. Generation may take a few minutes.")
-        } else if let message = store.batchMessage {
+        if !store.isGenerating, let message = store.batchMessage {
             Button { detailMessage = message } label: {
                 Label("\(store.results.count) \(store.results.count == 1 ? "sheet" : "sheets") available · Details", systemImage: "exclamationmark.circle")
                     .font(.footnote)
@@ -405,27 +368,102 @@ struct ContentView: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .allowsHitTesting(!descriptionFocused)
+                    .opacity(store.isShowingPreviousBatch ? 0.3 : 1)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: store.isShowingPreviousBatch)
                     .accessibilityIdentifier("sheetGallery")
-                } else {
+                    .accessibilityValue(store.isShowingPreviousBatch ? "Previous sheets, waiting for new results" : "Current sheets")
+                } else if store.isGenerating {
                     VStack(spacing: 12) {
                         Image(systemName: "pencil.and.outline")
                             .font(.system(size: min(40, page.height * 0.4), weight: .ultraLight))
                         if page.height >= 140 {
-                            Text("\(sheetCountLabel) to choose from.\nDescribe an idea below to begin.")
+                            Text("Your sheets will appear here.")
                                 .font(.callout).multilineTextAlignment(.center)
                         }
                     }.padding(8).foregroundStyle(.secondary)
                         .frame(width: page.width, height: page.height)
                         .background(.white)
                         .shadow(color: ink.opacity(0.08), radius: 6, y: 2)
+                } else {
+                    starterIdeas(in: canvas.size)
                 }
             }
             .frame(width: canvas.size.width, height: canvas.size.height)
+            .overlay(alignment: .top) {
+                if store.isGenerating {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text(store.progressText)
+                            .font(.callout)
+                            .accessibilityIdentifier("generationProgress")
+                    }
+                    .padding(10)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(8)
+                    .allowsHitTesting(false)
+                    .accessibilityHint("Keep the app open. Generation may take a few minutes.")
+                }
+            }
             .onAppear { updateGenerationSize(canvas.size) }
             .onChange(of: canvas.size) { _, size in updateGenerationSize(size) }
             .onChange(of: displayScale) { _, _ in updateGenerationSize(canvas.size) }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func starterIdeas(in size: CGSize) -> some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                if size.height >= 340 && !typeSize.isAccessibilitySize {
+                    VStack(spacing: 8) {
+                        Image("StarterDinosaur")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: 360, maxHeight: min(220, size.height * 0.38))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .accessibilityLabel("Example coloring sheet: a dinosaur riding a bicycle on the moon")
+                        Text("Example: a dinosaur riding a bike on the moon")
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                VStack(spacing: 6) {
+                    Text("What shall we draw?")
+                        .font(.title2.bold())
+                    Text("Pick an idea, or describe your own below.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .multilineTextAlignment(.center)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
+                                         count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 12) {
+                    ForEach(StarterIdea.allCases) { idea in
+                        Button { useStarterIdea(idea) } label: {
+                            Label(idea.title, systemImage: idea.symbol)
+                                .font(.callout.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .padding(.horizontal, 8)
+                                .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                                .contentShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Fills the description so you can edit it before generating")
+                        .accessibilityIdentifier("starterIdea.\(idea.rawValue)")
+                    }
+                }
+                .frame(maxWidth: 460)
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: size.height)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .accessibilityIdentifier("starterIdeas")
+    }
+
+    private func useStarterIdea(_ idea: StarterIdea) {
+        store.description = idea.prompt
+        descriptionFocused = true
     }
 
     private func updateGenerationSize(_ size: CGSize) {
@@ -654,6 +692,139 @@ struct ContentView: View {
             }
         }
     }
+}
+
+private enum StarterIdea: String, CaseIterable, Identifiable {
+    case dinosaurs, space, animals, surprise
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .dinosaurs: "Dinosaurs"
+        case .space: "Space"
+        case .animals: "Animals"
+        case .surprise: "Surprise me"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .dinosaurs: "fossil.shell"
+        case .space: "moon.stars"
+        case .animals: "pawprint"
+        case .surprise: "shuffle"
+        }
+    }
+    var prompt: String {
+        switch self {
+        case .dinosaurs: "A friendly dinosaur riding a bicycle on the moon"
+        case .space: "A cheerful astronaut exploring a planet with stars and a rocket"
+        case .animals: "A fox and a rabbit having a picnic in a flower garden"
+        case .surprise:
+            Self.surprisePrompts.randomElement() ?? "A dragon baking cupcakes in a cozy kitchen"
+        }
+    }
+
+    private static let surprisePrompts = [
+        "A dragon baking cupcakes in a cozy kitchen",
+        "A stegosaurus wearing a chef hat and making pancakes",
+        "A friendly T. rex playing a giant xylophone",
+        "An octopus playing several musical instruments",
+        "Penguins running an ice cream shop beside an igloo",
+        "A robot band making music with pots and pans",
+        "A giraffe painting a garden fence with a long brush",
+        "A space whale swimming past planets and comets",
+        "A sleepy moon reading a bedtime story to little stars",
+        "A mouse living in a teacup house with a button door",
+        "A cat flying a hot air balloon over a tiny village",
+        "A dinosaur train passing a peaceful volcano",
+        "A dinosaur blowing bubbles beside a lake",
+        "A hippo in a tutu practicing ballet in a giant bubble bath",
+        "A snail in a racing helmet driving a carrot-shaped race car",
+        "A sheep barber giving fluffy clouds a haircut",
+        "A crocodile brushing its enormous smile with a tiny toothbrush",
+        "A flamingo trying on roller skates in a fancy shoe shop",
+        "A walrus knitting a tiny sweater for a shivering teapot",
+        "An octopus tangled in seven scarves while knitting an eighth",
+        "A camel running a hat shop with hats balanced on both humps",
+        "A kangaroo carrying a tiny brass band in its pouch",
+        "A goose in a bow tie serving a fancy dinner inside a giant boot",
+        "A llama racing a wheeled bathtub full of rubber ducks",
+        "A raccoon astronaut washing cheesy moon dishes in a crater",
+        "Fluffy clouds having a pillow fight while feathers drift past the moon",
+        "A jellyfish wearing rain boots and splashing in underwater puddles",
+        "An elephant drinking from a tiny teacup with its trunk curled politely",
+        "A cheetah in slippers being overtaken by snails on tiny scooters",
+        "A sloth conducting an orchestra of ringing alarm clocks",
+        "A bat hanging upside down while decorating an upside-down birthday cake",
+        "Seals balancing plates of wobbly jelly on their noses",
+        "A pufferfish selling bubble balloons from a tiny underwater cart",
+        "A polar bear in pajamas raiding a refrigerator full of snowballs",
+        "A wombat driving a train made of sofa cushions and bedroom slippers",
+        "A penguin lifeguard watching over a bathtub full of rubber ducks",
+        "A giraffe trying to untangle a mountain of neckties at a tailor shop",
+        "A peacock proudly displaying a tail made of patterned umbrellas",
+        "A badger catching flying pancakes with an enormous butterfly net",
+        "A beaver building a bridge out of giant pencils",
+        "A frog juggling lily pads while riding a unicycle",
+        "An axolotl wearing a crown and sitting on a throne of bubbles",
+        "Ants holding tiny umbrellas beneath a shower of jellybeans",
+        "A hamster lifting broccoli dumbbells at a tiny gym",
+        "A tortoise moving house with wheels on its shell and socks on its chimney",
+        "A magician pulling a very surprised rabbit out of a giant carrot",
+        "A smiling cucumber dancing in moon boots beneath a disco ball",
+        "A pineapple in sunglasses driving a bus full of giggling fruit",
+        "A banana in pajamas brushing its teeth beside a smiling toothpaste tube",
+        "A strawberry queen playing chess with marshmallow guards",
+        "A slice of toast parachuting onto a breakfast plate with a butter-pat backpack",
+        "Cupcakes visiting a barbershop to have their icing mustaches trimmed",
+        "A stack of pancakes skiing downhill on two pats of butter",
+        "A teapot pouring tiny stars into cups wearing sleeping caps",
+        "A broccoli superhero posing proudly for a crowd of cheering peas",
+        "A mushroom conducting a choir of singing raindrops",
+        "A doughnut dog chasing its own sprinkle-covered tail",
+        "An avocado rowing its stone like a boat across a bowl of soup",
+        "A slice of pizza knitting a long scarf from stretchy cheese",
+        "Marshmallows having a snowball fight in a pile of flour",
+        "A pretzel teaching yoga to a class of very tangled pasta",
+        "A spaghetti family combing their noodle hair with an enormous fork",
+        "A space alien proudly wearing a different sock on each of its six ears",
+        "A moon mail carrier delivering letters in a rocket-shaped bathtub",
+        "The sun putting on sunscreen while clouds hold up a beach umbrella",
+        "A planet practicing hula hoops with its rings while little moons cheer",
+        "An astronaut wearing a fishbowl helmet while a goldfish inside blows bubbles",
+        "A robot sneezing butterflies into a polka-dot handkerchief",
+        "A robot eating nuts-and-bolts cereal with a screwdriver spoon",
+        "A flying saucer going through a car wash run by very fluffy sheep",
+        "A rocket in pajamas cuddling a teddy bear on a cloud",
+        "An alien walking a pet vacuum cleaner on a leash",
+        "A robot chef trying to comb spaghetti into a tidy hairstyle",
+        "A robot knight riding a wind-up toaster with a tiny saddle",
+        "A wizard chasing escaped bubbles with a vacuum cleaner",
+        "A friendly witch teaching a broomstick to ride with training wheels",
+        "A dragon blowing enormous soap bubbles full of tiny castles",
+        "A unicorn untangling a rainbow caught around its horn",
+        "A mermaid modeling rain boots for a panel of puzzled seahorses",
+        "A fairy holding a giant umbrella over a giant wearing a tiny hat",
+        "A giant knitting a rainbow scarf with two chimney-sized knitting needles",
+        "A goblin serving tea in upside-down hats to very polite frogs",
+        "A yeti getting its fluffy hair styled with a garden rake",
+        "A baby dragon hiding behind a flowerpot with its tail sticking out",
+        "A castle wearing enormous slippers and tiptoeing through a meadow",
+        "A tiny king commanding a bathtub fleet of rubber ducks",
+        "A knight in shiny armor riding a very proud hobby horse",
+        "A pirate captain steering a ship made from a giant sandwich",
+        "A caterpillar bus wearing a different sock on every foot",
+        "A train made of teacups pulled by a whistling kettle",
+        "A bicycle with square wheels being lifted along by cheerful umbrellas",
+        "An airplane wearing a scarf and mittens while flying through fluffy clouds",
+        "An octopus captain steering a goldfish-bowl submarine",
+        "A giraffe wearing a lighthouse as a hat while tiny boats circle its feet",
+        "A house riding a giant snail in a very slow race",
+        "An umbrella taking a shower beneath a tiny rain cloud",
+        "A grandfather clock wearing sneakers and chasing a runaway teacup",
+        "A library where the books wear pajamas and nap in tiny bunk beds",
+        "A T. rex using a grabber stick to put a party hat on its head",
+        "An octopus waiter delivering a tower of pancakes on eight roller skates"
+    ]
 }
 
 /// UIKit keeps the pinch centered under the fingers and bounds panning to the sheet.
