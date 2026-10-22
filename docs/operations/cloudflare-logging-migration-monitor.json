@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-17",
+  "status": "No supported self-service migration found",
+  "accountID": "994f60c144bd9dd9bc2333bd3abba832",
+  "gateway": "coloring-sheets",
+  "officialSource": "https://developers.cloudflare.com/ai-gateway/observability/logging/",
+  "dashboard": "No migration control visible; request logging disabled",
+  "support": "User already contacted Cloudflare last week; do not contact support. Prepared form not submitted.",
+  "automationID": "check-cloudflare-logging-migration",
+  "schedule": "Saturdays 10:00 Europe/London",
+  "reportedAvailability": false
+}

@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-19",
+  "provider": "Cloudflare account API token",
+  "name": "WonderLines GitHub deploy",
+  "tokenId": "aa2611a1808f7f5399ba1b76a1ac48ef",
+  "originalPermissions": {
+    "account": [
+      "CF Agents Write",
+      "Workers Containers Write",
+      "Workers Observability Write",
+      "Workers CI Write",
+      "Pages Write",
+      "Workers R2 Storage Write",
+      "Workers Tail Read",
+      "Workers KV Storage Write",
+      "Workers Scripts Write",
+      "Account Settings Read"
+    ],
+    "allZones": [
+      "Workers Routes Write"
+    ]
+  },
+  "savedPermissions": [
+    {
+      "role": "Individual Workers Editor",
+      "workers": [
+        "coloring-sheets-api",
+        "coloring-sheets-moderation-lab"
+      ]
+    },
+    {
+      "role": "Workers Metadata Read-Only",
+      "scope": "account Workers product"
+    }
+  ],
+  "expiry": {
+    "saved": "2026-12-23T23:59:59Z",
+    "attempted": "No expiration",
+    "confirmedByUser": true,
+    "status": "Original token retains expiry; replacement has confirmed No expiration."
+  },
+  "verification": {
+    "url": "https://github.com/jerenrich/WonderLines/actions/runs/39326183903",
+    "attempt": 2,
+    "status": "success",
+    "durationSeconds": 37,
+    "commit": "2f66f75ba7142b8062cddd6f259a6697b01a288b",
+    "tests": "Offline Worker test suite passed",
+    "deployed": [
+      "coloring-sheets-api",
+      "coloring-sheets-moderation-lab"
+    ],
+    "logRetentionWorker": "Bootstrap-gated optional deployment remains disabled"
+  },
+  "compatibilityFinding": "Individual Workers Editor alone failed Wrangler 4.136.3 remote configuration metadata lookup. Adding Workers Metadata Read-Only made the full workflow pass.",
+  "credentialValueChanged": true,
+  "evidence": [
+    "deploy-token-no-expiry-review.png",
+    "deploy-token-verification.png",
+    "deploy-token-expiry-retained.png",
+    "deploy-token-replacement-prepared.png",
+    "deploy-token-latest-verification.png",
+    "deploy-token-replacement-saved.png",
+    "replacement-token-deployment-success.png",
+    "old-deploy-token-revoked.png",
+    "post-revocation-deployment-success.png"
+  ],
+  "documentation": "https://developers.cloudflare.com/workers/authorization/workers/",
+  "replacement": {
+    "name": "WonderLines GitHub deploy \u2014 no expiry",
+    "expiry": "No expiration",
+    "permissions": "Same as savedPermissions",
+    "status": "Created by user; GitHub secret updated by user; deployment verified successfully",
+    "githubSecret": "CLOUDFLARE_API_TOKEN",
+    "githubSecretEdit": "https://github.com/jerenrich/WonderLines/settings/secrets/actions/CLOUDFLARE_API_TOKEN",
+    "tokenId": "b1eeaa08a00cb251f2c79c29ee49dd5d",
+    "savedExpiryVerified": "No expiration",
+    "lastUsedEvidence": "Cloudflare dashboard showed 35s ago following verification run; original token showed 3m ago"
+  },
+  "latestVerification": {
+    "url": "https://github.com/jerenrich/WonderLines/actions/runs/39328061234",
+    "runNumber": 44,
+    "status": "success",
+    "durationSeconds": 38,
+    "jobDurationSeconds": 33,
+    "commit": "2f66f75ba7142b8062cddd6f259a6697b01a288b",
+    "deployed": [
+      "coloring-sheets-api",
+      "coloring-sheets-moderation-lab"
+    ],
+    "tests": "All offline tests passed",
+    "credential": "Replacement restricted token with no expiration; run started after old token revocation",
+    "evidence": "post-revocation-deployment-success.png"
+  },
+  "credentialChangedBy": "User",
+  "oldTokenStatus": "Revoked by deletion at user request. Cloudflare account token inventory now contains only the active no-expiry replacement.",
+  "oldTokenRevocation": {
+    "tokenId": "aa2611a1808f7f5399ba1b76a1ac48ef",
+    "name": "WonderLines GitHub deploy",
+    "revokedAt": "2026-10-19T21:29:28.986360+00:00",
+    "method": "Cloudflare dashboard Delete token",
+    "verified": "Old token absent from inventory; replacement b1eeaa08a00cb251f2c79c29ee49dd5d remains Active",
+    "evidence": "old-deploy-token-revoked.png"
+  },
+  "postRevocationVerification": {
+    "url": "https://github.com/jerenrich/WonderLines/actions/runs/39328061234",
+    "runNumber": 44,
+    "status": "success",
+    "durationSeconds": 38,
+    "jobDurationSeconds": 33,
+    "commit": "2f66f75ba7142b8062cddd6f259a6697b01a288b",
+    "deployed": [
+      "coloring-sheets-api",
+      "coloring-sheets-moderation-lab"
+    ],
+    "tests": "All offline tests passed",
+    "credential": "Replacement restricted token with no expiration; run started after old token revocation",
+    "evidence": "post-revocation-deployment-success.png"
+  }
+}

@@ -1,0 +1,6 @@
+# Keep credential setup dashboards and redundant intermediate captures local.
+*.png
+!deploy-token-replacement-saved.png
+!old-deploy-token-revoked.png
+!post-revocation-deployment-success.png
+!restored-flare-test.png

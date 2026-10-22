@@ -1,0 +1,49 @@
+{
+  "model": "gpt-image-2.5-flare",
+  "generationPostsAttempted": 1,
+  "registrationStatus": 201,
+  "accessBefore": {
+    "features": [],
+    "generationCredits": 0,
+    "freeGenerationsRemaining": 100,
+    "allowanceResetsAt": "2026-10-20T00:00:00.000Z"
+  },
+  "generationID": "c728eac7-35f8-49ff-90ba-213ad84b1384",
+  "generationStatus": 200,
+  "resultStatus": 200,
+  "imageDimensions": [
+    1456,
+    1024
+  ],
+  "imageBytes": 1016833,
+  "imageSHA256": "68d2cfb704d3657dd0713d58c1ab2ebf5c328f4f352da63d48378383567a6176",
+  "metrics": {
+    "requestedModel": "gpt-image-2.5-flare",
+    "provider": "openai",
+    "upstreamModel": "gpt-image-2.5-flare",
+    "viaGateway": true,
+    "requestedSize": "1456x1024",
+    "size": "1456x1024",
+    "inputTokens": 82,
+    "textInputTokens": 82,
+    "imageInputTokens": 0,
+    "outputTokens": 154,
+    "totalTokens": 236,
+    "elapsedMs": 9017,
+    "estimatedInputUsd": 0.00041,
+    "estimatedOutputUsd": 0.00462,
+    "estimatedTotalUsd": 0.00503,
+    "ratesChecked": "2026-09-23",
+    "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+  },
+  "recoveryStatus": 200,
+  "recoveredImageMatches": true,
+  "accessAfter": {
+    "features": [],
+    "generationCredits": 0,
+    "freeGenerationsRemaining": 99,
+    "allowanceResetsAt": "2026-10-20T00:00:00.000Z"
+  },
+  "passed": true,
+  "elapsedSeconds": 14.11
+}
