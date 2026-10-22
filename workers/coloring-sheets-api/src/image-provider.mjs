@@ -131,10 +131,26 @@ export function imageRequest(env, route, subject, size) {
 }
 
 export class ImageProviderError extends Error {
-  constructor(message, code = 'provider_invalid_response') { super(message); this.code = code; }
+  constructor(message, code = 'provider_invalid_response', diagnostics = {}) { super(message); this.code = code; this.diagnostics = diagnostics; }
 }
 const INVALID_IMAGE = 'The image provider returned an unreadable or missing image. Try another model or check the provider status.';
 const providerName = provider => ({openai: 'OpenAI', 'workers-ai': 'Cloudflare Workers AI', 'google-ai-studio': 'Google AI Studio', fal: 'fal.ai'})[provider];
+
+// Keep only protocol metadata. Never retain response text, arbitrary headers,
+// URLs, or unrecognized string codes, which may contain customer input.
+function responseDiagnostics(response) {
+  const result={httpStatus:response.status};
+  const requestId=response.headers.get('x-request-id');
+  if(typeof requestId==='string'&&/^(?:req_[a-zA-Z0-9]{8,80}|[a-fA-F0-9]{32}|[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/.test(requestId))result.providerRequestID=requestId;
+  const gatewayId=response.headers.get('cf-aig-log-id');
+  if(typeof gatewayId==='string'&&/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(gatewayId))result.gatewayRequestID=gatewayId;
+  const ray=response.headers.get('cf-ray');
+  if(typeof ray==='string'&&/^[a-fA-F0-9]{16}(?:-[A-Z]{3})?$/.test(ray))result.cfRay=ray;
+  const retry=response.headers.get('retry-after');
+  const seconds=retry&&/^\d{1,5}$/.test(retry)?Number(retry):retry?Math.ceil((Date.parse(retry)-Date.now())/1000):NaN;
+  if(Number.isFinite(seconds)&&seconds>=0&&seconds<=86400)result.retryAfterSeconds=seconds;
+  return result;
+}
 
 // Read only a small error envelope. Provider text may echo prompts, credentials,
 // or internal diagnostics: use it to classify errors, never forward it verbatim.
@@ -164,7 +180,9 @@ function providerFailure(request, status, body) {
   const messages = errors.map(error => typeof error === 'string' ? error : error.message ?? '').join(' ').toLowerCase();
   const known = (...values) => values.some(value => codes.includes(value));
   const detail = status >= 400 ? ` (HTTP ${status})` : '';
-  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code);
+  const publicCodes=new Set(['insufficient_quota','billing_hard_limit_reached','billing_not_active','content_policy_violation','safety_violations','IMAGE_SAFETY','SAFETY','invalid_api_key','UNAUTHENTICATED','PERMISSION_DENIED','model_not_found','NOT_FOUND','rate_limit_exceeded','RESOURCE_EXHAUSTED']);
+  const upstreamErrorCodes=[...new Set(codes.filter(code=>/^\d{1,8}$/.test(code)||publicCodes.has(code)))].slice(0,8);
+  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code,{upstreamErrorCodes});
   if (request.provider === 'workers-ai' && (known('4006') || /daily free allocation.*10,?000 neurons/.test(messages))) {
     return failure('provider_daily_quota_exhausted',
       'Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst to use OpenAI, or upgrade the Cloudflare Workers plan',
@@ -227,6 +245,15 @@ export async function runImageRequest(request) {
     throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. You have not been charged. Check unfinished sheets before generating again.`,
       timeout ? 'provider_timeout' : 'provider_connection_failed');
   }
+  const diagnostics=responseDiagnostics(response);
+  try {return {...await readImageResponse(request,response),diagnostics};}
+  catch(error) {
+    const failure=error instanceof ImageProviderError?error:new ImageProviderError(INVALID_IMAGE);
+    failure.diagnostics={...diagnostics,...failure.diagnostics};throw failure;
+  }
+}
+
+async function readImageResponse(request,response) {
   if (!response.ok) throw providerFailure(request, response.status, await errorBody(response));
   if (request.provider === 'workers-ai') {
     let image;

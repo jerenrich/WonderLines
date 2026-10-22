@@ -18,7 +18,11 @@ export class ComparisonLibrary {
   fetch(request) {
     const operation=async()=>{
     try { return await this.handle(request); }
-    catch { return fail('The library is temporarily unavailable. Please try again.',503,'library_unavailable'); }
+    catch {
+      const path=new URL(request.url).pathname;
+      console.info(JSON.stringify({event:'comparison_library_unavailable',operation:['/list','/get','/lookup','/job','/save','/start'].includes(path)?path:'unknown'}));
+      return fail('The library is temporarily unavailable. Please try again.',503,'library_unavailable');
+    }
     };
     return ['/list','/get','/lookup','/job'].includes(new URL(request.url).pathname)?operation():this.serial(operation);
   }
@@ -50,8 +54,8 @@ export class ComparisonLibrary {
   }
   async observe(grid,cell,job) {
     if(['completed','failed'].includes(cell.status)&&job.state==='processing')return;
-    const changed=cell.status!==job.state||cell.error!==(job.message??null)||JSON.stringify(cell.metrics)!==JSON.stringify(job.metrics??null);
-    cell.status=job.state;cell.metrics=job.metrics??null;cell.error=job.message??null;
+    const changed=cell.status!==job.state||cell.error!==(job.message??null)||cell.errorCode!==(job.errorCode??null)||JSON.stringify(cell.metrics)!==JSON.stringify(job.metrics??null);
+    cell.status=job.state;cell.metrics=job.metrics??null;cell.error=job.message??null;cell.errorCode=job.errorCode??null;
     if(changed)await this.write(grid);
     if(['completed','failed'].includes(cell.status))await this.state.storage.delete('pending:'+cell.id);
   }
@@ -72,6 +76,7 @@ export class ComparisonLibrary {
           const fingerprints=await generationFingerprints(composed.subject,cell.model,{width:1456,height:1024});
           if(!Object.values(fingerprints).includes(found.value.job.fingerprint))return fail('A saved image does not match this comparison.',409);
           cell.status=found.value.job.state;cell.metrics=found.value.job.metrics??null;cell.error=found.value.job.message??null;
+          cell.errorCode=found.value.job.errorCode??null;
         } else if(found.status!==404)return fail('Could not import the saved comparison.',503);
       }
     }
@@ -138,7 +143,7 @@ export class ComparisonLibrary {
     } else if(cell.id!==input.id) {
       if(cell.status!=='failed')return fail('An image for this model and age is already in progress or complete.',409);
       await this.state.storage.put('image:'+cell.id,{gridId:grid.id,retired:true});await this.state.storage.put('cleanup:'+cell.id,true);
-      cell.id=input.id;cell.status='queued';cell.metrics=null;cell.error=null;await this.schedule();
+      cell.id=input.id;cell.status='queued';cell.metrics=null;cell.error=null;cell.errorCode=null;await this.schedule();
     }
     await this.state.storage.put('image:'+cell.id,{gridId:grid.id});await this.write(grid);
     const result=await startGeneration(prepared,{
@@ -158,7 +163,8 @@ export class ComparisonLibrary {
   }
 
   async failed(grid,cell,message,status,code='request_failed') {
-    cell.status='failed';cell.error=message;await this.state.storage.delete('pending:'+cell.id);await this.write(grid);return fail(message,status,code);
+    console.info(JSON.stringify({event:'comparison_start_failed',generationID:cell.id,gridID:grid.id,model:cell.model,status,errorCode:code}));
+    cell.status='failed';cell.error=message;cell.errorCode=code;await this.state.storage.delete('pending:'+cell.id);await this.write(grid);return fail(message,status,code);
   }
   async handle(request) {
     const path=new URL(request.url).pathname;

@@ -145,6 +145,9 @@ function renderGrid() {
   const grid = $('comparison-grid'); grid.replaceChildren();
   $('empty-state').hidden = !!current; grid.hidden = !current; $('run-prompt').hidden = !current; $('export').disabled = !current;
   $('total-cost').hidden=!current;$('resume-comparison').hidden=!current||busy||!current.cells.some(c=>['queued','uncertain'].includes(c.status));
+  const failed=current?.cells.filter(c=>c.status==='failed').length||0;
+  $('retry-failed').hidden=!failed;$('retry-failed').disabled=busy;
+  $('retry-failed').textContent=`Retry failed images (${failed})`;
   if (!current) { $('result-count').textContent = '0 sheets'; $('progress').hidden = true; return; }
   const costed=current.cells.filter(c=>Number.isFinite(c.metrics?.estimatedTotalUsd)&&c.metrics.estimatedTotalUsd>=0);
   const total=costed.reduce((sum,c)=>sum+c.metrics.estimatedTotalUsd,0);
@@ -177,6 +180,11 @@ function renderGrid() {
         const preview = el('div','sheet-preview'), placeholder = el('div','sheet-placeholder');
         placeholder.append(el('span',cell.status === 'processing' || cell.status === 'submitting' ? 'spinner' : 'placeholder-icon',cell.status === 'queued' ? '✳' : cell.status === 'failed' ? '↗' : ''));
         placeholder.append(el('span','',({queued:'Waiting for its turn',submitting:'Starting your sheet',processing:'Drawing your idea',failed:'This one needs another try',uncertain:'Ready to check again'})[cell.status] || 'Waiting'));
+        if(['failed','uncertain'].includes(cell.status)) {
+          const retry=el('button','secondary sheet-retry',cell.status==='failed'?'Retry image':'Check / resume');retry.type='button';retry.disabled=busy;
+          retry.setAttribute('aria-label',`${retry.textContent}: ${model.label}, age ${age}`);
+          retry.addEventListener('click',()=>retryCells([cell]));placeholder.append(retry);
+        }
         preview.append(placeholder); card.append(preview);
       }
       const info = el('button','sheet-info','i'); info.type = 'button';
@@ -200,25 +208,26 @@ function openDetails(cell, model) {
   row('Prompt',current.prompt); row('Model',model.label); row('Provider',providerLabels[model.provider] || model.provider);
   row('Age',`${cell.age} · ${ageDetail(cell.age)}`); row('Status',({completed:'Ready to colour',failed:'Not generated',uncertain:'Check again',processing:'Drawing',submitting:'Starting',queued:'Waiting'})[cell.status] || cell.status);
   if(cell.error) row('Message',cell.error);
+  if(cell.errorCode) row('Error code',cell.errorCode);
+  row('Generation ID',cell.id);
   for(const [key,value] of Object.entries(cell.metrics || {})) row(key,value);
   $('details-note').hidden = !cell.metrics;
   const actions = $('details-actions'); actions.replaceChildren();
   if(['uncertain','failed'].includes(cell.status)) {
-    const retry = el('button','secondary',cell.status === 'failed' ? 'Generate again' : 'Resume / check'); retry.type='button'; retry.disabled=busy;
+    const retry = el('button','secondary',cell.status === 'failed' ? 'Retry image' : 'Check / resume'); retry.type='button'; retry.disabled=busy;
     retry.addEventListener('click',async()=>{
       if(busy)return;
       $('details-dialog').close();
-      if(cell.status === 'failed') { cell.id=crypto.randomUUID(); cell.status='queued'; }
-      cell.error=null; setBusy(true); persist(); renderGrid(); const epoch=++pollEpoch;
-      await runCell(cell,epoch); setBusy(false); persist(); renderGrid();
+      await retryCells([cell]);
     }); actions.append(retry);
   }
   $('details-dialog').showModal();
 }
 function applyJob(cell, job) {
   const error=job.error?.message||null;
-  const changed=cell.status!==job.status||cell.error!==error||JSON.stringify(cell.metrics)!==JSON.stringify(job.metrics);
-  cell.status=job.status;cell.metrics=job.metrics;cell.error=error;updateAccess(job.access);
+  const errorCode=job.error?.code||null;
+  const changed=cell.status!==job.status||cell.error!==error||cell.errorCode!==errorCode||JSON.stringify(cell.metrics)!==JSON.stringify(job.metrics);
+  cell.status=job.status;cell.metrics=job.metrics;cell.error=error;cell.errorCode=errorCode;updateAccess(job.access);
   if(changed)queueRender();
 }
 async function runCell(cell, epoch, recoveryOnly = false) {
@@ -247,10 +256,37 @@ async function runCell(cell, epoch, recoveryOnly = false) {
   } catch(error) {
     // A dropped response may already have queued an image. Keep the same ID so
     // resuming never creates a second billed generation.
-    cell.status=error.status && [400,403,409,429].includes(error.status) ? 'failed' : 'uncertain';
+    cell.status=error.status && [400,403,409,410,429].includes(error.status) ? 'failed' : 'uncertain';
     cell.error=error.message || 'Connection interrupted. Resume to check the same image.';
+    cell.errorCode=error.code||null;
   }
   queueRender();
+}
+async function retryCells(cells) {
+  if(busy||!current)return;
+  const queue=cells.filter(cell=>current.cells.includes(cell)&&['failed','uncertain'].includes(cell.status));
+  if(!queue.length)return;
+  const epoch=++pollEpoch;setBusy(true);renderGrid();
+  async function worker() {
+    while(queue.length&&epoch===pollEpoch) {
+      const cell=queue.shift();
+      try {
+        if(cell.status==='failed') {
+          // Confirm the server's outcome before replacing an ID. A lost response
+          // or stale tab must never turn a completed/in-flight image into a second charge.
+          try {applyJob(cell,await api(`/api/generations/${cell.id}`));}
+          catch(error){if(error.status!==404)throw error;}
+          if(epoch!==pollEpoch)return;
+          if(cell.status==='failed') {
+            cell.id=crypto.randomUUID();cell.status='queued';cell.metrics=null;cell.error=null;cell.errorCode=null;
+          }
+        }
+        await runCell(cell,epoch);
+      }catch(error){cell.error=error.message;cell.errorCode=error.code||null;queueRender();}
+    }
+  }
+  try {await Promise.all(Array.from({length:Math.min(MAX_PARALLEL_GENERATIONS,queue.length)},worker));}
+  finally {if(epoch===pollEpoch){setBusy(false);persist();renderGrid();}}
 }
 async function runCells(recovery = false) {
   const epoch=++pollEpoch; setBusy(true); renderGrid();
@@ -274,6 +310,7 @@ async function browseLibrary(){showView('library');try{await refreshLibrary();me
 $('library-tab').addEventListener('click',browseLibrary);$('browse-library').addEventListener('click',browseLibrary);
 $('library-search').addEventListener('input',renderLibrary);
 $('resume-comparison').addEventListener('click',()=>{if(!busy&&current)runCells();});
+$('retry-failed').addEventListener('click',()=>retryCells(current?.cells.filter(c=>c.status==='failed')||[]));
 $('select-all-models').addEventListener('click',()=>{config.models.forEach(model=>selectedModels.add(model.id));document.querySelector('.more-models').open=true;renderOptions();});
 document.querySelectorAll('[data-example]').forEach(button=>button.addEventListener('click',()=>{$('prompt').value=button.dataset.example; updateSummary(); $('prompt').focus();}));
 $('compare-form').addEventListener('submit',async event=>{

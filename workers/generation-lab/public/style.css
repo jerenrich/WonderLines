@@ -41,3 +41,5 @@
 .library-empty{grid-column:1/-1;color:#92a082;font-size:13px;text-align:center;padding:70px 20px}
 .history-title .text-button{font-size:9px}
 @media(max-width:760px){.library-heading{align-items:start;flex-direction:column;padding-top:27px}.library-heading h1{font-size:30px}.library-search,.library-search input{width:100%}.library-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.total-cost{font-size:9px}.results-heading{gap:7px}.workspace-nav{padding-top:12px}}
+
+.sheet-retry{margin-top:6px;min-height:36px;padding:8px 14px;color:var(--green);background:var(--wash);border:1px solid var(--line);border-radius:6px}

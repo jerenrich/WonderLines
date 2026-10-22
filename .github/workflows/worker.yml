@@ -83,6 +83,7 @@ jobs:
           node workers/moderation-lab/tests/worker.mjs
           node workers/generation-lab/tests/worker.mjs
           node workers/generation-lab/tests/library.mjs
+          node workers/generation-lab/tests/retry.mjs
           node workers/log-retention/tests/worker.mjs
           node Scripts/test_diagnostic_retention.mjs
           node --check workers/moderation-lab/public/app.js

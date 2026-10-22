@@ -74,3 +74,26 @@ await call('/job',{id:cell.id});let writes=0;const originalPut=storage.put.bind(
 storage.put=async(key,value)=>{if(key==='grid:'+latest.id)writes++;return originalPut(key,value);};
 await call('/job',{id:cell.id});await call('/job',{id:cell.id});assert.equal(writes,0);storage.put=originalPut;
 console.log('PASS: library reads bypass generation locking and unchanged status polls avoid grid/index rewrites.');
+// Retrying replaces only the failed slot within the same saved comparison.
+// The old ID becomes inaccessible, siblings survive, and a lost response can
+// recover the new reservation without spending twice.
+const retryGrid=run(Date.now()-1000);retryGrid.ages=[4,7];retryGrid.cells.push({...retryGrid.cells[0],id:crypto.randomUUID(),age:7});
+assert.equal((await call('/save',retryGrid)).status,201);
+const startCell=cell=>({id:cell.id,batchID:retryGrid.id,description:retryGrid.prompt,age:cell.age,composition:retryGrid.composition,model:cell.model});
+for(const cell of retryGrid.cells)assert.equal((await call('/start',startCell(cell))).status,202);
+const [failedCell,sibling]=retryGrid.cells;
+Object.assign(jobs.get(failedCell.id),{state:'failed',errorCode:'provider_unavailable',message:'Temporarily unavailable',metrics:{httpStatus:500,inferenceMs:100}});
+Object.assign(jobs.get(sibling.id),{state:'completed',metrics:{estimatedTotalUsd:0.003}});
+await library.alarm();
+saved=(await (await call('/get',{id:retryGrid.id})).json()).grid;
+assert.equal(saved.cells[0].errorCode,'provider_unavailable');assert.equal(saved.cells[0].metrics.httpStatus,500);
+const retryInput={...startCell(failedCell),id:crypto.randomUUID()},beforeRetry=reservations;
+assert.equal((await call('/start',retryInput)).status,202);assert.equal(reservations,beforeRetry+1);
+assert.equal((await call('/start',retryInput)).status,200);assert.equal(reservations,beforeRetry+1);
+saved=(await (await call('/get',{id:retryGrid.id})).json()).grid;
+assert.equal(saved.cells[0].id,retryInput.id);assert.equal(saved.cells[0].status,'processing');assert.equal(saved.cells[0].errorCode,null);
+assert.equal(saved.cells[1].id,sibling.id);assert.equal(saved.cells[1].status,'completed');assert.equal(saved.cells[1].metrics.estimatedTotalUsd,0.003);
+assert.equal((await call('/job',{id:failedCell.id})).status,410);
+assert.equal((await call('/start',{...retryInput,id:crypto.randomUUID()})).status,409);
+assert.equal((await call('/start',{...startCell(sibling),id:crypto.randomUUID()})).status,409);assert.equal(reservations,beforeRetry+1);
+console.log('PASS: retries preserve successful siblings, replace only failed slots, retire old IDs, clear errors, persist diagnostics and recover reservations idempotently.');

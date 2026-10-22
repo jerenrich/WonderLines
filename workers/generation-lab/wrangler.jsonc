@@ -17,5 +17,5 @@
   ],
   "vars": {"LAB_ACCOUNT_ID": "f66c3047-7ae6-4a1d-9144-7514e7a44961"},
   "secrets": {"required": ["LAB_ACCESS_KEY"]},
-  "observability": {"enabled": false}
+  "observability": {"enabled": true, "head_sampling_rate": 1}
 }
