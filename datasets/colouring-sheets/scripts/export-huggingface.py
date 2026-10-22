@@ -32,9 +32,9 @@ def image_hash(path):
 
 def card(config, report, rows):
     bands = list(config["expected_age_band_counts"])
-    lines = ["---", "language:", "- en", "task_categories:",
+    lines = ["---", "pretty_name: WonderLines Colouring Sheets", "language:", "- en", "task_categories:",
              "- text-to-image", "tags:", "- synthetic", "- colouring-pages",
-             "- imagefolder", "size_categories:", "- n<1K"]
+             "- coloring-pages", "- line-art", "- image", "- imagefolder", "size_categories:", "- n<1K"]
     if config["license"]:
         lines.append("license: " + config["license"])
     lines.append("configs:")
@@ -46,95 +46,127 @@ def card(config, report, rows):
         for split in ("train", "validation", "test"):
             glob = "*" if name == "all" else name
             lines.extend(["  - split: " + split, '    path: "data/' + glob + '/' + split + '/**"'])
-    lines.extend(["---", "", "# WonderLines synthetic colouring sheets", "",
-                  "![4×4 preview of four colouring-sheet subjects across four difficulty bands](" + config["preview"]["export_path"] + ")", "",
-                  "Four subjects across four difficulty bands. Columns show target ages 3, 6, 9 and 13. "
-                  "This contact sheet is a browsing preview; original PNGs are stored under `data/`.", "",
-                  "Dataset created and published by **" + config["creator_name"] + "** for **WonderLines**.", "",
-                  "[WonderLines project site](" + config["project_url"] + ") · "
-                  "[GitHub repository](" + config["source_repository_url"] + ")", "",
-                  "400 original PNGs generated from 25 short subjects across slider ages 3–18. "
-                  "Use the default `all` configuration or one of four age-band configurations. "
-                  "These configurations select the same stored images; they do not duplicate them.", "",
-                  "## Status", "",
-                  "This is an archive of generated candidates, **not a curated training release**. "
-                  "All images await visual review. `training_ready` is false and `verified_caption` "
-                  "is null for every row. `text` is a draft derived from the requested subject, "
-                  "style and difficulty instructions; it may describe details absent from the image. "
-                  "Verify or replace it before using it as a training caption.", "",
-                  "Publication license: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "
-                  "to the extent the dataset owner holds copyright or similar rights. See `LICENSE` "
-                  "for the complete terms and `ATTRIBUTION.md` for credit guidance. Attribution name: "
-                  + config["attribution_name"] + ". When sharing, provide credit, link to the license "
-                  "and indicate changes. Commercial reuse is allowed under the license. "
-                  "This does not grant third-party trademark rights or resolve separate provider "
-                  "contractual restrictions on model training.", "",
-                  "## Coverage and age meaning", "",
-                  "| Configuration | Images | Requested complexity |", "| --- | ---: | --- |"])
-    complexities = {r["age_band"]: r["complexity_guidance"] for r in rows}
-    for band in bands:
-        lines.append(f'| `{band}` | {report["age_band_counts"][band]} | {complexities[band]} |')
-    lines.extend(["", "The numeric `age_target` records the app slider setting. The model received "
-                  "the band's complexity instructions, not the numeric age. Ages in one band "
-                  "are repeated stochastic samples of identical instructions. These are intended "
-                  "difficulty labels, not verified developmental or age-suitability assessments.", "",
-                  "The oldest band has more images because it covers six slider ages. "
-                  "`balanced_subset == true` selects 300 images: three per subject per band, "
-                  "75 per band. Selection is deterministic and does not assess quality. "
-                  "For a training experiment, use this selection or sample each band equally.", "",
-                  "## Splits", "",
-                  "Subjects are assigned deterministically using SHA-256 of a fixed seed and "
-                  "description ID. All ages of a subject stay together, including in the balanced "
-                  "selection. Train: 20 subjects / 320 images; validation: 3 subjects / 48 images; "
-                  "test: 2 subjects / 32 images. Counts for individual configurations are recorded "
-                  "in `export-manifest.json`. Held-out splits are small; results will be sensitive "
-                  "to which subjects were selected. Future runs must reuse this subject assignment "
-                  "to retain the same evaluation boundary.", "",
-                  "## Generation provenance", "",
-                  "Requested and reported model: `gpt-image-2.5-sunburst` (GPT-Image-2.5 Sunburst). "
-                  "The iPhone app's Cloudflare Worker routed requests to OpenAI via Cloudflare AI "
-                  "Gateway. Run: `" + config["run_id"] + "`. All outputs are 1456 × 1024 PNGs; "
-                  "requested quality was `low`, with one image and side composition per request. "
-                  "Model revision and seed were unavailable. Exact slider guidance, provider "
-                  "prompts, generation timestamps and image hashes are retained per row. "
-                  "`effective_prompt` was reconstructed from verified Worker source; the API did "
-                  "not echo it. No resizing, cropping, thresholding or other image edits were made.", "",
-                  "The subjects were deliberately varied across animals, people, food, vehicles "
-                  "and imaginary scenes. The collection contains only 25 subject ideas and one "
-                  "composition, which limits diversity. It is synthetic and was not collected "
-                  "from children or real-user uploads. Generation accounts, credentials, Worker "
-                  "request identifiers and recovery URLs are excluded from this package.", "",
-                  "## Fields", "",
-                  "- `image`: decoded source image (ImageFolder derives this from `file_name`).",
-                  "- `text`, `caption_status`, `verified_caption`: provisional caption and its provenance.",
-                  "- `sample_id`, `description_id`, `description`, `tags`: stable IDs and original subject.",
-                  "- `age_target`, `age_band`, `complexity_level`, `complexity_guidance`: intended difficulty.",
-                  "- `split`, `balanced_subset`: deterministic sampling and evaluation membership.",
-                  "- `review_status`, `training_ready`: review state, not a quality score.",
-                  "- `provider`, `model_id`, `model_revision`, `guidance_version`, `run_id`, `generated_at`: provenance.",
-                  "- `subject_prompt`, `effective_prompt`, `effective_prompt_source`, `negative_prompt`: generation instructions.",
-                  "- `composition`, `quality`, `seed`, `width`, `height`, `sha256`: output and requested settings.", "",
-                  "## Loading", "", "```python", "from datasets import load_dataset", "",
-                  'ds = load_dataset("' + config["repository_id"] + '", "all")',
-                  'young = load_dataset("' + config["repository_id"] + '", "ages-03-05")',
-                  'balanced_train = ds["train"].filter(lambda row: row["balanced_subset"])',
-                  'age_six = ds["train"].filter(lambda row: row["age_target"] == 6)', "```", "",
-                  "Locally, replace the repository ID with this package's absolute directory. "
-                  "The `text` field can be passed to a compatible trainer after caption review. "
-                  "A model may not learn four useful difficulty levels from this small collection; "
-                  "compare outputs on held-out subjects and expand reviewed examples as needed.", "",
-                  "## Review and release limitations", "",
-                  "Before a curated release, inspect subject fidelity, enclosed colouring areas, "
-                  "unwanted shading/text, observed complexity and print quality. Record accepted "
-                  "captions from visible contents. Structural checks confirm image integrity and "
-                  "coverage, not these visual properties. One prompt mentions Ferrari; it was "
-                  "user supplied and does not imply affiliation. CC BY 4.0 has been selected; "
-                  "source-model/output terms and third-party rights still require review. "
-                  "In particular, check the applicable OpenAI agreement's restriction on using "
-                  "outputs to develop competing models before LoRA training; the dataset license "
-                  "does not override that agreement. The owner has published this collection "
-                  "with image, caption and rights review still pending.", ""])
-    return "\n".join(lines)
+    lines.extend(["---", "", ""])
+    complexity_names = ["Very simple", "Simple", "Moderate", "Intricate"]
+    coverage = "\n".join(
+        f'| `{band}` | {report["age_band_counts"][band]} | {label} |'
+        for band, label in zip(bands, complexity_names)
+    )
+    guidance = "\n".join(
+        f'- `{band}`: {next(r["complexity_guidance"] for r in rows if r["age_band"] == band)}'
+        for band in bands
+    )
+    body = f"""# WonderLines: 400 synthetic colouring sheets
+
+**The same subject, from simple outlines to intricate scenes.** A small collection for exploring how difficulty prompts change AI-generated colouring pages.
+
+I'm **{config["creator_name"]}**, the creator of [WonderLines]({config["project_url"]}). I'm sharing these images and their generation metadata to invite feedback from people working on image generation, creative tools and colouring-page design.
+
+![Four subjects shown across four requested difficulty bands, from simple to intricate]({config["preview"]["export_path"]})
+
+Left to right: slider ages 3, 6, 9 and 13. The labels describe **requested complexity**, not validated age suitability. The preview shows 16 of the {report["sample_count"]} images; original PNGs are available below.
+
+[Browse the images](https://huggingface.co/datasets/{config["repository_id"]}/viewer/all/train) · [Download files](https://huggingface.co/datasets/{config["repository_id"]}/tree/main/data) · [Share feedback](https://huggingface.co/datasets/{config["repository_id"]}/discussions) · [Project & code]({config["source_repository_url"]})
+
+## What is included?
+
+- **{report["sample_count"]} original PNGs**, 1456 × 1024 pixels, generated with OpenAI's GPT-Image-2.5 Sunburst (`gpt-image-2.5-sunburst`).
+- **{len(report["subject_split_assignment"])} subjects** spanning animals, people, food, vehicles and imaginary scenes, each generated at slider ages 3–18.
+- **Four requested difficulty bands**, with the original subjects, prompts, difficulty instructions and generation metadata.
+- **CC BY 4.0** publication license, with attribution to WonderLines; see the license notes below.
+
+**Review status:** these are unreviewed generated candidates. Captions are prompt-derived drafts and may not match the images. Every row has `training_ready = false` and `verified_caption = null`. Inspect images and captions before using them for training or activities with children.
+
+## Feedback welcome
+
+I'd love to hear your thoughts or see what you make with these images. [Share feedback or a project in the discussions](https://huggingface.co/datasets/{config["repository_id"]}/discussions).
+
+## Try it
+
+You can browse the viewer or download PNGs using the links above. For Python, install `datasets` and `Pillow`, then load a sample without downloading the full collection:
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset("{config["repository_id"]}", "all", streaming=True)
+example = next(iter(ds["train"]))
+print(example["sample_id"], example["description"], example["age_band"])
+example["image"].save("wonderlines-example.png")
+```
+
+Use `"ages-03-05"`, `"ages-06-08"`, `"ages-09-12"` or `"ages-13-18"` instead of `"all"` for one band. Omit `streaming=True` to download a configuration for local use.
+
+## Difficulty bands
+
+| Configuration | Images | Requested complexity |
+| --- | ---: | --- |
+{coverage}
+
+The model received each band's complexity instructions, not a numeric age. Ages within a band repeat the same instructions with different generated outputs. These labels are not developmental assessments.
+
+## License and credit
+
+Published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), to the extent the dataset owner holds copyright or similar rights. When sharing, credit **{config["attribution_name"]}**, link to the dataset and license, and indicate changes. See [LICENSE](LICENSE) and [ATTRIBUTION.md](ATTRIBUTION.md) for full terms and credit guidance.
+
+The dataset license does not override provider contracts or grant third-party trademark rights. Source-provider terms and third-party rights review are still pending; see the limitations below before model-training reuse.
+
+## Technical details
+
+<details>
+<summary>Splits, balancing and exact difficulty instructions</summary>
+
+All images of a subject stay in one split: **20 train subjects / 320 images**, **3 validation subjects / 48 images**, and **2 test subjects / 32 images**. The assignment uses SHA-256 of a fixed seed and description ID. Future runs must reuse that assignment to preserve the evaluation boundary. Validation and test sets are small, so results will depend heavily on the held-out subjects. Per-configuration counts are in [export-manifest.json](export-manifest.json).
+
+The oldest band contains more images because it spans six slider ages. `balanced_subset == true` selects **{report["balanced_count"]} images**, three per subject per band and 75 per band. Selection is deterministic, not a quality ranking. Configurations select the same stored images without duplicating them; the preview is excluded.
+
+```python
+# With the non-streaming dataset loaded:
+balanced_train = ds["train"].filter(lambda row: row["balanced_subset"])
+age_six = ds["train"].filter(lambda row: row["age_target"] == 6)
+```
+
+Exact requested guidance:
+
+{guidance}
+
+</details>
+
+<details>
+<summary>Generation provenance and metadata fields</summary>
+
+Run: `{config["run_id"]}`. Requested and reported model: `gpt-image-2.5-sunburst` (GPT-Image-2.5 Sunburst). The WonderLines iPhone app's Cloudflare Worker routed requests to OpenAI via Cloudflare AI Gateway. Requested quality was `low`, with one image and side composition per request. Model revision and seed were unavailable. No resizing, cropping, thresholding or other image edits were made.
+
+Exact slider guidance, provider prompts, generation timestamps and image hashes are retained per row. `effective_prompt` was reconstructed from verified Worker source; the API did not echo it. This is synthetic data, not images collected from children or real-user uploads. Generation accounts, credentials, Worker request identifiers and recovery URLs are excluded.
+
+| Fields | Meaning |
+| --- | --- |
+| `image` | Source image, decoded from ImageFolder's `file_name` |
+| `text`, `caption_status`, `verified_caption` | Draft caption and its review status |
+| `sample_id`, `description_id`, `description`, `tags` | Stable IDs and original subject |
+| `age_target`, `age_band`, `complexity_level`, `complexity_guidance` | Requested difficulty and app slider setting |
+| `split`, `balanced_subset` | Evaluation and sampling membership |
+| `review_status`, `training_ready` | Review state, not a quality score |
+| `provider`, `model_id`, `model_revision`, `guidance_version`, `run_id`, `generated_at` | Generation provenance |
+| `subject_prompt`, `effective_prompt`, `effective_prompt_source`, `negative_prompt` | Generation instructions |
+| `composition`, `quality`, `seed`, `width`, `height`, `sha256` | Output and requested settings |
+
+For local loading, replace the repository ID with the export directory's absolute path.
+
+</details>
+
+<details>
+<summary>Review checklist and limitations</summary>
+
+The collection contains only 25 subject ideas, one model and one composition setting. It is not a curated training release or an established benchmark for age suitability or model performance.
+
+Before a curated release, inspect subject fidelity, enclosed colouring areas, unwanted shading or text, observed complexity and print quality. Verify or replace draft captions using visible image contents. Structural checks confirm file integrity and coverage, not visual quality. A model may not learn four useful difficulty levels from this small collection; any future training experiment needs reviewed examples and held-out evaluation.
+
+One prompt mentions Ferrari; this does not imply affiliation. Applicable source-model/output terms and third-party rights still require review. In particular, check the applicable OpenAI agreement's restriction on using outputs to develop competing models before LoRA training; the dataset license does not override that agreement. Image, caption and rights review remain pending.
+
+</details>
+"""
+    return "\n".join(lines) + body
+
 
 
 def main():

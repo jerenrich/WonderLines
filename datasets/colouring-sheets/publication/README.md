@@ -6,6 +6,10 @@ The generated package is `../exports/20261005-sunburst-r01-huggingface-v1/`: 400
 
 The live dataset card credits **Jordan Erenrich**, links to the [WonderLines project site](https://jerenrich.github.io/WonderLines/) and [GitHub repository](https://github.com/jerenrich/WonderLines), and shows the preview near the top. The [card-update receipt](../reviews/20261005-sunburst-r01-huggingface-v1-card-update.json) records its commit and verification of all 417 package files.
 
+The [2026-10-07 card update](../reviews/20261007-huggingface-engagement-card-update.json) simplifies the introduction, adds browse/download/discussion links and specific feedback questions, and moves detailed documentation into expandable sections. Only the remote `README.md` changed; all 418 repository files were checked. The exporter preserves this version when rebuilding the package.
+
+A [follow-up update](../reviews/20261007-huggingface-feedback-card-update.json) replaces the feedback questions with a short invitation to share thoughts or projects.
+
 ## Build and validate
 
 From the repository root:

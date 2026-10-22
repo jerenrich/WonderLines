@@ -1,0 +1,17 @@
+{
+  "repo_id": "jerenrich/wonderlines-colouring-sheets",
+  "url": "https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets",
+  "commit_sha": "d91a8bc36fbc4e7be99598d9ded6a8b40591b2f2",
+  "commit_url": "https://huggingface.co/datasets/jerenrich/wonderlines-colouring-sheets/commit/d91a8bc36fbc4e7be99598d9ded6a8b40591b2f2",
+  "parent_commit": "a85d6c6b841091259a2de5adb75d959b7c0d4d69",
+  "updated_at": "2026-10-07T08:37:58.368718+00:00",
+  "changed_files": [
+    "README.md"
+  ],
+  "remote_verified": true,
+  "readme_sha256": "10bb9d119416c2dfa50bc10b3d1b7768d6d6d1c21469f14c313961f84cb45e56",
+  "verified_files": 418,
+  "images": 400,
+  "configurations": 5,
+  "visibility": "public"
+}
