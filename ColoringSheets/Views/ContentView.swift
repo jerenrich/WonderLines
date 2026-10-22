@@ -320,12 +320,6 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var generationStatus: some View {
-        if !store.isGenerating && !store.unfinishedSheets.isEmpty {
-            Button("Check unfinished sheets (\(store.unfinishedSheets.count))", action: store.recoverUnfinishedSheets)
-                .font(.footnote)
-                .accessibilityIdentifier("recoverGenerations")
-                .accessibilityHint("Checks existing generations without requesting new sheets")
-        }
         if !store.isGenerating, let message = store.batchMessage {
             Button { detailMessage = message } label: {
                 Label("\(store.results.count) \(store.results.count == 1 ? "sheet" : "sheets") available · Details", systemImage: "exclamationmark.circle")
