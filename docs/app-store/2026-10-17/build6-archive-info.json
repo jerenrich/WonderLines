@@ -69,12 +69,13 @@
     "NSPrivacyTrackingDomains": []
   },
   "ipaSHA256": "97910fcb939388203371b7f41c105a40d4adec68d17f25c1750e991277496171",
-  "uploaded": false,
-  "submitted": false,
+  "uploaded": true,
+  "submitted": true,
   "backendDeployed": true,
   "backendCommit": "2018c17f865e295c24daf85567c78e2750829a83",
   "deploymentRun": "https://github.com/jerenrich/WonderLines/actions/runs/39019418836",
   "distributionSignatureVerified": true,
   "productionAppAttest": true,
-  "debuggingEntitlement": false
+  "debuggingEntitlement": false,
+  "submissionID": "59d8d2cf-8431-4049-81b7-d40f94b5263c"
 }

@@ -1,0 +1,108 @@
+Wonder Lines 1.0 (4): App Review rejection investigation, 17 October 2026
+
+Submission: 3e4788e0-34da-4282-9ee0-9b6356271868
+Apple's review: 16 October 2026, iPad Air 11-inch (M3), iPadOS 27.0.
+
+REPRODUCED CAUSE
+
+A clean installation restored childAge as 0. GenerationRequest only accepts
+ages 3–18. ContentView disabled Generate whenever request validation failed,
+so entering a valid description could not enable it until an age was chosen
+separately in Settings. An active internet connection cannot fix this local
+validation failure. This reproduces Apple's symptom; Apple's exact actions
+and device logs are unavailable.
+
+The baseline UI test failed at the assertion that Generate should become enabled
+after entering a normal description, on a newly created iPad Air 11-inch (M3)
+simulator running iPadOS 27.0. first-launch-before.png records that state.
+
+Existing demonstrations and most UI tests explicitly supplied an age, which
+hid this first-use problem. Build 4's review instructions also required opening
+Settings and choosing an age before generation.
+
+FIX
+
+First use now starts at drawing difficulty 6. Valid saved choices are retained;
+missing, zero, or out-of-range preferences use 6. The main composer visibly
+shows the current difficulty and a Change button. Settings remains optional.
+An empty or overlong description still disables generation and can be corrected
+without restarting. The age controls describe drawing difficulty, not identity
+or age verification. Existing gallery, draft, and account data are preserved.
+
+ADDITIONAL ISSUES FIXED
+
+1. Reinstallation could strand device verification. App Attest key references
+   are held in Keychain, but Apple invalidates the actual key on reinstall or
+   restore. The client previously reused it permanently, and the server rejected
+   replacement keys for an existing account. The client now replaces only a key
+   explicitly rejected by Apple as invalidKey, then retries verification once
+   before any generation POST. The server accepts a replacement only after its
+   existing account/challenge/Apple attestation verification. Account identity,
+   spent allowance, credentials, and saved jobs are retained. Same-key enrollment
+   preserves replay protection; forged attestations are rejected. Temporary
+   failures retain the saved key. Concurrent sheets share replacement enrollment.
+   This was reproduced with injected Apple errors and the real local networking/
+   Keychain code; a physical uninstall/reinstall has not been performed.
+
+   Apple reference:
+   https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity
+
+2. The optional live UI check previously accepted any visible gallery as success,
+   including an older saved sheet. It now waits for the new request to finish,
+   rejects explicit failure, and checks the requested one-sheet result.
+
+3. Numeric preference overrides arrived as strings and the image-count loader
+   ignored them. A purported one-sheet test could request the default three.
+   The loader now uses UserDefaults' integer conversion while preserving the
+   missing-preference default and 1–3 clamp. Regression coverage verifies this.
+
+RELEASE PREPARATION
+
+The project and project generator now use build 5. A Release archive using the
+live service was created at:
+.build/review-fix-2026-10-17/WonderLines-1.0-5.xcarchive
+
+archive-info.json records the bundled service configuration and executable hash.
+The archive signature was verified through macOS signing services; the production
+App Attest entitlement is present. This is a locally signed archive, not an
+uploaded or App Store-validated distribution package.
+
+The backend recovery fix was deployed after the user authorized deployment.
+Production version: 98b17f08-5041-490e-b461-4bdf76795a84, from commit 37a4185.
+Deployment CI and production endpoint checks passed; variables/secrets were
+preserved. App fixes were published separately as commit 6bcd690. Unrelated
+dataset edits remain untouched. Build 5 upload succeeded on 17 October at 07:49 Europe/London; Apple confirmed
+that the package was processing. It was selected and resubmitted at 07:56 Europe/London. App Store Connect
+confirmed Waiting for Review. The revised reply
+was explicitly approved by the user, sent at 07:56, and verified in the review
+conversation. The review notes were updated to make Settings optional. See deployment-resubmission.json
+for the latest action state.
+
+PHYSICAL AND SIMULATOR VERIFICATION
+
+After unlocking the ninth-generation iPad (iPadOS 27.0.1), the production App
+Attest check passed, including rejection of a replayed assertion. Physical UI
+automation then timed out enabling automation mode before the UI test started;
+no image request was sent by that UI attempt. A direct test inside the real app
+subsequently passed: a fresh preference store with no chosen age, default Sunburst,
+one requested sheet, actual App Attest, live generation, and PNG validation. It
+sent exactly one generation request and did not automatically retry it. The result
+is physical-live-sheet.png. This verifies the app logic and live provider on real
+hardware, while the on-screen interactions were verified in the simulators.
+
+The final app suite passed 72 tests, with 3 opt-in checks skipped. The new device
+key tests passed all four cases. The broader matching-iPad run covered keyboard,
+rotation, large text, gallery navigation, setting changes, lifecycle and drafts.
+Its one failure exposed the numeric image-count override issue described above;
+the corrected case passed on both iPad and iPhone. A final clean reinstall on
+the exact review simulator passed first use and invalid-input recovery. The
+phone's first-use, rotation, and accessibility checks also passed. Worker, App
+Attest signature/replacement, configuration, cost and moderation checks passed.
+
+Physical uninstall/reinstall and the new replacement-key path have not been run
+against production as part of this investigation; the new server behavior has local cryptographic
+and client recovery tests plus post-deployment rejection checks. Final
+on-device UI/export and distribution validation remain release checks; this
+investigation did not repeat the earlier Photos/share/print demonstration.
+
+Test outcomes and before/after evidence are recorded in verification.json.

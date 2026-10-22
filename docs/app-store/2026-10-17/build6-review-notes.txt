@@ -1,0 +1,38 @@
+Hello,
+
+Build 1.0 (6) includes the fix for the disabled Generate button. On a fresh install, enter a description, tap Generate and accept the one-time AI consent prompt. No settings changes or sign-in are needed.
+
+This build also adds privacy and support links in Settings, account and data deletion, a Report sheet option, and the required privacy manifest.
+
+We tested the new flows on iPad Air 11-inch (M3) and iPhone simulators running OS 27.0, and verified generation, reporting and account deletion against the live service.
+
+Please review build 1.0 (6).
+
+Thank you.
+
+Reviewer details
+
+1. Setup and core features
+No login, API keys, uploads or sample files are needed. Internet access is required. Enter “A friendly dinosaur riding a bicycle on the moon” and tap Generate/the sparkle button. Accept the first-use AI sharing disclosure with Agree and Generate. Consent is remembered; Cancel preserves the description and sends no generation request. Settings allows withdrawal.
+Defaults: age difficulty 6, Sunburst, 3 sheets. Settings can change these. Swipe/use arrows to select a result. Save to Photos requests add-only permission. Share uses the system sheet. Print requires an AirPrint printer. Compact iPhone layouts put actions under Sheet actions. Check unfinished sheets recovers existing jobs without starting another batch. Generation is free, subject to service availability and 100 images per account per UTC day.
+
+2. Privacy and safety
+The app creates a random service account automatically, without a name or email. Settings includes the privacy policy, support, Delete account and data, and consent withdrawal. Deletion removes the service account, server sheets/reports and local app history; interrupted deletion can be retried. Exported copies and provider logs follow the privacy policy. Build 6 includes the privacy manifest.
+Prompts and sheets are private: no public gallery, feed, messaging or other users' content. Descriptions are moderated before generation. Report sheet sends a private report for support review and removes that sheet from gallery/recovery. There is no user-blocking control because no other users' content is shown. Support: jordan.erenrich@gmail.com.
+No purchases, subscriptions, ads or paywalls. Usage & cost shows developer-paid provider costs/estimates and does not charge users.
+
+3. Purpose and audience
+A creative utility turning text ideas into printable coloring sheets for families, educators and adult coloring enthusiasts. Age difficulty controls drawing detail, not age verification. Adults should supervise family use.
+
+4. Services
+Cloudflare Workers, Durable Objects, R2, Images and AI Gateway host/process requests. OpenAI supplies Flare/Sunburst; Cloudflare Workers AI supplies FLUX/Leonardo options and Clef description moderation; fal.ai supplies ColoringBook.Redmond V2. Apple App Attest, Keychain and native Photos/share/AirPrint support the app. No advertising or analytics SDK.
+
+5. Regions and content rights
+Features, models, safety rules and UTC limits are the same across regions. The interface is English. Internet/provider availability and local printers can affect access. This is not a regulated service. There is no licensed character library or protected-content catalogue; sheets are generated from descriptions using authorized provider accounts/models.
+
+6. Existing demonstration
+The existing WonderLines-1.0-4-physical-device.zip is an earlier build-4 demonstration on a ninth-generation iPad running iPadOS 27.0.1: real generation, settings, gallery, Photos, share, print options and usage. It does not demonstrate build 6's new privacy controls. No print job was sent.
+Listing screenshots used an illustration in an isolated simulator capture; build 6 contains no screenshot fixture.
+
+Privacy: https://jerenrich.github.io/WonderLines/privacy.html
+Support: https://jerenrich.github.io/WonderLines/#support

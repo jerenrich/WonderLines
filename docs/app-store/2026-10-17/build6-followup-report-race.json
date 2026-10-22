@@ -1,0 +1,14 @@
+{
+  "reportRace": {
+    "reportPersisted": true,
+    "reportedAfterBilling": false,
+    "recoveryGateWouldPass": true
+  },
+  "deletionRace": {
+    "waitedForBilling": true,
+    "jobResurrected": false,
+    "remainingKeys": [
+      "deletion"
+    ]
+  }
+}

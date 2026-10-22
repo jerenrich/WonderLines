@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "build": "5",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "minimumOS": "17.0",
+  "deviceFamilies": [
+    1,
+    2
+  ],
+  "serviceConfiguration": {
+    "mock": false,
+    "serviceURL": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+  },
+  "executableSHA256": "76f1ffc9ace41b8c30451a0c0611c3c71a4396b96bd5dcee32751042f6f8a916",
+  "uploaded": true,
+  "submitted": false,
+  "backendDeployed": true,
+  "appStoreSubmitted": true,
+  "uploadLog": ".build/review-fix-2026-10-17/upload.log",
+  "submissionStatus": "Waiting for Review",
+  "appStoreBuildID": "66887efb-6e0e-4dd9-a610-cdb0b1fa0cd4",
+  "replySent": true
+}

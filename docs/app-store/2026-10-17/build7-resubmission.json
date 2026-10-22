@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "build": 7,
+  "uploadedAt": "2026-10-17T15:06:00+01:00",
+  "submittedAt": "2026-10-17T15:12:00+01:00",
+  "submissionID": "39e2f8b5-da20-411b-86f2-b17edacae9b9",
+  "submissionURL": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/39e2f8b5-da20-411b-86f2-b17edacae9b9",
+  "status": "Waiting for Review",
+  "previousBuild": 6,
+  "previousSubmission": "59d8d2cf-8431-4049-81b7-d40f94b5263c",
+  "previousSubmissionAction": "Canceled to replace with build 7, as authorized",
+  "approvedReply": "build7-approved-reply.txt",
+  "replyDelivery": "App Review Notes, verbatim; no separate conversation message",
+  "notesLength": 3981,
+  "proof": "build7-submitted.png",
+  "cloudflareSupportContacted": false,
+  "weeklyMigrationCheck": "Saturdays 10:00 Europe/London, check-cloudflare-logging-migration"
+}

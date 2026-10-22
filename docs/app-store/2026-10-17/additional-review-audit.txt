@@ -1,0 +1,109 @@
+Wonder Lines 1.0 (5) — additional App Review audit
+17 October 2026
+
+Scope
+Reviewed the submitted archive, current Swift and Worker source, live App Store
+Connect listing/privacy/platform declarations, public privacy/support pages,
+Apple's current review guidance, and focused iPad simulator flows.
+Build 5 remains Waiting for Review. No new reply was sent, no submission or
+distribution setting was changed, and no paid generation was requested.
+
+HIGH PRIORITY — confirmed implementation gaps
+
+1. No privacy policy accessible inside the app.
+   Settings contains Age difficulty, Generation and Help -> Diagnostics only.
+   The website and App Store privacy URL are present, but neither provides the
+   in-app link Apple also requires. Add Privacy Policy and Contact Support in
+   Settings.
+   Evidence: ColoringSheets/Views/ContentView.swift:443-501, especially 487.
+   Rule: App Review 5.1.1(i).
+   https://developer.apple.com/app-store/review/guidelines/#privacy
+
+2. No explicit disclosure/permission before sending descriptions to AI services.
+   Generate starts the remote request directly. There is no consent state or
+   first-use disclosure. Descriptions may contain personal information, and the
+   service processes them through Cloudflare and the selected image provider
+   (OpenAI, Cloudflare Workers AI or fal.ai), with possible logging. Model labels
+   and a policy on a separate website do not supply explicit in-app permission.
+   Add a clear first-use disclosure and choice before sending a description,
+   naming the data and providers, with policy access and a withdrawal option.
+   Evidence: ContentView.swift:281; Core/Generation.swift:436; privacy.html:28-30.
+   Rule: App Review 5.1.2(i), including its explicit third-party AI provision.
+   https://developer.apple.com/app-store/review/guidelines/#data-use-and-sharing
+
+3. Automatically created service accounts cannot be deleted inside the app.
+   Guest credentials and persistent server account/job/image data are created,
+   but there is no deletion control or API. The local credential remove helper
+   is not a complete account deletion flow. The privacy policy instead directs
+   users to email. Apple explicitly includes automatically created guest accounts
+   in its requirement and disallows email-only deletion for ordinary apps.
+   Add authenticated deletion of the service account and associated data, with
+   confirmation and safe handling of in-flight jobs, then clear local state.
+   Evidence: Core/AnonymousIdentity.swift:25-40,78; worker src/index.mjs:531-601;
+   privacy.html:35-37. Paths are relative to the project except the Worker source,
+   which is under workers/coloring-sheets-api/.
+   Rule: App Review 5.1.1(v).
+   https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion
+
+4. The actual build-5 archive contains no PrivacyInfo.xcprivacy manifest.
+   The app uses UserDefaults for preferences, saved state and diagnostics.
+   Apple's required-reason API declaration applies to the app's own API use.
+   Add and bundle the manifest with NSPrivacyAccessedAPICategoryUserDefaults and
+   the applicable approved reason (CA92.1 for this app's private preferences),
+   then verify the exported archive actually contains it. This is separate from
+   the published App Privacy labels. Apple accepted build 5 for processing, so
+   this finding does not imply that Apple has already blocked the build.
+   Evidence: Core/ColoringViewModel.swift:93; Core/DiagnosticLog.swift:42;
+   Scripts/create_project.py:21; zero .xcprivacy files inside the submitted app.
+   https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+   https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype
+
+ADDITIONAL CONTENT-SAFETY RISK
+
+5. No useful in-app route to report an inappropriate generated sheet.
+   Prompt moderation exists, but gallery actions only export or show usage;
+   there is no Report Sheet or accessible support action. Current guideline 1.2
+   explicitly includes AI content creation apps. Add reporting with a generation
+   identifier and a defined response/removal process. A user-blocking UI is not
+   automatically appropriate here because no other users' content is displayed.
+   Evidence: ContentView.swift:111-146,443-501; review-notes.txt:8.
+   https://developer.apple.com/app-store/review/guidelines/#user-generated-content
+
+LOWER PRIORITY
+
+- Usage/error text says users may be charged even though generation is free and
+  there are no purchases. Clarify that displayed amounts are developer-paid
+  service costs. ContentView.swift:541; Generation.swift:248-250.
+- The selectable Redmond model is labeled Beta. Avoid presenting an unfinished
+  feature in the shipping app; remove that label only if the feature is ready,
+  otherwise omit it from the release. Generation.swift:25.
+- Mac availability remains enabled for macOS 14+, with compatibility unverified;
+  Vision Pro availability is also enabled. Neither was runtime-tested here.
+  App Attest is NOT a confirmed Mac blocker: a read-only check of deployed Worker
+  version 98b17f08-5041-490e-b461-4bdf76795a84 found APP_ATTEST_ENFORCE=false.
+
+CHECKS THAT DID NOT PRODUCE A FINDING
+
+- Current privacy labels declare linked user content, IDs, usage and diagnostics.
+  They do not incorrectly claim Data Not Collected.
+- The live description correctly says 1-3 sheets, not the older draft's 1-5.
+- The support and privacy website responds successfully.
+- Current rating is 9+ with regional exceptions; Graphics & Design category.
+  A drawing-difficulty slider is not age verification, but this alone does not
+  prove a Kids Category violation. The private gallery also does not by itself
+  establish an incorrect UGC answer in Apple's age-rating questionnaire.
+- Four iPad Air 11-inch (M3), iPadOS 27.0 simulator checks passed: settings,
+  portrait/landscape editing, largest accessibility text, and gallery navigation.
+- Offline Worker, batch moderation and configuration tests passed.
+
+Runtime export check and final evidence are recorded in audit-verification.json.
+Simulator generation uses mock images; no live AI quality/safety sampling was
+performed during this audit. The earlier physical-device generation check is
+recorded separately in verification.json.
+
+Recommendation
+Address the privacy, consent, deletion, manifest and reporting gaps together in
+the next build, with matching backend support and revised privacy/review notes.
+These are independent of the fixed first-launch Generate issue. A new binary
+would require replacing build 5 in the review submission; this audit did not do
+that or send further messages to Apple.

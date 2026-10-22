@@ -61,5 +61,13 @@ build6-archive-info.json (distribution metadata)
 build6-live-verification.json (live endpoint results)
 
 Submission
-Build 6 is prepared locally, not uploaded or submitted. Build 5 remains Waiting
-for Review. The new App Review reply is only a draft and requires user approval.
+Build 6 uploaded successfully at 10:32:44 BST on 17 October 2026. Apple
+completed processing; Jordan approved the encryption classification. Build 5
+was withdrawn, build 6 selected, and the new submission was accepted at
+10:41 BST with status Waiting for Review.
+Submission: 59d8d2cf-8431-4049-81b7-d40f94b5263c
+Jordan's approved reply was saved verbatim at the top of App Review Notes
+with explicit approval for this channel and verified after page reload.
+It was not sent as a separate message: the removed conversation exposes no
+Reply control. Updated review instructions were also saved.
+The monitor now targets build 6; its existing PAUSED status is preserved.

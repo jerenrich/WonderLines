@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-17",
+  "appVersion": "1.0",
+  "build": "5",
+  "device": "iPad Air 11-inch (M3)",
+  "os": "iPadOS 27.0",
+  "uiChecks": {
+    "passed": 4,
+    "failed": 0,
+    "resultBundle": ".build/review-audit-2026-10-17/ipad-ui.xcresult"
+  },
+  "exports": {
+    "passed": 1,
+    "failed": 0,
+    "resultBundle": ".build/review-audit-2026-10-17/ipad-exports-final.xcresult",
+    "actions": [
+      "Save to Photos with permission granted",
+      "Open and dismiss system Share",
+      "Open and dismiss Print options",
+      "View usage",
+      "Edit description while retaining gallery"
+    ]
+  },
+  "screenshotsVisuallyInspected": [
+    "print options",
+    "system share",
+    "largest accessibility text"
+  ],
+  "initialExportHarnessFailure": "Temporary test expected a progress indicator that the fast mock service had already dismissed. Corrected the test to await completion; final run passed.",
+  "mode": "mock; no paid image generation, external sharing, or print job",
+  "offlineChecks": [
+    "Worker passed",
+    "batch moderation passed",
+    "configuration passed"
+  ],
+  "submittedArchivePrivacyManifestCount": 0,
+  "storeState": "Waiting for Review; build5; four messages; no new Apple response",
+  "productionAppAttestEnforce": false,
+  "limitations": [
+    "No fresh live image-quality/safety sampling",
+    "No actual paper print",
+    "No new iPhone run in this additional audit",
+    "Mac and Vision Pro not runtime-tested",
+    "Photos denial path inspected in code but not exercised in this audit"
+  ],
+  "shippingSourceChanged": false,
+  "submissionChanged": false,
+  "temporaryAuditTestRestored": true
+}

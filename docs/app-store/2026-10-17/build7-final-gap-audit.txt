@@ -1,0 +1,88 @@
+Wonder Lines build 7 — further read-only review, 17 October 2026
+
+Scope
+Reviewed submitted App Store Connect version, published privacy labels and age
+ratings, signed-build verification records, client consent/error handling, server
+moderation/provider/account/report code, report operations and current Apple
+requirements. No app, backend, submission, privacy or rating settings changed.
+No new simulator/physical runs or paid AI requests were made in this pass.
+
+1. New confirmed implementation gap: no explicit operator account suspension
+Account.handleRequest authorizes any matching credential for an existing account
+(index.mjs:128-134). No suspension/ban state or authenticated operator suspension
+workflow is implemented. The report workflow removes a sheet and permits model
+route intervention, but does not cover repeat abusive accounts. Credential
+matching supports revocation in principle; there is no documented safe operator
+process to perform it while retaining necessary report/deletion access.
+Apple 1.2 explicitly includes AI content creation apps and calls for ability to
+block abusive users from the service. The absence of a public gallery explains
+why no user-facing block-another-user button is useful; it does not by itself
+establish that operator abuse controls are unnecessary. Add a secure operator
+suspension/reinstatement process, preserve deletion/report access and test denial
+of new generation/token renewal. This can be a backend change; do not infer that
+all existing accounts are abusive or suspend any account without evidence.
+Policy risk, not a verified Apple rejection or reproduced core-feature failure.
+https://developer.apple.com/app-store/review/guidelines/#user-generated-content
+
+2. Known unresolved privacy item: historical Gateway logs
+Last verified coloring-sheets count is 3,005, not a fresh count in this pass.
+New collection is disabled. Historical records can contain prompt/image data,
+remain outside in-app account deletion and await the owner-deferred cleanup.
+The public policy discloses this; disclosure alone does not resolve retention of
+unnecessary account-associated data under Apple's account-deletion guidance.
+The automatic legacy Gateway cleaner is implemented but inactive pending its
+management credential/live validation. Worker diagnostic expiry/R2 cleanup are
+separate deployed protections. Finish the historical cleanup rather than wait
+for optional native migration. Existing 20:00 reminder remains in place.
+https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion/
+
+3. Safety hardening gap, not proof of unsafe output
+Descriptions pass Clef before generation; provider safety failures are handled.
+For active Workers AI routes the app accepts returned image bytes after format
+validation and does not independently classify the final image for suitability
+(image-provider.mjs:232-256; index.mjs:408-421). The public model schemas describe
+image output but do not establish our all-ages policy for every returned image.
+Do not claim provider filtering is absent or that an unsafe result was generated.
+Consider an output safety check before storing/exposing results, and a measured
+live safety/quality check across enabled routes. This needs validation for false
+positives, latency, privacy and failure handling rather than an untested switch.
+https://developers.cloudflare.com/workers-ai/models/flux-2-klein-4b/
+https://developers.cloudflare.com/workers-ai/models/phoenix-1.0/
+
+4. New confirmed residual wording problem (lower priority)
+Quota errors still tell ordinary users to check provider billing or upgrade the
+Cloudflare Workers plan (image-provider.mjs:168-174). The build7 parser forwards
+these structured messages to the UI (Generation.swift:786-810). This is developer
+setup advice in a free consumer app and was not fully addressed by the normal
+Usage & cost wording fix. Use a brief model-unavailable/try-another-model message
+and keep billing/API details in diagnostics. Server wording can be corrected
+without replacing build7; legacy client fallback copy also exists in the binary.
+This is a clarity concern, not evidence of purchases or actual user charges.
+
+5. Existing verification gaps
+Build7 live physical test covers default Sunburst plus report/deletion. Redmond
+failed its separate live check and was removed. Synthetic provider tests are not
+fresh end-to-end live tests of all five remaining models. No new all-model check
+was performed in this review. iOS17+ is supported but older 17.5/18.5 runtimes were
+unavailable; tested simulator OS is27.0 and physical iPad27.0.1. A physical
+uninstall/reinstall of a production account was not done; key replacement has
+injected-error/real networking regression coverage. These are test limits, not
+confirmed compatibility or model failures.
+
+Checks reducing concern
+Live App Privacy has six linked app-functionality types, matching bundled
+manifest: Other User Content, User ID, Device ID, Product Interaction, Performance
+Data, Other Diagnostic Data. Policy URL is correct. Live rating remains9+ with
+regional exceptions, Graphics & Design. No public gallery/feed or chat exists;
+Apple's age-questionnaire UGC definition concerns broad distribution, so private
+AI creation alone does not establish that saved No answer is wrong. Family
+activity wording alone does not prove Kids Category misclassification. No new
+privacy-label mismatch or definite age-rating defect found.
+Approved review wording remains at top of Notes; build4 demonstration attachment
+is explicitly described as old and is not claimed to demonstrate build7 controls.
+Build7 remains the submitted build; no withdrawal or new review message made.
+
+Priority
+Finish deferred log cleanup and add a safe operator suspension process. Tighten
+service-error wording. Broaden live model/safety and old-OS checks as practical.
+Do not withdraw build7 solely because a fresh audit cannot guarantee approval.

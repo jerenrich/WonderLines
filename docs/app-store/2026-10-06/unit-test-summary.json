@@ -1,0 +1,49 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "085704B4-55BE-44A7-990E-6D482D7081A7",
+        "deviceName" : "iPad Pro 11-inch (M5)",
+        "modelName" : "iPad Pro 11-inch (M5)",
+        "osBuildNumber" : "24A434",
+        "osVersion" : "27.0",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 0,
+      "passedTests" : 66,
+      "skippedTests" : 3,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "ColoringSheets · Built with macOS 27.0",
+  "expectedFailures" : 0,
+  "failedTests" : 0,
+  "finishTime" : 1791313111.741,
+  "passedTests" : 66,
+  "result" : "Passed",
+  "runtimeWarnings" : [
+
+  ],
+  "skippedTests" : 3,
+  "startTime" : 1791313045.905,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+
+  ],
+  "title" : "Test - ColoringSheets",
+  "topInsights" : [
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "56% of duration",
+      "text" : "3 longest test runs with outlier durations exceeding 5.10s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 69
+}

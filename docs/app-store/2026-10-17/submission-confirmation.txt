@@ -1,0 +1,102 @@
+Browser tab: 2, Title: "App Store Connect", URL: "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/3e4788e0-34da-4282-9ee0-9b6356271868".
+0 AXWebArea App Store Connect, URL: appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/3e4788e0-34da-4282-9ee0-9b6356271868
+	1 container
+		2 container App Store Connect
+			3 container
+				4 heading App Store Connect, Value: 1
+					16 link Description: App Store Connect, Value: appstoreconnect.apple.com/, ID: logo
+				5 container Global
+					343 content list
+						344 link Description: Apps, Value: appstoreconnect.apple.com/apps
+						345 link Description: Xcode Cloud, Value: appstoreconnect.apple.com/teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+						346 link Description: Trends, Value: appstoreconnect.apple.com/trends
+						347 link Description: Reports, Value: appstoreconnect.apple.com/itc/payments_and_financial_reports
+						348 link Description: Business, Value: appstoreconnect.apple.com/business
+						349 link Description: Users and Access, Value: appstoreconnect.apple.com/access/users
+				23 button Jordan Erenrich Jordan Erenrich Account name menu
+					350 image
+		351 container sub
+			352 pop up button (collapsed) Description: Apps menu, Wonder Lines, selected, Secondary Actions: Expand
+				353 container
+					354 image Wonder Lines
+					355 text Wonder Lines
+				356 image
+			357 container Apps
+				358 container
+					359 text Distribution
+					360 image
+				361 content list
+					362 link Description: Distribution, Value: appstoreconnect.apple.com/apps/6817505650/distribution
+					363 link Description: Analytics, Value: appstoreconnect.apple.com/apps/6817505650/analytics
+					364 link Description: TestFlight, Value: appstoreconnect.apple.com/teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+		38 container
+			490 container
+				546 link Description: App Review, Value: appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions
+				547 heading iOS Submission, Value: 2
+					548 text iOS Submission
+				549 image
+				550 text Waiting for Review
+				551 heading Items Submitted (1), Value: 3
+					552 text Items Submitted (1)
+				553 table
+					554 row
+						555 cell
+							556 text ITEM
+						557 cell
+							558 text TYPE
+						559 cell
+							560 text REVIEW STATUS
+						561 cell
+					562 row M2U0Nzg4ZTAtMzRkYS00MjgyLTllZTAtOWI2MzU2MjcxODY4fDZ8ODkyMjM2NzI4
+						563 cell
+							564 image App Icon
+							565 text iOS App 1.0
+							566 link Description: 1.0 (5), Value: appstoreconnect.apple.com/apps/6817505650/testflight/ios/66887efb-6e0e-4dd9-a610-cdb0b1fa0cd4/metadata
+						567 cell
+							568 text App Version
+						569 cell
+							570 text Waiting for Review
+				571 heading Messages (4), Value: 3
+					572 text Messages (4)
+				573 button (collapsed) Apple2026-10-05 12:31 AM, ID: accordion-toggle-0.9515160112444726-2517, Secondary Actions: Expand
+					574 heading Apple2026-10-05 12:31 AM, Value: 6
+						575 text Apple 2026-10-05 12:31 AM
+				576 button (collapsed) Jordan Erenrich2026-10-06 9:51 PM, ID: accordion-toggle-0.9515160112444726-2518, Secondary Actions: Expand
+					577 heading Jordan Erenrich2026-10-06 9:51 PM, Value: 6
+						578 text Jordan Erenrich 2026-10-06 9:51 PM
+					579 image
+				580 button (collapsed) AppleYesterday 11:44 PM, ID: accordion-toggle-0.9515160112444726-2519, Secondary Actions: Expand
+					581 heading AppleYesterday 11:44 PM, Value: 6
+						582 text Apple Yesterday 11:44 PM
+				583 button (expanded) Jordan ErenrichToday 7:56 AM, ID: accordion-toggle-0.9515160112444726-2520, Secondary Actions: Collapse
+					584 heading Jordan ErenrichToday 7:56 AM, Value: 6
+						585 text Jordan Erenrich Today 7:56 AM
+				586 container Jordan ErenrichToday 7:56 AM, ID: accordion-section-0.9515160112444726-2520
+					587 text Hello,
+
+We found and fixed the issue. On a fresh installation, Generate stayed disabled until an age difficulty was selected in Settings.
+
+Build 1.0 (5) now uses a default difficulty, so you can enter a description and tap Generate immediately. You can still change the difficulty in Settings.
+
+We reproduced the issue on an iPad Air 11-inch (M3) simulator running iPadOS 27.0 and verified the fix. We also tested iPhone layouts and successfully generated a sheet on a physical iPad.
+
+Please review the updated build 1.0 (5).
+
+Thank you.
+
+				588 text Date Submitted Oct 17, 2026 at 7:56 AM Submission ID 3e4788e0-34da-4282-9ee0-9b6356271868 Submitted By Jordan Erenrich Last Updated By Jordan Erenrich
+				589 button Cancel Submission
+		142 content list
+			143 link Description: App Store Connect, Value: appstoreconnect.apple.com/apps
+		6 content list
+			7 container
+				8 text Copyright © 2026 Apple Inc. All rights reserved. |
+			9 container
+				10 link Description: Terms of Service, Value: appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/wa/termsOfService
+				590 text |
+			12 container
+				13 link Description: Privacy Policy, Value: apple.com/legal/privacy
+				591 text |
+			15 link Description: Contact Us, Value: appstoreconnect.apple.com/contact-us
+
+The focused UI element is 0 AXWebArea App Store Connect, URL: appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/3e4788e0-34da-4282-9ee0-9b6356271868

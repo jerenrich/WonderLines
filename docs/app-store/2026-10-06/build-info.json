@@ -1,0 +1,65 @@
+{
+  "source_commit": "f03a0784b0d02fd8086b6d41e53633effddd42bf",
+  "version": "1.0",
+  "build": "4",
+  "bundle_id": "com.jordan.family.ColoringSheets",
+  "minimum_os": "17.0",
+  "device_family": [
+    1,
+    2
+  ],
+  "service_configuration": {
+    "mock": false,
+    "serviceURL": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+  },
+  "executable_sha256": "7fc9c96a8102c4c70668741c643dfa2f24652b006786a659fb4822d0d62cf750",
+  "backend_ci": "https://github.com/jerenrich/WonderLines/actions/runs/37513698710",
+  "status": "Waiting for Review",
+  "upload_status": "succeeded",
+  "upload_log": ".build/apple-review-2026-10-06/upload-retry.log",
+  "privacy_publication_commit": "a42d84460e3de3178a4a9112899a74f1c907af17",
+  "privacy_publication_verified": true,
+  "app_store_build_id": "7821a7cd-59e5-4e94-bd2d-4d9fc0f57c8d",
+  "physical_device": {
+    "model": "iPad (9th generation)",
+    "os": "iPadOS 27.0.1",
+    "build": "24A446"
+  },
+  "recording": {
+    "path": ".build/apple-review-2026-10-06/WonderLines-1.0-4-physical-device.mp4",
+    "sha256": "9b4492797fa3dc7812a9b765947e8b1120189de52a95ebe09080783cb7381ce0",
+    "duration_seconds": 252.15,
+    "width": 960,
+    "height": 1280,
+    "source_result": ".build/apple-review-2026-10-06/ipad-complete-flow.xcresult",
+    "source_start_seconds": 6.75,
+    "source_end_seconds": 258.9,
+    "edits": "Trimmed startup home screen and test teardown; no internal cuts or simulated footage.",
+    "high_resolution_path": ".build/apple-review-2026-10-06/WonderLines-1.0-4-physical-device-high-resolution.mp4",
+    "high_resolution_sha256": "9b4492797fa3dc7812a9b765947e8b1120189de52a95ebe09080783cb7381ce0",
+    "compression": "Complete recording re-encoded at smaller resolution; no internal cuts.",
+    "submitted_zip": {
+      "path": ".build/apple-review-2026-10-06/WonderLines-1.0-4-physical-device.zip",
+      "sha256": "a92f77087cf0f76eec97943dd5347d17f5964b98b451da12490e43733486e417",
+      "mp4_sha256": "0eae24c56b776aec09b4c84d755ec7f2a96157fe0f6972a1938dc3dfcec64b40",
+      "width": 480,
+      "height": 640,
+      "duration_seconds": 252.15,
+      "edits": "Same complete timeline; lower-resolution compression only."
+    }
+  },
+  "qa": {
+    "unit_tests": "66 passed, 3 intentional skips",
+    "physical_demo": "passed on updated iPad with live generation, saving, sharing, print options, usage and editing",
+    "physical_resume": "passed on updated iPad; previous pre-update snapshot failure did not recur",
+    "worker_checks": "passed"
+  },
+  "submission_id": "3e4788e0-34da-4282-9ee0-9b6356271868",
+  "submission_url": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/3e4788e0-34da-4282-9ee0-9b6356271868",
+  "review_notes_saved": true,
+  "reply_status": "sent with completed ZIP recording attachment",
+  "review_attachment_saved": true,
+  "resubmission_verified_at": "2026-10-06T21:52:34+01:00",
+  "reply_sent_display_time": "6 October 2026, 21:51 Europe/London",
+  "reply_text_sha256": "344f9bc5c19bd03a87e35353c918d762facfe48847cc114f0796b8d5035ce7f2"
+}

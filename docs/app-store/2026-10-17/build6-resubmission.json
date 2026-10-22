@@ -1,0 +1,25 @@
+{
+  "build": "1.0 (6)",
+  "upload": "succeeded",
+  "uploadedAt": "2026-10-17T10:32:44+01:00",
+  "buildID": "7c8f3bdb-bfac-4b6d-a204-8e9cd1ab9c87",
+  "processing": "complete",
+  "reply": {
+    "approved": true,
+    "sent": false,
+    "sha256": "b6b9e7d5d0ffccdc712c81964ca697fa4c25b67aa277137305431c8d4e52ffaa",
+    "deliveredInReviewNotes": true,
+    "alternateChannelApproved": true,
+    "reason": "Previous submission is Removed and exposes no Reply control. Approved text saved verbatim at top of App Review Notes and verified after reload."
+  },
+  "submitted": true,
+  "submittedAt": "2026-10-17T10:41:00+01:00",
+  "submissionID": "59d8d2cf-8431-4049-81b7-d40f94b5263c",
+  "submissionURL": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/59d8d2cf-8431-4049-81b7-d40f94b5263c",
+  "status": "Waiting for Review",
+  "replacedBuild": "1.0 (5)",
+  "encryptionAnswer": "None of the algorithms mentioned above",
+  "encryptionAnswerApproved": true,
+  "reviewNotesVerifiedAt": "2026-10-17T10:44:11.523292+01:00",
+  "screenshot": "build6-submitted.png"
+}

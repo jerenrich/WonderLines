@@ -16,3 +16,8 @@ Config/Local.xcconfig
 
 # Review-only contact information is local; public submission metadata is tracked.
 docs/app-store/**/review-contact.private.json
+
+# Superseded attachment drafts and duplicate replies remain local.
+docs/app-store/2026-10-06/review-response-mp4-draft.txt
+docs/app-store/2026-10-06/review-response-zip.txt
+docs/app-store/2026-10-17/review-response-draft.txt

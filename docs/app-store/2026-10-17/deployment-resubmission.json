@@ -1,0 +1,37 @@
+{
+  "server": {
+    "status": "deployed",
+    "commit": "37a418555acb93f062bb4546359abbac4d21c1d7",
+    "version": "98b17f08-5041-490e-b461-4bdf76795a84",
+    "workflow": "https://github.com/jerenrich/WonderLines/actions/runs/39011190277",
+    "smokeChecks": "passed; invalid keys rejected; no image generation"
+  },
+  "appSourceCommit": "6bcd690",
+  "build": {
+    "version": "1.0",
+    "number": "5",
+    "upload": "succeeded",
+    "processing": "complete",
+    "uploadLog": ".build/review-fix-2026-10-17/upload.log",
+    "uploadedAt": "2026-10-17T07:49:59+01:00",
+    "selected": true,
+    "appStoreBuildID": "66887efb-6e0e-4dd9-a610-cdb0b1fa0cd4",
+    "encryptionAnswer": "None of the algorithms mentioned above"
+  },
+  "reply": {
+    "status": "sent; verified in App Review conversation",
+    "file": "review-response.txt",
+    "approved": true,
+    "sentDisplayTime": "17 October 2026, 07:56 Europe/London",
+    "sha256": "3edfdfc6f7531247bb19d981424018bd1637a1befd0e945afa97425158af7a97"
+  },
+  "submission": {
+    "status": "Waiting for Review",
+    "appStoreConnectSignIn": "verified",
+    "resubmitted": true,
+    "submittedDisplayTime": "17 October 2026, 07:56 Europe/London",
+    "submissionID": "3e4788e0-34da-4282-9ee0-9b6356271868",
+    "url": "https://appstoreconnect.apple.com/apps/6817505650/distribution/reviewsubmissions/details/3e4788e0-34da-4282-9ee0-9b6356271868"
+  },
+  "reviewNotesUpdated": true
+}

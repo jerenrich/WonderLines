@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-17",
+  "baseline": {
+    "device": "iPad Air 11-inch (M3)",
+    "os": "iPadOS 27.0",
+    "freshInstallation": true,
+    "expectedFailure": "Generate remains disabled after a valid description because childAge is unset",
+    "resultBundle": ".build/review-fix-2026-10-17/baseline.xcresult"
+  },
+  "finalAppTests": {
+    "result": "Passed",
+    "totalTestCount": 75,
+    "passedTests": 72,
+    "failedTests": 0,
+    "skippedTests": 3,
+    "testFailures": []
+  },
+  "finalFreshInstallAndInputTestsIPad": {
+    "result": "Passed",
+    "totalTestCount": 2,
+    "passedTests": 2,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": []
+  },
+  "finalInputTestIPhone": {
+    "result": "Passed",
+    "totalTestCount": 1,
+    "passedTests": 1,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": []
+  },
+  "deviceKeyRecoveryTests": {
+    "result": "Passed",
+    "totalTestCount": 4,
+    "passedTests": 4,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": []
+  },
+  "broaderIPadRunBeforeImageCountFix": {
+    "result": "Failed",
+    "totalTestCount": 84,
+    "passedTests": 78,
+    "failedTests": 1,
+    "skippedTests": 5,
+    "testFailures": [
+      {
+        "failureText": "XCTAssertEqual failed: (\"Sheet 1 of 3\") is not equal to (\"Sheet 1 of 1\")",
+        "targetName": "ColoringSheetsUITests",
+        "testIdentifier": 84,
+        "testIdentifierString": "GalleryUITests/testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch()",
+        "testIdentifierURL": "test://com.apple.xcode/ColoringSheets/ColoringSheetsUITests/GalleryUITests/testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch",
+        "testName": "testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch()"
+      }
+    ]
+  },
+  "broaderIPhoneRunBeforeImageCountFix": {
+    "result": "Failed",
+    "totalTestCount": 4,
+    "passedTests": 3,
+    "failedTests": 1,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "XCTAssertEqual failed: (\"Sheet 1 of 3\") is not equal to (\"Sheet 1 of 1\")",
+        "targetName": "ColoringSheetsUITests",
+        "testIdentifier": 4,
+        "testIdentifierString": "GalleryUITests/testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch()",
+        "testIdentifierURL": "test://com.apple.xcode/ColoringSheets/ColoringSheetsUITests/GalleryUITests/testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch",
+        "testName": "testUnsetAgeAndInvalidDescriptionRecoverWithoutRelaunch()"
+      }
+    ]
+  },
+  "earlierFailuresResolution": "The only failures in the broader iPad/iPhone runs were the numeric one-sheet preference override. This was corrected and the failing case passed on both devices. The full app suite also passed after the correction.",
+  "offlineChecks": {
+    "worker": "passed",
+    "appAttestSignatureAndReplacement": "passed",
+    "configuration": "passed",
+    "imageCost": "passed",
+    "moderation": "passed",
+    "batchModeration": "passed"
+  },
+  "physicalLiveCheck": {
+    "result": "Passed",
+    "totalTestCount": 1,
+    "passedTests": 1,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": [],
+    "method": "Direct app view-model test on physical iPad; no UI automation",
+    "generationRequests": 1,
+    "automaticGenerationRetries": 0,
+    "device": "iPad (9th generation)",
+    "os": "iPadOS 27.0.1",
+    "output": "physical-live-sheet.png",
+    "resultBundle": ".build/review-fix-2026-10-17/physical-direct.xcresult"
+  },
+  "archive": "WonderLines-1.0-5.xcarchive",
+  "archiveSignatureVerified": true,
+  "archiveUploaded": true,
+  "appStoreSubmitted": true,
+  "backendDeployed": true,
+  "sourceBaseCommit": "c56cfea5efa5e73a0d4153b8d2067b17f334ea9d",
+  "sourceHasUncommittedChanges": true,
+  "sourceSHA256": {
+    "ColoringSheets/ColoringSheetsApp.swift": "0a48c8504c971b82d70d3123385160791a5937a1b880b07a4c1db10ca064e216",
+    "ColoringSheets/Core/Access.swift": "97143edba375745917ffc440b4e2329316ec33db32f079fb509d2839f584fd7d",
+    "ColoringSheets/Core/AnonymousIdentity.swift": "6af9524a86eb467fefb444332060e36ff99aaaefe60da9e04fe282400bf56fd8",
+    "ColoringSheets/Core/AppAttest.swift": "4707afc5c9b226677f1634e74f2f43109c61e03ace7ffd715d0f0a32c66f5473",
+    "ColoringSheets/Core/AppConfiguration.swift": "fd9102db284d8a9806dca6979bdc3c8fdcb99e03d4caca81b1cf7c97bac6d63e",
+    "ColoringSheets/Core/ColoringViewModel.swift": "e7570ec52aaf38e115877e621470b04c3d4ac89d53b38285faf4f3bd8b0f804c",
+    "ColoringSheets/Core/DiagnosticLog.swift": "b2022cdeddcc75db77f4f538529826df27512a1f91a236cb4d931a24ee69082c",
+    "ColoringSheets/Core/Generation.swift": "f27825c5405a34977ef61add9fe3aeaaa7d77dc71e9983144283158bb7fb8b94",
+    "ColoringSheets/Core/MockGenerator.swift": "d186a4e73479a32fb77460991a0c8d52f6e4dd8d5f7238558320af7ae16871a3",
+    "ColoringSheets/Views/ContentView.swift": "f89c2e758b6d115637ad04726a98d88e2a8df9d030c2994663ee97802ec299b5",
+    "ColoringSheets/Views/ExportViews.swift": "7fcd0c961076320011afabcac7726586d0541a8f0d9857c3841dedc97e642dfa",
+    "ColoringSheetsTests/GenerationTests.swift": "7b355798a49a503c88d88be9cf234980e1569a8b6fb12766189ab2ca9bebd534",
+    "ColoringSheetsTests/LiveIntegrationTests.swift": "648833630b580ba8153519d46eedf53858c13e6101b53eb129c3ca632dbc7f48",
+    "ColoringSheetsUITests/GalleryUITests.swift": "dcbc7c68886af34b71ebe05d1351ea894a715bd600b3f318b6f85331dc548c68",
+    "workers/coloring-sheets-api/src/index.mjs": "b8c48d85eee726046bfaf7fd1186685babbb9274025a16afe694db55f14f05ec",
+    "Scripts/test_app_attest.mjs": "c0ae1d33dd4ff0333505f3c9f1b21479122bebf01e2d54dadd36dcba9d0dcda0",
+    "Scripts/create_project.py": "5ec1e88a2c3bea5d4d14c6abd75fe9c068f26f20528e4a2cf10da53eae65da67",
+    "ColoringSheets.xcodeproj/project.pbxproj": "9f71fe772742ba617546d8d93b7e4b59a257017af9e31f936af328710fdd58c9"
+  },
+  "physicalAppAttestCheck": {
+    "result": "passed",
+    "test": "testExplicitAppAttestCheckWithoutGeneration",
+    "resultBundle": ".build/review-fix-2026-10-17/physical-live-final.xcresult",
+    "note": "Authentication check passed. The subsequent UI target timed out enabling device automation before it could issue any image request. The later direct generation check passed."
+  },
+  "physicalUIAutomation": {
+    "result": "infrastructure failure",
+    "reason": "Timed out enabling automation mode; the app UI test did not start.",
+    "additionalPaidRequests": 0
+  },
+  "backendDeployment": {
+    "status": "deployed",
+    "commit": "37a418555acb93f062bb4546359abbac4d21c1d7",
+    "version": "98b17f08-5041-490e-b461-4bdf76795a84",
+    "workflow": "https://github.com/jerenrich/WonderLines/actions/runs/39011190277",
+    "smokeChecks": "passed; invalid keys rejected; no image generation"
+  },
+  "appSourceCommit": "6bcd690",
+  "uploadLog": ".build/review-fix-2026-10-17/upload.log",
+  "submissionStatus": "Waiting for Review",
+  "appStoreBuildID": "66887efb-6e0e-4dd9-a610-cdb0b1fa0cd4",
+  "replySent": true
+}

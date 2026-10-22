@@ -1,0 +1,105 @@
+Wonder Lines 1.0 (6) — further App Review audit
+17 October 2026, Europe/London
+
+Scope and result
+Read-only review of submitted build/source, live App Store Connect metadata,
+public website, current Apple guidance and prior build-6 test evidence. A new
+synthetic offline concurrency test confirms a report-state bug. The existing
+backend privacy tests pass. No production data, messages, deployment, source
+implementation or submission settings were changed. Build 6 remains Waiting
+for Review. No new simulator/physical-device UI run was completed in this pass.
+
+1. Confirmed bug: concurrent billing can undo a sheet report (P2)
+workers/coloring-sheets-api/src/index.mjs:239 marks a job reported. A delayed
+Redmond/fal usage enrichment writes its earlier whole-job copy at :524-526,
+removing that flag. The recovery gate at :557 subsequently permits the sheet.
+Reproduced through Account.fetch('/usage') and '/report' with synthetic storage
+and a held billing response. Report JSON survives but reportedAfterBilling is
+false. This affects the server's recovery guarantee, not delivery of the report
+itself. Normal client reporting removes the local sheet; the reproduction proves
+server access can become allowed again, not that every report visibly reappears.
+Fix: atomically merge billing fields into the latest job, preserving safety state;
+add a regression test. This can be deployed without replacing build 6.
+Evidence: build6-followup-report-race.mjs and .json.
+The concurrent deletion case passes: deletion waits for billing, then removes the
+job. Do not claim this same race resurrects deleted accounts.
+Guidelines 1.2, 2.1: https://developer.apple.com/app-store/review/guidelines/
+
+2. Privacy risk: deletion excludes prompt content retained in logs (P2)
+Raw descriptions are logged at worker index.mjs:267,279,595,600. Wrangler enables
+observability; moderation.mjs:139 enables Gateway logging. Deletion clears R2,
+Durable Object and budget records but has no corresponding log cleanup.
+privacy.html:40-42 discloses the exception without a fixed duration. Apple expects
+associated account data to be deleted except data legally required to remain.
+This is a policy risk requiring investigation, not a definitive legal conclusion
+or a verified historical-data leak. Actual dashboard retention/settings and real
+logs were not inspected. Distinguish developer-controlled logs from independent
+provider retention. Stop unnecessary raw-prompt logging, determine and disclose
+retention, and provide appropriate cleanup of developer-controlled content.
+https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion/
+
+3. Confirmed presentation problems: unfinished-product language (P2)
+The live Support URL and Marketing URL both point to the root website. It still
+says 'Explore the demo', 'family app prototype', and that live generation needs
+a separately deployed service (index.html:37,66-67). The developer instructions
+are confusing for customers of the submitted working app. The source-only
+availability statement (:40) is currently true before first approval, but needs
+updating on release. Separate developer setup from customer product/support copy.
+The app also exposes ColoringBook.Redmond V2 (Beta), Generation.swift:19-25,
+in the Settings model picker (ContentView.swift:487). A Beta label alone does not
+prove incompleteness, but it invites scrutiny under 2.2. Validate the model's
+readiness and remove the label or exclude the unfinished feature. The label is
+in the binary; changing it requires a new build. Website correction does not.
+https://developer.apple.com/app-store/review/guidelines/#beta-testing
+
+4. Confirmed misleading cost wording (P2)
+The app is free to generate with no purchase flow, but Generation.swift:248-250,
+ColoringViewModel.swift:401, and ContentView.swift:593,620 warn users about being
+charged and say missing usage does not mean generation was free. These describe
+provider costs paid by the developer. Clarify that users are not charged or keep
+provider billing details outside ordinary user flows. A copy fix requires a new
+build. This is a clarity/metadata concern, not evidence of an IAP rule violation.
+https://developer.apple.com/app-store/review/guidelines/#accurate-metadata
+
+5. Operational dependency: reports need timely review
+The reporting feature saves a private R2 queue. build6-report-operations.txt
+requires daily human review; it explicitly says notifications/recurring checks
+are not configured. Establish an actual owner/check or notification process.
+No evidence shows reports have been missed, and a notification system itself is
+not an Apple requirement. Timely handling is. No client rebuild needed.
+https://developer.apple.com/app-store/review/guidelines/#user-generated-content
+
+6. Compatibility coverage gap, not a confirmed defect
+Current App Store Connect still has Apple silicon Mac availability checked,
+minimum automatic macOS14.0, compatibility unverified; Vision Pro availability
+is checked too. Archive supports iOS17+. Build6 evidence covers OS27 iPhone/iPad
+simulators and a separate live service check, not a physical build6 installation,
+Mac, Vision Pro, or the oldest supported iOS. Test the offered environments or
+limit availability as appropriate. No definite compatibility failure was found.
+Live metadata evidence: build6-followup-metadata-evidence.json.
+https://developer.apple.com/app-store/review/guidelines/#app-completeness
+
+Additional caution, lower confidence
+The website emphasizes kids (index.html:35,63) while the app is Graphics & Design,
+9+, not in the Kids Category. The live description includes family/child activity
+language but does not explicitly say 'For Kids'. Family use alone does not prove
+a Kids Category violation. Review audience positioning consistently; do not add
+a parental gate or change categories based solely on a difficulty slider.
+Apple 2.3.8/5.1.4 reserve metadata implying children are the main audience for
+Kids Category apps. No legal compliance conclusion is made here.
+The age questionnaire's UGC definition concerns broad distribution; private AI
+creation alone does not prove its saved No answer incorrect.
+https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions/
+
+Checks that reduced concern
+The manifest is bundled, one-off consent gates generation/recovery, account
+cleanup/retry exists, report failures preserve local sheets, App Attest invalid-
+key recovery already exists, and photo export requests add-only permission.
+No additional definite launch crash or disabled Generate bug found. No guarantee
+of approval: the remaining items vary from reproduced bugs to review/test gaps.
+
+Suggested order
+Fix the report race, review logging/deletion policy, update customer website,
+and establish report handling first; these do not inherently require withdrawing
+build6. If preparing another binary, clarify cost copy and resolve Beta wording,
+then test physical/older OS and enabled platforms before deciding availability.
