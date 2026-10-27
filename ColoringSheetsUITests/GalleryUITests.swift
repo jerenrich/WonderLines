@@ -80,23 +80,25 @@ final class GalleryUITests: XCTestCase {
     }
 
     @MainActor
-    func testStarterIdeasAndGenerateStopControlKeepComposerStable() {
+    func testOnlySurpriseStarterAndGenerateStopControlKeepComposerStable() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["--mock", "--slow-mock", "-descriptionDraft", "", "-imageCount", "1"]
         app.launch()
-        let dinosaur = app.buttons["starterIdea.dinosaurs"]
-        XCTAssertTrue(dinosaur.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["starterIdea.space"].exists)
-        XCTAssertTrue(app.buttons["starterIdea.animals"].exists)
-        XCTAssertTrue(app.buttons["starterIdea.surprise"].exists)
+        let surprise = app.buttons["starterIdea.surprise"]
+        XCTAssertTrue(surprise.waitForExistence(timeout: 5))
+        XCTAssertEqual(surprise.label, "Surprise me")
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "starterIdea.")).count, 1)
+        XCTAssertFalse(app.buttons["starterIdea.dinosaurs"].exists)
+        XCTAssertFalse(app.buttons["starterIdea.space"].exists)
+        XCTAssertFalse(app.buttons["starterIdea.animals"].exists)
         let welcome = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        welcome.name = "Starter illustration and ideas"
+        welcome.name = "Starter illustration and Surprise me"
         welcome.lifetime = .keepAlways
         add(welcome)
-        dinosaur.tap()
+        surprise.tap()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
-        XCTAssertEqual(subject.value as? String, "A friendly dinosaur riding a bicycle on the moon")
+        XCTAssertFalse((subject.value as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         XCTAssertFalse(app.staticTexts["generationProgress"].exists, "Choosing an idea must not start generation")
         subject.typeText(" with stars")
         XCTAssertTrue((subject.value as? String)?.contains("with stars") == true)

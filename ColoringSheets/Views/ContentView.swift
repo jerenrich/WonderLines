@@ -274,7 +274,7 @@ struct ContentView: View {
                         descriptionFocused = false
                         store.cancel()
                     } else if needsIdea {
-                        useStarterIdea(.surprise)
+                        useSurpriseIdea()
                     } else {
                         descriptionFocused = false
                         store.generate()
@@ -425,28 +425,23 @@ struct ContentView: View {
                 VStack(spacing: 6) {
                     Text("What shall we draw?")
                         .font(.title2.bold())
-                    Text("Pick an idea, or describe your own below.")
+                    Text("Try a surprise, or describe your own below.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.center)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
-                                         count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 12) {
-                    ForEach(StarterIdea.allCases) { idea in
-                        Button { useStarterIdea(idea) } label: {
-                            Label(idea.title, systemImage: idea.symbol)
-                                .font(.callout.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .padding(.horizontal, 8)
-                                .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
-                                .contentShape(RoundedRectangle(cornerRadius: 14))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Fills the description so you can edit it before generating")
-                        .accessibilityIdentifier("starterIdea.\(idea.rawValue)")
-                    }
+                Button { useSurpriseIdea() } label: {
+                    Label("Surprise me", systemImage: "shuffle")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.horizontal, 8)
+                        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                        .contentShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .frame(maxWidth: 460)
+                .buttonStyle(.plain)
+                .accessibilityHint("Fills the description so you can edit it before generating")
+                .accessibilityIdentifier("starterIdea.surprise")
+                .frame(maxWidth: 320)
             }
             .padding(20)
             .frame(maxWidth: .infinity, minHeight: size.height)
@@ -455,8 +450,8 @@ struct ContentView: View {
         .accessibilityIdentifier("starterIdeas")
     }
 
-    private func useStarterIdea(_ idea: StarterIdea) {
-        store.description = idea.prompt
+    private func useSurpriseIdea() {
+        store.description = StarterIdeas.surprisePrompt
         descriptionFocused = true
     }
 
@@ -688,33 +683,9 @@ struct ContentView: View {
     }
 }
 
-private enum StarterIdea: String, CaseIterable, Identifiable {
-    case dinosaurs, space, animals, surprise
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .dinosaurs: "Dinosaurs"
-        case .space: "Space"
-        case .animals: "Animals"
-        case .surprise: "Surprise me"
-        }
-    }
-    var symbol: String {
-        switch self {
-        case .dinosaurs: "fossil.shell"
-        case .space: "moon.stars"
-        case .animals: "pawprint"
-        case .surprise: "shuffle"
-        }
-    }
-    var prompt: String {
-        switch self {
-        case .dinosaurs: "A friendly dinosaur riding a bicycle on the moon"
-        case .space: "A cheerful astronaut exploring a planet with stars and a rocket"
-        case .animals: "A fox and a rabbit having a picnic in a flower garden"
-        case .surprise:
-            Self.surprisePrompts.randomElement() ?? "A dragon baking cupcakes in a cozy kitchen"
-        }
+private enum StarterIdeas {
+    static var surprisePrompt: String {
+        surprisePrompts.randomElement() ?? "A dragon baking cupcakes in a cozy kitchen"
     }
 
     private static let surprisePrompts = [
