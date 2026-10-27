@@ -50,3 +50,4 @@
 .model-option .model-price,.grid-model .model-price{font-size:10px;color:#47623e;line-height:1.5}
 .grid-model .model-price{margin-top:7px}
 .model-price-note{font-size:10px;color:#737f69;line-height:1.6;margin:12px 0 0}
+.provider-setup{grid-column:1/-1;padding:12px 4px;color:var(--muted);font-size:11px;line-height:1.6}.provider-setup summary{cursor:pointer;color:var(--ink)}.provider-setup p{margin:8px 0}.provider-setup strong{font-weight:550}

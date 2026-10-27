@@ -1,6 +1,6 @@
 // Z-Image Turbo through real app/lab handlers with synthetic providers only.
 import assert from 'node:assert/strict';
-import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
+import worker, {Account, Budget, ComparisonImageRunner} from '../workers/coloring-sheets-api/src/index.mjs';
 import {imageRequest, modelCatalog, falQueueURL} from '../workers/coloring-sheets-api/src/image-provider.mjs';
 import {falCostData} from '../workers/coloring-sheets-api/src/fal-cost.mjs';
 import {imageCost} from '../workers/coloring-sheets-api/src/image-cost.mjs';
@@ -27,7 +27,7 @@ let state='IN_QUEUE',nsfw=false,reported=false,approved=true;
 const upstream='fal-ai/z-image/turbo',route=modelCatalog({}).routes['z-image-turbo'];
 assert.deepEqual(route,{provider:'fal',model:'z-image-turbo'});
 assert.ok(catalog({}).some(m=>m.id==='z-image-turbo'&&m.label==='Z-Image Turbo'&&m.recommended));
-assert.ok(!catalog({}).some(m=>m.id==='coloringbook-redmond-v2'));
+assert.ok(catalog({}).some(m=>m.id==='coloringbook-redmond-v2'),'Retain the expanded comparison catalogue.');
 assert.throws(()=>falQueueURL('https://evil.example'));
 assert.throws(()=>modelCatalog({IMAGE_MODEL_ROUTES:JSON.stringify({bad:{provider:'fal',model:'fal-ai/arbitrary'}})}));
 for(const size of [{width:1456,height:1024},{width:1024,height:1456},{width:1024,height:1024}]) {
@@ -102,16 +102,21 @@ try {
   assert.equal(imageCost(stored.fal.request,billed).estimatedTotalUsd,0.0065);reported=false;
   // Without billable units, never multiply inference seconds by a megapixel rate.
   assert.equal(imageCost(stored.fal.request,{inferenceMs:2000,unitPriceUsd:0.005,billingUnit:'megapixels'}).estimatedTotalUsd,null);
-  // The website has no provider key; its trusted reservation is validated by Account.
+  // The website has no provider key. Comparison jobs use the independent
+  // durable runner, while the app retains its native fal queue.
+  env.COMPARISON_ACCOUNT_ID=identity.accountId;
+  env.COMPARISON_RUNNERS=new Namespace(ComparisonImageRunner);
   const labEnv={LAB_ACCOUNT_ID:identity.accountId,ACCOUNTS:env.ACCOUNTS,GENERATION_LIMITER:{limit:async()=>({success:true})}};
   const library=new ComparisonLibrary({storage:new MemoryStorage()},labEnv);
   const labID=crypto.randomUUID(),batchID=crypto.randomUUID();
   const start=()=>library.fetch(new Request('https://library/start',{method:'POST',body:JSON.stringify({id:labID,batchID,description:'Synthetic flower',age:7,composition:'front',model:'z-image-turbo'})}));
-  const labBefore=await account.access();delete env.FAL_KEY;
-  assert.equal((await start()).status,503);assert.deepEqual(await account.access(),labBefore);env.FAL_KEY=key;
-  assert.equal((await start()).status,202);await account.alarm();await account.alarm();
+  assert.equal((await start()).status,202);await account.alarm();
+  const runner=env.COMPARISON_RUNNERS.objects.get(identity.accountId+':'+labID);
+  assert.ok(runner,'The comparison job was delegated to its own runner.');
+  await runner.alarm();await runner.alarm();
   assert.equal((await account.state.storage.get('job:'+labID)).state,'completed');
   assert.equal((await start()).status,200);
+  delete env.COMPARISON_ACCOUNT_ID;delete env.COMPARISON_RUNNERS;
   // Safety rejection is terminal, and the shared fal cap covers app and website.
   nsfw=true;const unsafeID=crypto.randomUUID();assert.equal((await send(unsafeID)).status,202);
   await account.alarm();await account.alarm();

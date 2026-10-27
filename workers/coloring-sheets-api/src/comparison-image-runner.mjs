@@ -1,5 +1,6 @@
-import {imageRequest,runImageRequest,ImageProviderError} from './image-provider.mjs';
+import {imageRequest,runImageRequest,submitFalRequest,pollFalRequest,ImageProviderError} from './image-provider.mjs';
 import {imageCost} from './image-cost.mjs';
+import {falCostData} from './fal-cost.mjs';
 import {isUUID,MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
 
 // One durable runner per comparison image gives inference its own I/O context.
@@ -52,11 +53,37 @@ export class ComparisonImageRunner {
     this.log(task,result.state,result);
     task.stage='reporting';task.result=result;delete task.subject;delete task.route;delete task.size;await this.state.storage.put('task',task);await this.report(task);
   }
+  async pollFal(task,objectKey){
+    // The external request ID is durable. Restarts and failed downloads only
+    // poll that same paid job; they must never submit a replacement.
+    if(Date.now()-task.startedAt>30*60*1000)return this.finish(task,{state:'failed',errorCode:'provider_timeout',message:'This fal job could not be recovered within 30 minutes. Check provider usage before generating again.'});
+    try{
+      const model=task.route.model==='coloringbook-redmond-v2'?'fal-ai/lora':task.route.model;
+      const result=await pollFalRequest(this.env,task.falRequestID,model);
+      if(!result){await this.state.storage.setAlarm(Date.now()+4000);return;}
+      const cost=await falCostData(this.env,task.falRequestID,result.billableUnits,task.startedAt,model);
+      task.metrics={requestedModel:task.publicModel,provider:'fal',upstreamModel:model,viaGateway:true,
+        providerRequestID:task.falRequestID,seed:result.seed,requestedSize:task.size.width+'x'+task.size.height,size:result.size,
+        elapsedMs:Date.now()-task.createdAt,queueMs:task.startedAt-task.createdAt,inferenceMs:result.inferenceMs,
+        ...cost,...imageCost({provider:'fal',model},{...result,...cost})};
+      task.stage='saving';await this.state.storage.put('task',task);
+      await this.env.GENERATIONS.put(objectKey,result.image);
+      await this.finish(task,{state:'completed',objectKey,metrics:task.metrics});
+    }catch(error){
+      if(['saving','reporting'].includes(task.stage))throw error;
+      if(error instanceof ImageProviderError&&['provider_connection_failed','provider_unavailable','provider_timeout','provider_rate_limited'].includes(error.code)){
+        await this.state.storage.setAlarm(Date.now()+5000);return;
+      }
+      await this.finish(task,{state:'failed',errorCode:error instanceof ImageProviderError?error.code:'provider_invalid_response',
+        message:error instanceof ImageProviderError?error.message:'The fal image could not be recovered.',metrics:{providerRequestID:task.falRequestID,...error?.diagnostics}});
+    }
+  }
   async run(){
     const task=await this.state.storage.get('task');if(!task||task.stage==='done')return;
     await this.state.storage.setAlarm(Date.now()+30000);
     if(task.stage==='reporting'){await this.report(task);return;}
     const objectKey=task.accountId+'/'+task.id+'.png';
+    if(task.stage==='polling'&&task.route?.provider==='fal')return this.pollFal(task,objectKey);
     if(task.stage!=='queued'){
       if(task.stage==='saving'&&await this.env.GENERATIONS.get(objectKey))return this.finish(task,{state:'completed',objectKey,metrics:task.metrics});
       return this.finish(task,{state:'failed',errorCode:'provider_connection_failed',message:'The image request was interrupted. No automatic second generation was submitted.'});
@@ -67,6 +94,12 @@ export class ComparisonImageRunner {
     const started=Date.now();task.stage='submitting';task.startedAt=started;await this.state.storage.put('task',task);
     this.log(task,'provider_started');
     try{
+      if(request.provider==='fal'){
+        task.falRequestID=await submitFalRequest(this.env,request);
+        task.stage='polling';await this.state.storage.put('task',task);
+        this.log(task,'provider_submitted',{metrics:{providerRequestID:task.falRequestID}});
+        await this.state.storage.setAlarm(Date.now()+1000);return;
+      }
       const result=await runImageRequest(request);
       task.metrics={requestedModel:task.publicModel,provider:request.provider,upstreamModel:request.model,viaGateway:request.viaGateway,
         requestedSize:task.size.width+'x'+task.size.height,size:result.size,inputTokens:result.inputTokens,textInputTokens:result.textInputTokens??null,

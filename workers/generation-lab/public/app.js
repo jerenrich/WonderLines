@@ -118,6 +118,11 @@ function renderOptions() {
     input.addEventListener('change', () => { input.checked ? selectedModels.add(model.id) : selectedModels.delete(model.id); updateSummary(); });
     $(model.recommended ? 'model-options' : 'extra-model-options').append(label);
   }
+  if(config.unavailableModels?.length){
+    const note=el('details','provider-setup');note.append(el('summary','','Models requiring another endpoint'));
+    for(const model of config.unavailableModels){const item=el('p');item.append(el('strong','',model.label+': '),document.createTextNode(model.reason));note.append(item);}
+    $('extra-model-options').append(note);
+  }
   $('age-options').replaceChildren();
   for (const preset of presets) {
     const button = el('button','age-button'); button.type = 'button'; button.disabled = busy; button.setAttribute('aria-pressed',String(selectedAges.has(preset.age))); button.setAttribute('aria-label',`Age ${preset.age}, ${preset.detail.toLowerCase()} detail`);

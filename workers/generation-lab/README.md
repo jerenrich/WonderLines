@@ -2,13 +2,37 @@
 
 Private colouring-sheet comparison studio, hosted as the separate Cloudflare Worker `wonderlines-compare`.
 
-Enter the key in the ignored `.secrets/generation-lab-access-key` file. Select a prompt, one or more models, and ages 3–18. **Select all** enables every available model, including those under **More models**. A run generates the model × age combinations (up to 80 sheets in the interface). Six models match the app's selectable picker, including Z-Image Turbo through fal.ai; six more alternatives are under **More models**. Redmond remains excluded from new comparisons. All four age presets are selected by default, using representative ages 4, 7, 10 and 15; **Choose exact ages** selects any age from 3–18. The compact grid shows images without footer panels. Click an image to enlarge it, or its top-right **i** button for generation details, costs, and recovery actions. Export comparison metadata as JSON. The toolbar totals known image inference estimates (with a count when estimates are incomplete). Beneath each model, the mean elapsed time uses its completed images with timing metadata, including queue time.
+Enter the key in the ignored `.secrets/generation-lab-access-key` file. Select a prompt, one or more models, and ages 3–18. **Select all** enables every available model, including those under **More models**. A run generates the model × age combinations (up to 80 sheets in the interface). Six models match the app's selectable picker, including Z-Image Turbo; the remaining alternatives are under **More models**. All four age presets are selected by default, using representative ages 4, 7, 10 and 15; **Choose exact ages** selects any age from 3–18. With 24 models, selecting all four ages exceeds the existing 80-sheet limit; choose fewer models or ages. The compact grid shows images without footer panels. Click an image to enlarge it, or its top-right **i** button for generation details, costs, and recovery actions. Export comparison metadata as JSON. The toolbar totals known image inference estimates (with a count when estimates are incomplete). Beneath each model, the mean elapsed time uses its completed images with timing metadata, including queue time.
 
 Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause categories), `upstreamErrorParameters` (known parameter names only), and `upstreamErrorDetailStatus` (`classified`, `unclassified`, or `unavailable`). Raw error messages, echoed input, credentials and image data are never retained, including hashes of provider messages. Classification identifies provider-reported symptoms, not independently verified root causes. Unknown wording remains explicitly unclassified. Image failures, persistence retries, failed starts and library outages use error-level logs, so query `outcome = "failed"` or the error-level view. The same safe fields persist with comparison jobs and appear in image details. This does not enable Gateway payload logging or retry inference.
 
+## Foundation model coverage (2026-10-27)
+
+The comparison catalogue extends the app catalogue. Z-Image Turbo is also available in the iOS app; the other additional fal presets remain comparison-only. All additions use the existing production `FAL_KEY`, AI Gateway fal proxy, private R2 bucket, moderation, and daily fal/global budgets. No new provider account, GPU deployment or copied credentials is required. Hosted fal pricing applies; the earlier self-hosting GPU estimates are not endpoint prices.
+
+| Models | Existing provider / endpoint |
+| --- | --- |
+| Klein 4B / 9B, SDXL Base / Lightning | Already available through Workers AI |
+| Z-Image Base / Turbo | `fal-ai/z-image/base`, `fal-ai/z-image/turbo` |
+| SANA / SANA-Sprint | `fal-ai/sana`, `fal-ai/sana/sprint` |
+| ERNIE-Image / Turbo | `fal-ai/ernie-image`, `fal-ai/ernie-image/turbo` |
+| Lumina-Image 2.0 | `fal-ai/lumina-image/v2` |
+| Krea 2 Turbo | `fal-ai/krea-2/turbo` (open-weight family, not the separate Medium/Large API) |
+| Klein Base 4B / 9B | `fal-ai/flux-2/klein/4b/base`, `fal-ai/flux-2/klein/9b/base` |
+| Qwen-Image / 2512 | `fal-ai/qwen-image`, `fal-ai/qwen-image-2512` |
+| ColoringBook Redmond V2 | Existing pinned SDXL LoRA preset, now also available in Compare |
+
+SANA endpoint IDs do not expose independent 0.6B/1.6B checkpoint selection; the options are labelled by the hosted model rather than promising an exact weight revision. Selecting specific checkpoints or arbitrary LoRAs would require a separate integration. Krea RAW, Chroma1, Flex.2-preview and Qwen-Image-2.1 Turbo are listed under **Models requiring another endpoint** and cannot be selected. No verified matching hosted endpoint was found in the current integrations. Qwen 2.1 Turbo can use Alibaba Cloud with another integration; the others can use a custom GPU deployment, including fal Serverless if the account has deployment access. Qwen 2.1's downloadable weights require separate commercial licensing.
+
+Each new fal preset uses the provider's documented parameters, one image, a PNG output and the provider safety checker. Optional prompt expansion is disabled to preserve the comparison prompt. fal outputs are fitted to approximately one megapixel while retaining the requested aspect ratio; the actual output dimensions are recorded in image details. Inference steps are explicit except Krea Turbo, whose endpoint controls its sampling schedule.
+
+Comparison fal jobs use the independent durable image runner: submit once, save the provider request ID, then poll via alarms. Queue result/status URLs use only `owner/app`, not the endpoint subpath. Restarted runners and transient download failures recover the same request; ambiguous submissions are never automatically repeated. Read-only billing lookups use the actual model endpoint and exact request ID. Missing provider evidence remains an unavailable estimate, never a zero cost. The existing iOS Redmond queue and billing path remain supported.
+
+Endpoint schemas: each endpoint's `https://fal.ai/models/<endpoint>/api` page. Queue protocol: https://docs.fal.ai/model-apis/model-endpoints/queue.
+
 ## Generation and recovery
 
-The Worker binds to the existing production `coloring-sheets-api` Account Durable Object and image bucket. A dedicated lab account shares production moderation, generation queue, provider credentials, cost metadata, and the global spend ledger. Its own 100-sheet daily allowance is separate from iPad accounts. The app API and studio share `coloring-sheets-api/src/generation-start.mjs` for request validation, prompt composition, recovery, moderation and job reservation. The app’s App Attest policy remains unchanged. The lab is a trusted server client of the internal account interface; its public routes expose only bounded lab operations. Never expose arbitrary Durable Object paths or object keys.
+The Worker binds to the existing production `coloring-sheets-api` Account Durable Object and image bucket. A dedicated lab account shares production moderation, generation queue, provider credentials, cost metadata, and the global spend ledger. Its own 1,000-sheet daily allowance resets at midnight UTC and is separate from the unchanged 100-sheet iPad allowance. The production Account identifies it by `COMPARISON_ACCOUNT_ID`; both its displayed free allowance and hard daily cap are 1,000. Shared fal and global service budgets still apply. The app API and studio share `coloring-sheets-api/src/generation-start.mjs` for request validation, prompt composition, recovery, moderation and job reservation. The app’s App Attest policy remains unchanged. The lab is a trusted server client of the internal account interface; its public routes expose only bounded lab operations. Never expose arbitrary Durable Object paths or object keys.
 
 All server-side providers run inside the production Account object, so image provider keys never need to be copied to this Worker. The model catalogue imports the production source defaults; if production adds `IMAGE_MODEL_ROUTES` overrides, keep this Worker's non-secret catalogue overrides aligned. The initially inspected live deployment had no routing overrides.
 
@@ -31,6 +55,7 @@ From this directory:
 ```sh
 node tests/worker.mjs
 node tests/library.mjs
+node tests/fal.mjs
 npx wrangler deploy --dry-run
 npx wrangler secret put LAB_ACCESS_KEY
 npx wrangler deploy --keep-vars
@@ -39,5 +64,7 @@ npx wrangler deploy --keep-vars
 For local work, use ignored `.dev.vars` with `LAB_ACCESS_KEY`. The actual cross-script Account binding requires Cloudflare deployment; offline tests replace it with a stub. `v1-comparison-library` provisions the new SQLite Durable Object namespace on first deployment. Keep the migration and namespace binding in future deployments. Do not add a production service binding or disable App Attest to make local generation work.
 
 Prices throughout the studio, detail dialogs and JSON exports use US cents (¢). API/storage metrics remain USD; exported monetary fields are renamed `*Cents` and tagged `priceUnit: "US cents"`. All displayed amounts use exactly two decimal places; nonzero costs below one hundredth of a cent display as `<¢0.01`, while genuine zero inference prices display as `¢0.00`. Run `node tests/cost-display.mjs` for conversion, historical explanation and export checks.
+
+Comparison presets without matching audited price evidence show **Price unavailable**. This includes the approximately one-megapixel fal presets; the app’s audited Z-Image Turbo preset uses different dimensions, so its billing-confirmed reference is not copied to the comparison preset. Completed images can still show their own endpoint-specific billing evidence.
 
 Each model choice and comparison row shows a per-image reference cost and either **Billing confirmed** or **Estimate**. The app uses the same audited reference prices. OpenAI figures are token-based averages; Cloudflare prices are metering-backed estimates for the stated presets; Z-Image’s reference price is backed by four matched billing events. These labels describe the reference samples, not a guarantee for future requests. Current route identity must match before a historical row is given a reference price. Run `node tests/model-reference-cost.mjs` to check every model and alias remapping.

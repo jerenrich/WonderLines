@@ -11,6 +11,7 @@ import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} f
 import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
 const TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
+const COMPARISON_DAILY_IMAGE_LIMIT = DAILY_IMAGE_LIMIT * 10;
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status, details = {}) => reply({error: {code, message, ...details}}, status);
 // This is a dashboard-managed Worker variable, not source configuration. Invalid
@@ -363,8 +364,15 @@ export class Account {
     const account = {id: accountId, credentialId: crypto.randomUUID()}; await this.state.storage.put('account', account);
     return reply({credentialId: account.credentialId, access: await this.access()}, 201);
   }
+  async dailyImagePolicy() {
+    const account = await this.state.storage.get('account');
+    if (account?.id && account.id === this.env.COMPARISON_ACCOUNT_ID) {
+      return {limit: COMPARISON_DAILY_IMAGE_LIMIT, allowance: COMPARISON_DAILY_IMAGE_LIMIT};
+    }
+    return {limit: DAILY_IMAGE_LIMIT, allowance: freeDailyAllowance(this.env)};
+  }
   async access() {
-    const day = new Date().toISOString().slice(0, 10), allowance = freeDailyAllowance(this.env);
+    const day = new Date().toISOString().slice(0, 10), {allowance} = await this.dailyImagePolicy();
     const usage = await this.state.storage.get('usage'), credits = (await this.state.storage.get('credits')) ?? 0;
     return {features: [], generationCredits: credits, freeGenerationsRemaining: Math.max(0, allowance - (usage?.day === day ? usage.used : 0)), allowanceResetsAt: new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString()};
   }
@@ -376,11 +384,11 @@ export class Account {
       validateFalConfiguration(this.env);
       falQueueURL(falTask.request?.model);
     } catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
-    const day = new Date().toISOString().slice(0, 10), allowance = freeDailyAllowance(this.env), usage = await this.state.storage.get('usage');
+    const day = new Date().toISOString().slice(0, 10), {limit, allowance} = await this.dailyImagePolicy(), usage = await this.state.storage.get('usage');
     const used = usage?.day === day ? usage.used : 0; let credits = (await this.state.storage.get('credits')) ?? 0;
-    if (used >= DAILY_IMAGE_LIMIT) return fail('allowance_exhausted', 'Today’s limit of 100 images has been reached. It resets at midnight UTC.', 429);
+    if (used >= limit) return fail('allowance_exhausted', `Today’s limit of ${limit} images has been reached. It resets at midnight UTC.`, 429);
     if (used >= allowance && credits < 1) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
-    const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask ? 'fal' : undefined);
+    const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask || imageTask?.route?.provider === 'fal' ? 'fal' : undefined);
     if (global.status === 429) return fail('service_budget_exhausted', global.value.error.message, 429);
     if (global.status >= 400) return fail('service_unavailable', 'Could not reserve service capacity.', 503);
     await this.state.storage.put('usage', {day, used: used + 1});

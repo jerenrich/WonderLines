@@ -38,7 +38,17 @@ assert.equal(await getPrincipal(request('/api/config','GET',undefined,cookie),{.
 assert.equal(await getPrincipal(request('/api/config','GET',undefined,cookie+'x'),env),null);
 assert.ok(!(await createSession(env,false)).includes('Max-Age'));
 const config=await (await worker.fetch(request('/api/config','GET',undefined,cookie),env)).json();
-assert.equal(config.models.length,12);assert.equal(config.models.filter(x=>x.recommended).length,6);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
+assert.equal(config.models.length,24);assert.equal(config.models.filter(x=>x.recommended).length,6);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
+assert.ok(config.models.some(x=>x.id==='sana-sprint'&&x.provider==='fal'));
+// Klein's distinct distilled/base checkpoints must be visibly distinguishable.
+for(const size of ['4b','9b']){
+  const fast=config.models.find(x=>x.id==='flux-2-klein-'+size);
+  const base=config.models.find(x=>x.id==='flux-2-klein-base-'+size);
+  assert.match(fast.label,/Fast, 4 steps/);assert.match(base.label,/Base, 28 steps/);
+  assert.equal(fast.provider,'workers-ai');assert.equal(base.provider,'fal');
+  assert.notEqual(fast.model,base.model);assert.notEqual(fast.label,base.label);
+}
+assert.ok(config.unavailableModels.some(x=>x.label==='Flex.2-preview'));
 const input={id:crypto.randomUUID(),batchID:crypto.randomUUID(),description:'A friendly dinosaur gardening',age:4,composition:'front',model:'flux-2-klein-4b'};
 const post=(data=input,headers={})=>worker.fetch(request('/api/generations','POST',data,cookie,headers),env);
 assert.equal((await post({...input,age:2})).status,400);
@@ -56,6 +66,11 @@ assert.equal((await post()).status,200);assert.equal(reservations,1);
 assert.equal((await post({...input,age:15})).status,409);assert.equal(reservations,1);
 const second={...input,id:crypto.randomUUID(),age:15};assert.equal((await post(second)).status,202);
 assert.match(calls.filter(x=>x.path==='/reserve').at(-1).input.imageTask.subject,/intricate outlines/);
+const falInput={...input,id:crypto.randomUUID(),batchID:crypto.randomUUID(),model:'z-image-turbo'};
+assert.equal((await post(falInput)).status,202);
+const falReservation=calls.filter(x=>x.path==='/reserve').at(-1).input;
+assert.equal(falReservation.imageTask.route.model,'fal-ai/z-image/turbo');
+assert.equal(falReservation.falTask,undefined,'Comparison queues carry routes, never provider credentials or prebuilt paid submissions.');
 const job=jobs.get(input.id);job.state='completed';job.objectKey=accountId+'/'+input.id+'.png';job.metrics={elapsedMs:1200};
 const read=await (await worker.fetch(request('/api/generations/'+input.id,'GET',undefined,cookie),env)).json();assert.equal(read.imageUrl,'/api/images/'+input.id);assert.ok(!JSON.stringify(read).includes('objectKey'));
 const image=await worker.fetch(request('/api/images/'+input.id,'GET',undefined,cookie),env);assert.equal(image.status,200);assert.equal(image.headers.get('Content-Type'),'image/png');assert.equal(image.headers.get('Cache-Control'),'no-store');

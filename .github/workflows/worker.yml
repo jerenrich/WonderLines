@@ -78,6 +78,7 @@ jobs:
         run: |
           node Scripts/test_worker.mjs
           node Scripts/test_z_image.mjs
+          node Scripts/test_image_cost.mjs
           node Scripts/test_comparison_queue.mjs
           node Scripts/test_comparison_runner.mjs
           node Scripts/test_provider_diagnostics.mjs
@@ -92,6 +93,7 @@ jobs:
           node workers/generation-lab/tests/retry.mjs
           node workers/generation-lab/tests/cost-display.mjs
           node workers/generation-lab/tests/model-reference-cost.mjs
+          node workers/generation-lab/tests/fal.mjs
           node workers/log-retention/tests/worker.mjs
           node Scripts/test_diagnostic_retention.mjs
           node --check workers/moderation-lab/public/app.js
