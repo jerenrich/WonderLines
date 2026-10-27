@@ -2,7 +2,31 @@
 
 Private colouring-sheet comparison studio, hosted as the separate Cloudflare Worker `wonderlines-compare`.
 
-Enter the key in the ignored `.secrets/generation-lab-access-key` file. Select a prompt, one or more models, and ages 3–18. **Select all** enables every available model, including those under **More models**. A run generates the model × age combinations (up to 80 sheets in the interface). Five models match the app's selectable picker; six more image-queue-compatible alternatives are under **More models**. Redmond's separate fal queue protocol is not included. All four age presets are selected by default, using representative ages 4, 7, 10 and 15; **Choose exact ages** selects any age from 3–18. The compact grid shows images without footer panels. Click an image to enlarge it, or its top-right **i** button for generation details, costs, and recovery actions. Export comparison metadata as JSON. The toolbar totals known image inference estimates (with a count when estimates are incomplete). Beneath each model, the mean elapsed time uses its completed images with timing metadata, including queue time.
+Enter the key in the ignored `.secrets/generation-lab-access-key` file. Select a prompt, one or more models, and ages 3–18. **Select all** enables every available model, including those under **More models**. A run generates the model × age combinations (up to 80 sheets in the interface). Five models match the app's selectable picker; the remaining alternatives are under **More models**. All four age presets are selected by default, using representative ages 4, 7, 10 and 15; **Choose exact ages** selects any age from 3–18. With 24 models, selecting all four ages exceeds the existing 80-sheet limit; choose fewer models or ages. The compact grid shows images without footer panels. Click an image to enlarge it, or its top-right **i** button for generation details, costs, and recovery actions. Export comparison metadata as JSON. The toolbar totals known image inference estimates (with a count when estimates are incomplete). Beneath each model, the mean elapsed time uses its completed images with timing metadata, including queue time.
+
+## Foundation model coverage (2026-10-27)
+
+The comparison catalogue extends the existing app catalogue without adding new choices to the iOS app. All additions use the existing production `FAL_KEY`, AI Gateway fal proxy, private R2 bucket, moderation, and daily fal/global budgets. No new provider account, GPU deployment or copied credentials is required. Hosted fal pricing applies; the earlier self-hosting GPU estimates are not endpoint prices.
+
+| Models | Existing provider / endpoint |
+| --- | --- |
+| Klein 4B / 9B, SDXL Base / Lightning | Already available through Workers AI |
+| Z-Image Base / Turbo | `fal-ai/z-image/base`, `fal-ai/z-image/turbo` |
+| SANA / SANA-Sprint | `fal-ai/sana`, `fal-ai/sana/sprint` |
+| ERNIE-Image / Turbo | `fal-ai/ernie-image`, `fal-ai/ernie-image/turbo` |
+| Lumina-Image 2.0 | `fal-ai/lumina-image/v2` |
+| Krea 2 Turbo | `fal-ai/krea-2/turbo` (open-weight family, not the separate Medium/Large API) |
+| Klein Base 4B / 9B | `fal-ai/flux-2/klein/4b/base`, `fal-ai/flux-2/klein/9b/base` |
+| Qwen-Image / 2512 | `fal-ai/qwen-image`, `fal-ai/qwen-image-2512` |
+| ColoringBook Redmond V2 | Existing pinned SDXL LoRA preset, now also available in Compare |
+
+SANA endpoint IDs do not expose independent 0.6B/1.6B checkpoint selection; the options are labelled by the hosted model rather than promising an exact weight revision. Selecting specific checkpoints or arbitrary LoRAs would require a separate integration. Krea RAW, Chroma1, Flex.2-preview and Qwen-Image-2.1 Turbo are listed under **Models requiring another endpoint** and cannot be selected. No verified matching hosted endpoint was found in the current integrations. Qwen 2.1 Turbo can use Alibaba Cloud with another integration; the others can use a custom GPU deployment, including fal Serverless if the account has deployment access. Qwen 2.1's downloadable weights require separate commercial licensing.
+
+Each new fal preset uses the provider's documented parameters, one image, a PNG output and the provider safety checker. Optional prompt expansion is disabled to preserve the comparison prompt. fal outputs are fitted to approximately one megapixel while retaining the requested aspect ratio; the actual output dimensions are recorded in image details. Inference steps are explicit except Krea Turbo, whose endpoint controls its sampling schedule.
+
+Comparison fal jobs use the independent durable image runner: submit once, save the provider request ID, then poll via alarms. Queue result/status URLs use only `owner/app`, not the endpoint subpath. Restarted runners and transient download failures recover the same request; ambiguous submissions are never automatically repeated. Read-only billing lookups use the actual model endpoint and exact request ID. Missing provider evidence remains an unavailable estimate, never a zero cost. The existing iOS Redmond queue and billing path remain supported.
+
+Endpoint schemas: each endpoint's `https://fal.ai/models/<endpoint>/api` page. Queue protocol: https://docs.fal.ai/model-apis/model-endpoints/queue.
 
 ## Generation and recovery
 
@@ -29,6 +53,7 @@ From this directory:
 ```sh
 node tests/worker.mjs
 node tests/library.mjs
+node tests/fal.mjs
 npx wrangler deploy --dry-run
 npx wrangler secret put LAB_ACCESS_KEY
 npx wrangler deploy --keep-vars

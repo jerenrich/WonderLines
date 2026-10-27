@@ -1,5 +1,5 @@
 import {getPrincipal, createSession, sessionCookie, equal} from './auth.mjs';
-import {catalog} from './catalog.mjs';
+import {catalog,unavailableModels} from './catalog.mjs';
 import {ComparisonLibrary} from './library.mjs';
 export {ComparisonLibrary};
 import {isUUID} from '../../coloring-sheets-api/src/composition.mjs';
@@ -50,7 +50,7 @@ async function handle(request, env) {
   if (path === '/api/config' && request.method === 'GET') {
     if (!await ensureAccount(stub, principal)) return fail('Could not open the comparison account.', 503);
     const {value} = await call(stub, '/access');
-    return json({models: catalog(env), access: value.access, auth: principal.method, maxImages: 80});
+    return json({models: catalog(env), unavailableModels, access: value.access, auth: principal.method, maxImages: 80});
   }
   const library = (operation, input) => {
     const store = env.LIBRARY.get(env.LIBRARY.idFromName(principal.accountId));

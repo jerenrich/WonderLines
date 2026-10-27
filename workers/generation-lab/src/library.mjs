@@ -147,10 +147,10 @@ export class ComparisonLibrary {
     }
     await this.state.storage.put('image:'+cell.id,{gridId:grid.id});await this.write(grid);
     const result=await startGeneration(prepared,{
-      env:this.env,call:(path,value)=>this.call(path,value),queueImages:true,
+      env:this.env,call:(path,value)=>this.call(path,value),queueImages:true,comparisonModels:true,
       // Provider credentials remain in the production Account object. That
       // object validates the provider request again before making inference.
-      validateProvider:false,fingerprintFormat:'hex',allowRoute:route=>route.provider!=='fal',
+      validateProvider:false,fingerprintFormat:'hex',
       rateLimit:async()=>!this.env.GENERATION_LIMITER||!(await this.env.GENERATION_LIMITER.limit({key:'shared-lab'})).success
         ? {status:429,value:{error:{code:'request_failed',message:'Please wait a minute before starting more images.'}}}:null,
       beforeReserve:async()=>{

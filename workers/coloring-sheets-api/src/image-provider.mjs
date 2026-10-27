@@ -1,5 +1,6 @@
 // Provider-native image APIs behind AI Gateway. Public model IDs are an allowlist,
 // never URLs, credentials, or arbitrary upstream request bodies from a client.
+import {comparisonRoutes, falComparisonConfig, isFalEndpoint} from './fal-models.mjs';
 export const DEFAULT_MODEL = 'gpt-image-2.5-flare';
 const DEFAULT_ROUTES = {
   'coloringbook-redmond-v2': {provider: 'fal', model: 'coloringbook-redmond-v2'},
@@ -36,15 +37,15 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const secret = value => typeof value === 'string' && /^[\x21-\x7e]+$/.test(value);
 const PROMPT = 'Create a printable coloring page with bold clean black outlines on a pure white background, enclosed areas to color, and generous white margins. Follow any complexity guidance in the subject description. No shading, gray, colors, text, or watermarks. Friendly, gentle, child-appropriate imagery only. Subject and complexity guidance: ';
 
-export function modelCatalog(env) {
+export function modelCatalog(env, {comparison = false} = {}) {
   const overrides = env.IMAGE_MODEL_ROUTES === undefined ? {} : JSON.parse(env.IMAGE_MODEL_ROUTES);
   if (!object(overrides)) throw new Error('Invalid image model routes');
-  const routes = {...DEFAULT_ROUTES, ...overrides};
+  const routes = {...DEFAULT_ROUTES, ...(comparison ? comparisonRoutes() : {}), ...overrides};
   if (Object.keys(routes).length > 32) throw new Error('Too many image model routes');
   for (const [id, route] of Object.entries(routes)) {
     if (!identifier(id) || !object(route) || !PROVIDERS.includes(route.provider) ||
         !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) :
-          route.provider === 'fal' ? route.model === 'coloringbook-redmond-v2' : identifier(route.model)) ||
+          route.provider === 'fal' ? route.model === 'coloringbook-redmond-v2' || comparison && !!falComparisonConfig(route.model) : identifier(route.model)) ||
         Object.keys(route).some(key => !['provider', 'model'].includes(key))) throw new Error('Invalid image model route');
   }
   const defaultModel = env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
@@ -91,7 +92,7 @@ function closestAspectRatio({width, height}) {
 
 // Build and validate everything that can fail locally before spending allowance.
 export function imageRequest(env, route, subject, size) {
-  if (route.provider === 'fal') return falImageRequest(env, subject, size);
+  if (route.provider === 'fal') return falImageRequest(env, subject, size, route.model);
   const prompt = PROMPT + subject.trim();
   if (route.provider === 'workers-ai') {
     const token = env.WORKERS_AI_API_TOKEN;
@@ -324,13 +325,21 @@ function falTransport(env, target) {
       'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN, 'cf-aig-skip-cache': 'true',
       'cf-aig-max-attempts': '1', 'cf-aig-collect-log': 'false', 'x-fal-target-url': target}};
 }
-function falImageRequest(env, subject, size) {
+function falImageRequest(env, subject, size, model = 'coloringbook-redmond-v2') {
   falTransport(env, FAL_QUEUE); // Validate before consuming any allowance.
   if (!/^(0|[1-9][0-9]{0,5})$/.test(env.FAL_DAILY_GENERATION_LIMIT ?? '') ||
       Number(env.FAL_DAILY_GENERATION_LIMIT) > 100000) throw new Error('Missing fal trial limit');
   // About one megapixel, retaining the requested aspect ratio and generous margins.
   const scale = Math.min(1, Math.sqrt(1048576 / (size.width * size.height)));
   const image_size = Object.fromEntries(['width', 'height'].map(edge => [edge, Math.round(size[edge] * scale / 16) * 16]));
+  if (model !== 'coloringbook-redmond-v2') {
+    const config = falComparisonConfig(model);
+    if (!config) throw new Error('Unsupported fal model');
+    return {provider: 'fal', model, viaGateway: true,
+      payload: {prompt: PROMPT + subject.trim(), image_size, num_images: 1,
+        enable_safety_checker: true, output_format: 'png', sync_mode: false,
+        ...(config.negative ? {negative_prompt: NEGATIVE_PROMPT} : {}), ...config.parameters}};
+  }
   return {provider: 'fal', model: FAL_ENDPOINT, viaGateway: true, modelRevision: REDMOND_REVISION,
     payload: {model_name: 'stabilityai/stable-diffusion-xl-base-1.0',
       loras: [{path: `https://huggingface.co/artificialguybr/ColoringBookRedmond-V2/resolve/${REDMOND_REVISION}/ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors`, scale: 1}],
@@ -373,16 +382,19 @@ async function falJSON(env, target, payload) {
   }
 }
 export async function submitFalRequest(env, request) {
-  const {data: result} = await falJSON(env, FAL_QUEUE, request.payload);
+  if (!isFalEndpoint(request.model)) throw new Error('Unsupported fal model');
+  const {data: result} = await falJSON(env, 'https://queue.fal.run/' + request.model, request.payload);
   if (typeof result.request_id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(result.request_id)) {
     throw new ImageProviderError('fal.ai did not return a usable job ID. You have not been charged.', 'provider_invalid_response');
   }
   return result.request_id;
 }
-export async function pollFalRequest(env, requestID) {
+export async function pollFalRequest(env, requestID, model = FAL_ENDPOINT) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(requestID)) throw new ImageProviderError(INVALID_IMAGE);
+  if (!isFalEndpoint(model)) throw new Error('Unsupported fal model');
   // Construct trusted queue URLs; never follow provider-supplied status URLs.
-  const target = FAL_QUEUE + '/requests/' + requestID;
+  // fal queue status/result paths use owner/app, without endpoint subpaths.
+  const target = 'https://queue.fal.run/' + model.split('/').slice(0, 2).join('/') + '/requests/' + requestID;
   const {data: status} = await falJSON(env, target + '/status');
   if (['IN_QUEUE', 'IN_PROGRESS'].includes(status.status)) return null;
   if (status.status !== 'COMPLETED') throw new ImageProviderError(INVALID_IMAGE);
@@ -397,7 +409,16 @@ export async function pollFalRequest(env, requestID) {
   // CDN downloads carry no credentials and may not redirect to another host.
   const response = await fetch(url.href, {redirect: 'manual', signal: AbortSignal.timeout(20000)});
   if (!response.ok) throw new ImageProviderError('The generated sheet could not be downloaded. Check unfinished sheets again.', 'provider_connection_failed');
-  const decoded = decodePNG(await boundedBytes(response, 20 * 1024 * 1024));
+  let bytes = await boundedBytes(response, 20 * 1024 * 1024);
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    try {
+      const converted = await env.IMAGES.input(new Response(bytes).body).output({format: 'image/png'});
+      const png = converted.response();
+      if (!png.ok) throw new Error('Image conversion failed');
+      bytes = await boundedBytes(png, 20 * 1024 * 1024);
+    } catch { throw new ImageProviderError('The generated image could not be converted to PNG. Check the Images service before generating again.', 'provider_image_conversion_failed'); }
+  }
+  const decoded = decodePNG(bytes);
   const [width, height] = decoded.size.split('x').map(Number);
   if (width * height > 3686400) throw new ImageProviderError(INVALID_IMAGE);
   return {...decoded, billableUnits, seed: Number.isSafeInteger(result.seed) ? result.seed : null,

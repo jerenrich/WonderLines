@@ -36,7 +36,7 @@ export async function prepareGeneration(input,generationId,env={}) {
 
 // Authentication, HTTP/image responses and library storage belong to the
 // caller. Validation, recovery, moderation and reservation follow one path.
-export async function startGeneration(prepared,{env,call,queueImages=false,validateProvider=true,fingerprintFormat='base64url',allowRoute,rateLimit,beforeReserve,onModeration}) {
+export async function startGeneration(prepared,{env,call,queueImages=false,comparisonModels=false,validateProvider=true,fingerprintFormat='base64url',allowRoute,rateLimit,beforeReserve,onModeration}) {
   if(prepared.value?.error)return prepared;
   const {generationId,subject,model,size,composed,fingerprints}=prepared;
   const existing=await call('/job',{generationId});
@@ -45,7 +45,7 @@ export async function startGeneration(prepared,{env,call,queueImages=false,valid
     : failure('idempotency_conflict','Generation ID was already used.',409);
   if(existing.status!==404)return failure('service_unavailable','Could not check generation.',503);
   let routes,upstreamRequest;
-  try {routes=modelCatalog(env).routes;}catch{return failure('service_unavailable','Image model configuration is incomplete.',503);}
+  try {routes=modelCatalog(env,{comparison:comparisonModels}).routes;}catch{return failure('service_unavailable','Image model configuration is incomplete.',503);}
   if(typeof model!=='string'||!Object.hasOwn(routes,model)||allowRoute&&!allowRoute(routes[model]))return failure('invalid_request','Model is invalid.',400);
   try {
     upstreamRequest=validateProvider?imageRequest(env,routes[model],subject,size):{provider:routes[model].provider,model:routes[model].model};
@@ -64,7 +64,7 @@ export async function startGeneration(prepared,{env,call,queueImages=false,valid
   }
   await beforeReserve?.();
   const result=await call('/reserve',{generationId,fingerprint:fingerprints[fingerprintFormat],
-    ...(upstreamRequest.provider==='fal'?{falTask:{request:upstreamRequest,publicModel:model,requestedSize:size.width+'x'+size.height}}:
+    ...(upstreamRequest.provider==='fal'&&!comparisonModels?{falTask:{request:upstreamRequest,publicModel:model,requestedSize:size.width+'x'+size.height}}:
       queueImages?{imageTask:{route:routes[model],subject,size,publicModel:model}}:{})});
   if(result.status===429)return result;
   if(result.status>=400)return failure('generation_unavailable','Could not start generation.',result.status);
