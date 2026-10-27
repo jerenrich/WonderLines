@@ -40,6 +40,14 @@ assert.ok(!(await createSession(env,false)).includes('Max-Age'));
 const config=await (await worker.fetch(request('/api/config','GET',undefined,cookie),env)).json();
 assert.equal(config.models.length,24);assert.equal(config.models.filter(x=>x.recommended).length,5);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
 assert.ok(config.models.some(x=>x.id==='sana-sprint'&&x.provider==='fal'));
+// Klein's distinct distilled/base checkpoints must be visibly distinguishable.
+for(const size of ['4b','9b']){
+  const fast=config.models.find(x=>x.id==='flux-2-klein-'+size);
+  const base=config.models.find(x=>x.id==='flux-2-klein-base-'+size);
+  assert.match(fast.label,/Fast, 4 steps/);assert.match(base.label,/Base, 28 steps/);
+  assert.equal(fast.provider,'workers-ai');assert.equal(base.provider,'fal');
+  assert.notEqual(fast.model,base.model);assert.notEqual(fast.label,base.label);
+}
 assert.ok(config.unavailableModels.some(x=>x.label==='Flex.2-preview'));
 const input={id:crypto.randomUUID(),batchID:crypto.randomUUID(),description:'A friendly dinosaur gardening',age:4,composition:'front',model:'flux-2-klein-4b'};
 const post=(data=input,headers={})=>worker.fetch(request('/api/generations','POST',data,cookie,headers),env);
