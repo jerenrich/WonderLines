@@ -1,0 +1,241 @@
+--- /dev/null
++++ b/workers/coloring-sheets-api/src/provider-diagnostics.mjs
+@@ -0,0 +1,40 @@
++// Provider messages can echo entire prompts, credentials and image data. Never
++// log, truncate, hash or forward them. Emit only fixed diagnostic vocabulary.
++const RULES = [
++  ['unsupported_queue', /(?:does not support|unsupported|not supported).{0,40}(?:request queu|queue request|queuing|queueing)|(?:request queu|queue request|queuing|queueing).{0,40}(?:not supported|unsupported)/i],
++  ['missing_required_input', /missing required (?:input|parameter|field)|(?:field|parameter|input).{0,30}(?:is required|must be provided)/i],
++  ['invalid_model_input', /model input is not valid|invalid (?:model input|input|parameter)|validation error|failed (?:input )?validation/i],
++  ['invalid_dimensions', /(?:width|height|dimensions|image size).{0,50}(?:must|invalid|exceed|too large|too small|multiple of)/i],
++  ['prompt_too_long', /(?:prompt|input text).{0,30}(?:too long|exceeds.{0,20}(?:length|limit)|maximum length)/i],
++  ['safety_rejected', /nsfw|content policy|safety (?:filter|check|violation)|content.{0,20}(?:flagged|blocked|not allowed)/i],
++  ['out_of_memory', /out of memory|cuda.{0,20}(?:memory|oom)|resource exhausted.*memory/i],
++  ['capacity_exceeded', /out of capacity|capacity (?:temporarily )?exceeded|no available (?:capacity|replica|gpu)/i],
++  ['rate_limited', /rate limit|too many requests/i],
++  ['quota_exhausted', /daily free allocation|insufficient.{0,20}(?:credit|quota)|billing.{0,20}limit|quota.{0,20}exhausted/i],
++  ['provider_timeout', /timed? ?out|timeout|deadline exceeded/i],
++  ['model_unavailable', /no such model|model.{0,30}(?:not found|unavailable|not loaded)/i],
++  ['inference_failed', /inference (?:error|failed|failure)|failed to (?:execute|run).{0,20}model|internal (?:server )?error/i],
++  ['tensor_shape_mismatch', /(?:tensor|matrix).{0,60}(?:shape|size).{0,40}(?:mismatch|incompatible)|shapes? cannot be multiplied/i],
++];
++const PARAMETERS = new Set(['prompt','negative_prompt','width','height','steps','num_steps','num_inference_steps','guidance','guidance_scale','seed','image','image_size','mask','mask_image','model','n','quality','output_format','queueRequest','queue_request']);
++
++export function providerErrorDiagnostics(body) {
++  const errors = [body?.error, ...(Array.isArray(body?.errors) ? body.errors : []),
++    ...(Array.isArray(body?.detail) ? body.detail : [])].filter(Boolean).slice(0, 8);
++  const reasons = new Set(), parameters = new Set();
++  for (const error of errors) {
++    const message = typeof error === 'string' ? error : error.message ?? error.msg;
++    if (typeof message === 'string') {
++      for (const [reason, pattern] of RULES) if (pattern.test(message)) reasons.add(reason);
++      // Extract only names from this fixed set; never return the submitted value.
++      for (const match of message.matchAll(/(?:missing required (?:input|parameter|field)|(?:invalid|unknown|unsupported) (?:parameter|field))\s*[:=]?\s*["'`]?([a-zA-Z_][a-zA-Z_0-9]*)/gi)) {
++        if (PARAMETERS.has(match[1])) parameters.add(match[1]);
++      }
++    }
++    for (const parameter of [error?.param, error?.parameter, error?.field, ...(Array.isArray(error?.loc) ? error.loc : [])]) {
++      if (PARAMETERS.has(parameter)) parameters.add(parameter);
++    }
++  }
++  return {upstreamErrorReasons: [...reasons], upstreamErrorParameters: [...parameters],
++    upstreamErrorDetailStatus: reasons.size ? 'classified' : errors.length ? 'unclassified' : 'unavailable'};
++}
+--- a/workers/coloring-sheets-api/src/image-provider.mjs
++++ b/workers/coloring-sheets-api/src/image-provider.mjs
+@@ -1,5 +1,6 @@
+ // Provider-native image APIs behind AI Gateway. Public model IDs are an allowlist,
+ // never URLs, credentials, or arbitrary upstream request bodies from a client.
++import {providerErrorDiagnostics} from './provider-diagnostics.mjs';
+ export const DEFAULT_MODEL = 'gpt-image-2.5-flare';
+ const DEFAULT_ROUTES = {
+   'coloringbook-redmond-v2': {provider: 'fal', model: 'coloringbook-redmond-v2'},
+@@ -182,7 +183,8 @@
+   const detail = status >= 400 ? ` (HTTP ${status})` : '';
+   const publicCodes=new Set(['insufficient_quota','billing_hard_limit_reached','billing_not_active','content_policy_violation','safety_violations','IMAGE_SAFETY','SAFETY','invalid_api_key','UNAUTHENTICATED','PERMISSION_DENIED','model_not_found','NOT_FOUND','rate_limit_exceeded','RESOURCE_EXHAUSTED']);
+   const upstreamErrorCodes=[...new Set(codes.filter(code=>/^\d{1,8}$/.test(code)||publicCodes.has(code)))].slice(0,8);
+-  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code,{upstreamErrorCodes});
++  const safeDetails = providerErrorDiagnostics(body);
++  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code,{upstreamErrorCodes,...safeDetails});
+   if (request.provider === 'workers-ai' && (known('4006') || /daily free allocation.*10,?000 neurons/.test(messages))) {
+     return failure('provider_daily_quota_exhausted',
+       'Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst to use OpenAI, or upgrade the Cloudflare Workers plan',
+--- a/workers/coloring-sheets-api/src/comparison-image-runner.mjs
++++ b/workers/coloring-sheets-api/src/comparison-image-runner.mjs
+@@ -8,9 +8,10 @@
+   constructor(state,env){this.state=state;this.env=env;this.queue=Promise.resolve();this.active=null;}
+   log(task,outcome,result={}) {
+     const metrics=result.metrics??task.metrics??{};
+-    console.info(JSON.stringify({event:'comparison_image',generationID:task.id,model:task.publicModel??metrics.requestedModel,
++    const emit=outcome==='failed'||outcome==='persistence_retry'?console.error:console.info;
++    emit(JSON.stringify({event:'comparison_image',generationID:task.id,model:task.publicModel??metrics.requestedModel,
+       provider:task.route?.provider??metrics.provider,stage:task.stage,outcome,errorCode:result.errorCode??null,
+-      ...Object.fromEntries(['elapsedMs','queueMs','inferenceMs','failureStage','httpStatus','upstreamErrorCodes','providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'].filter(key=>metrics[key]!==undefined).map(key=>[key,metrics[key]]))}));
++      ...Object.fromEntries(['elapsedMs','queueMs','inferenceMs','failureStage','httpStatus','upstreamErrorCodes','upstreamErrorReasons','upstreamErrorParameters','upstreamErrorDetailStatus','providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'].filter(key=>metrics[key]!==undefined).map(key=>[key,metrics[key]]))}));
+   }
+   fetch(request){
+     const result=this.queue.then(async()=>{
+--- a/workers/generation-lab/src/library.mjs
++++ b/workers/generation-lab/src/library.mjs
+@@ -20,7 +20,7 @@
+     try { return await this.handle(request); }
+     catch {
+       const path=new URL(request.url).pathname;
+-      console.info(JSON.stringify({event:'comparison_library_unavailable',operation:['/list','/get','/lookup','/job','/save','/start'].includes(path)?path:'unknown'}));
++      console.error(JSON.stringify({event:'comparison_library_unavailable',operation:['/list','/get','/lookup','/job','/save','/start'].includes(path)?path:'unknown'}));
+       return fail('The library is temporarily unavailable. Please try again.',503,'library_unavailable');
+     }
+     };
+@@ -163,7 +163,7 @@
+   }
+ 
+   async failed(grid,cell,message,status,code='request_failed') {
+-    console.info(JSON.stringify({event:'comparison_start_failed',generationID:cell.id,gridID:grid.id,model:cell.model,status,errorCode:code}));
++    console.error(JSON.stringify({event:'comparison_start_failed',generationID:cell.id,gridID:grid.id,model:cell.model,status,errorCode:code}));
+     cell.status='failed';cell.error=message;cell.errorCode=code;await this.state.storage.delete('pending:'+cell.id);await this.write(grid);return fail(message,status,code);
+   }
+   async handle(request) {
+--- /dev/null
++++ b/Scripts/test_provider_diagnostics.mjs
+@@ -0,0 +1,53 @@
++import assert from 'node:assert/strict';
++import {runImageRequest} from '../workers/coloring-sheets-api/src/image-provider.mjs';
++
++// Exercise the real response reader and classifier with prompt echoes, hostile
++// fields, malformed/oversized responses and failures behind HTTP 200. No network.
++const originalFetch=globalThis.fetch;
++const privateText='PRIVATE-PROMPT dinosaur delivering pizza PRIVATE-API-KEY';
++const cases=[
++  ['AiError: Model input is not valid: missing required input mask_image', ['missing_required_input','invalid_model_input'],['mask_image']],
++  ['This model does not support request queuing', ['unsupported_queue'],[]],
++  ['Inference error: CUDA out of memory', ['out_of_memory','inference_failed'],[]],
++  ['Inference error: tensor shape mismatch', ['inference_failed','tensor_shape_mismatch'],[]],
++  ['Response was flagged by NSFW check', ['safety_rejected'],[]],
++  ['Capacity temporarily exceeded, please try again', ['capacity_exceeded'],[]],
++  ['Inference timeout: deadline exceeded', ['provider_timeout'],[]],
++  ['width must be a multiple of 16', ['invalid_dimensions'],[]],
++  ['prompt is too long', ['prompt_too_long'],[]],
++  ['Invalid parameter width', ['invalid_model_input'],['width']],
++  ['Invalid parameter PRIVATE_API_KEY', ['invalid_model_input'],[]],
++  ['Unknown failure '+privateText, [],[]],
++];
++try {
++  for(const [message,reasons,parameters] of cases) {
++    globalThis.fetch=async()=>Response.json({errors:[{code:3030,message:message+' '+privateText,param:'PRIVATE-API-KEY',data:{prompt:privateText}}]},
++      {status:400,headers:{'cf-aig-log-id':'01234567-89ab-cdef-0123-456789abcdef'}});
++    await assert.rejects(runImageRequest({url:'https://synthetic.invalid',payload:{prompt:privateText},headers:{},provider:'workers-ai'}),error=>{
++      assert.deepEqual(error.diagnostics.upstreamErrorReasons,reasons);
++      assert.deepEqual(error.diagnostics.upstreamErrorParameters,parameters);
++      assert.equal(error.diagnostics.upstreamErrorDetailStatus,reasons.length?'classified':'unclassified');
++      assert.deepEqual(error.diagnostics.upstreamErrorCodes,['3030']);
++      assert.equal(error.diagnostics.gatewayRequestID,'01234567-89ab-cdef-0123-456789abcdef');
++      assert.ok(!JSON.stringify({message:error.message,diagnostics:error.diagnostics}).includes('PRIVATE'));
++      return true;
++    });
++  }
++  // Multiple error envelopes, including FastAPI field locations, must never
++  // retain free-form parameter names, messages, input objects or secret values.
++  globalThis.fetch=async()=>Response.json({success:false,errors:[{code:8007,message:'This model does not support request queuing'}],
++    detail:[{loc:['body','width',privateText],msg:'validation error',input:privateText}]});
++  await assert.rejects(runImageRequest({url:'https://synthetic.invalid',payload:{},provider:'workers-ai'}),error=>{
++    assert.deepEqual(error.diagnostics.upstreamErrorReasons,['unsupported_queue','invalid_model_input']);
++    assert.deepEqual(error.diagnostics.upstreamErrorParameters,['width']);
++    assert.ok(!JSON.stringify(error.diagnostics).includes('PRIVATE'));return true;
++  });
++  for(const body of ['not JSON '+privateText,JSON.stringify({errors:[{message:privateText.repeat(2000)}]})]) {
++    globalThis.fetch=async()=>new Response(body,{status:400});
++    await assert.rejects(runImageRequest({url:'https://synthetic.invalid',payload:{},provider:'workers-ai'}),error=>{
++      assert.equal(error.diagnostics.upstreamErrorDetailStatus,'unavailable');
++      assert.ok(!JSON.stringify(error.diagnostics).includes('PRIVATE'));return true;
++    });
++  }
++} finally {globalThis.fetch=originalFetch;}
++console.log('PASS: provider failure causes and safe parameter names survive response parsing; prompts, keys, raw messages, oversized bodies and unknown text remain private; no network.');
+--- a/Scripts/test_comparison_runner.mjs
++++ b/Scripts/test_comparison_runner.mjs
+@@ -21,7 +21,9 @@
+ const task={id,accountId,fingerprint:'synthetic-fingerprint',createdAt:Date.now()-100,route:{provider:'openai',model:'gpt-image-2.5-flare'},subject:'A synthetic friendly flower',size:{width:1456,height:1024},publicModel:'gpt-image-2.5-flare'};
+ const request=(input=task)=>new Request('https://runner/start',{method:'POST',body:JSON.stringify(input)});
+ const originalFetch=globalThis.fetch;let calls=0,release;
+-const originalInfo=console.info,logs=[];console.info=value=>logs.push(JSON.parse(value));
++const originalInfo=console.info,originalError=console.error,logs=[],errorLogs=[];
++console.info=value=>logs.push(JSON.parse(value));
++console.error=value=>{const log=JSON.parse(value);logs.push(log);errorLogs.push(log);};
+ globalThis.fetch=async()=>{calls++;if(release)await new Promise(resolve=>release=resolve);return Response.json({data:[{b64_json:png}],usage:{input_tokens:1,output_tokens:2}});};
+ try{
+   const storage=new Storage();let runner=new ComparisonImageRunner({storage},env);
+@@ -62,7 +64,7 @@
+   // Provider failures retain enough safe protocol metadata to investigate a
+   // single image without saving provider text, prompts, keys, or raw headers.
+   const failureId=crypto.randomUUID(),gatewayID=crypto.randomUUID();
+-  globalThis.fetch=async()=>{calls++;return Response.json({errors:[{code:3040,message:'PRIVATE-PROVIDER-TEXT '+task.subject},{code:'PRIVATE-CODE-TEXT'},{code:'rate_limit_exceeded'}]},
++  globalThis.fetch=async()=>{calls++;return Response.json({errors:[{code:3040,message:'Capacity temporarily exceeded. PRIVATE-PROVIDER-TEXT '+task.subject},{code:'PRIVATE-CODE-TEXT'},{code:'rate_limit_exceeded'}]},
+     {status:429,headers:{'x-request-id':'req_12345678','cf-aig-log-id':gatewayID,'cf-ray':'0123456789abcdef-LHR','retry-after':'30','x-secret':'PRIVATE-HEADER'}});};
+   const failureRunner=new ComparisonImageRunner({storage:new Storage()},env);
+   await failureRunner.fetch(request({...task,id:failureId}));await failureRunner.alarm();
+@@ -71,6 +73,11 @@
+   assert.deepEqual(failed.metrics.upstreamErrorCodes,['3040','rate_limit_exceeded']);assert.equal(failed.metrics.retryAfterSeconds,30);
+   assert.equal(failed.metrics.gatewayRequestID,gatewayID);assert.equal(failed.metrics.providerRequestID,'req_12345678');assert.equal(failed.metrics.cfRay,'0123456789abcdef-LHR');
+   assert.ok(logs.some(log=>log.generationID===failureId&&log.outcome==='failed'&&log.httpStatus===429));
++  assert.deepEqual(failed.metrics.upstreamErrorReasons,['capacity_exceeded']);
++  assert.equal(failed.metrics.upstreamErrorDetailStatus,'classified');
++  assert.ok(errorLogs.some(log=>log.generationID===failureId&&log.outcome==='failed'&&log.upstreamErrorReasons.includes('capacity_exceeded')));
++  assert.ok(errorLogs.some(log=>log.outcome==='persistence_retry'));
++  assert.ok(!errorLogs.some(log=>['completed','accepted','provider_started','reported'].includes(log.outcome)));
+   assert.ok(logs.some(log=>log.outcome==='persistence_retry'));
+   const diagnosticJSON=JSON.stringify({logs,failed});
+   for(const privateText of [task.subject,'PRIVATE-PROVIDER-TEXT','PRIVATE-CODE-TEXT','PRIVATE-HEADER',env.OPENAI_API_KEY,png])assert.ok(!diagnosticJSON.includes(privateText),'Diagnostics must omit '+privateText);
+@@ -82,4 +89,4 @@
+   const diagnostics=jobs.get(rejectedId).metrics;assert.equal(diagnostics.httpStatus,400);assert.deepEqual(diagnostics.upstreamErrorCodes,[]);
+   for(const field of ['providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'])assert.equal(diagnostics[field],undefined);
+   console.log('PASS: independent image execution, durable handoff, one inference per ID, watchdog deduplication, ambiguous-submission safety, saved-image recovery, completion retries, and prompt removal; no network.');
+-}finally{globalThis.fetch=originalFetch;console.info=originalInfo;}
++}finally{globalThis.fetch=originalFetch;console.info=originalInfo;console.error=originalError;}
+--- a/.github/workflows/worker.yml
++++ b/.github/workflows/worker.yml
+@@ -8,6 +8,7 @@
+       - 'Scripts/test_worker.mjs'
+       - 'Scripts/test_comparison_queue.mjs'
+       - 'Scripts/test_comparison_runner.mjs'
++      - 'Scripts/test_provider_diagnostics.mjs'
+       - 'Scripts/test_request_security.mjs'
+       - 'Scripts/test_privacy.mjs'
+       - 'Scripts/test_reporting_concurrency.mjs'
+@@ -25,6 +26,7 @@
+       - 'Scripts/test_worker.mjs'
+       - 'Scripts/test_comparison_queue.mjs'
+       - 'Scripts/test_comparison_runner.mjs'
++      - 'Scripts/test_provider_diagnostics.mjs'
+       - 'Scripts/test_request_security.mjs'
+       - 'Scripts/test_privacy.mjs'
+       - 'Scripts/test_reporting_concurrency.mjs'
+@@ -75,6 +77,7 @@
+           node Scripts/test_worker.mjs
+           node Scripts/test_comparison_queue.mjs
+           node Scripts/test_comparison_runner.mjs
++          node Scripts/test_provider_diagnostics.mjs
+           node Scripts/test_request_security.mjs
+           node Scripts/test_privacy.mjs
+           node Scripts/test_reporting_concurrency.mjs
+--- a/workers/coloring-sheets-api/README.md
++++ b/workers/coloring-sheets-api/README.md
+@@ -1,6 +1,8 @@
+ # coloring-sheets-api
+ 
+ Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated image generation. The Worker keeps provider credentials server-side and exposes `/v1` endpoints. It supports ColoringBook.Redmond V2 on fal.ai, nine Cloudflare-hosted Workers AI image models plus OpenAI and Google Gemini image generation through Cloudflare AI Gateway, with direct OpenAI retained for existing deployments until Gateway is configured.
++
++Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause categories), `upstreamErrorParameters` (known parameter names only), and `upstreamErrorDetailStatus` (`classified`, `unclassified`, or `unavailable`). Raw error messages, echoed input, credentials and image data are never retained, including hashes of provider messages. Classification identifies provider-reported symptoms, not independently verified root causes. Unknown wording remains explicitly unclassified. Image failures, persistence retries, failed starts and library outages use error-level logs, so query `outcome = "failed"` or the error-level view. The same safe fields persist with comparison jobs and appear in image details. This does not enable Gateway payload logging or retry inference.
+ 
+ ## Files
+ 
+--- a/workers/generation-lab/README.md
++++ b/workers/generation-lab/README.md
+@@ -3,6 +3,8 @@
+ Private colouring-sheet comparison studio, hosted as the separate Cloudflare Worker `wonderlines-compare`.
+ 
+ Enter the key in the ignored `.secrets/generation-lab-access-key` file. Select a prompt, one or more models, and ages 3–18. **Select all** enables every available model, including those under **More models**. A run generates the model × age combinations (up to 80 sheets in the interface). Five models match the app's selectable picker; six more image-queue-compatible alternatives are under **More models**. Redmond's separate fal queue protocol is not included. All four age presets are selected by default, using representative ages 4, 7, 10 and 15; **Choose exact ages** selects any age from 3–18. The compact grid shows images without footer panels. Click an image to enlarge it, or its top-right **i** button for generation details, costs, and recovery actions. Export comparison metadata as JSON. The toolbar totals known image inference estimates (with a count when estimates are incomplete). Beneath each model, the mean elapsed time uses its completed images with timing metadata, including queue time.
++
++Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause categories), `upstreamErrorParameters` (known parameter names only), and `upstreamErrorDetailStatus` (`classified`, `unclassified`, or `unavailable`). Raw error messages, echoed input, credentials and image data are never retained, including hashes of provider messages. Classification identifies provider-reported symptoms, not independently verified root causes. Unknown wording remains explicitly unclassified. Image failures, persistence retries, failed starts and library outages use error-level logs, so query `outcome = "failed"` or the error-level view. The same safe fields persist with comparison jobs and appear in image details. This does not enable Gateway payload logging or retry inference.
+ 
+ ## Generation and recovery
+ 

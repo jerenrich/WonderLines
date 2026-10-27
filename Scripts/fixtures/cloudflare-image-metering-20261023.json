@@ -1,0 +1,159 @@
+{
+  "source": "Authenticated Workers AI aiInferenceAdaptive, sampleInterval=1",
+  "checkedOn": "2026-10-23",
+  "cases": [
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-4b",
+      "size": "1216x1712",
+      "steps": null,
+      "meteredNeurons": 206.8736328125,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T22:31:01Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-4b",
+      "size": "1456x1024",
+      "steps": null,
+      "meteredNeurons": 148.159375,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-21T21:54:00Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-4b",
+      "size": "1024x1024",
+      "steps": null,
+      "meteredNeurons": 104.2,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-24T09:22:39Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-4b",
+      "size": "1168x1648",
+      "steps": null,
+      "meteredNeurons": 191.279248046875,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-26T21:04:20Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-9b",
+      "size": "1216x1712",
+      "steps": null,
+      "meteredNeurons": 1542.7911931812753,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T23:09:56Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-9b",
+      "size": "1456x1024",
+      "steps": null,
+      "meteredNeurons": 1440.3409090904686,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-21T21:54:17Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-9b",
+      "size": "1168x1648",
+      "steps": null,
+      "meteredNeurons": 1515.5806107949388,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T22:29:53Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-9b",
+      "size": "1024x1024",
+      "steps": null,
+      "meteredNeurons": 1363.636363636,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-05T12:40:11Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-dev",
+      "size": "1456x1024",
+      "steps": 25,
+      "meteredNeurons": 5332.03125,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-22T21:25:41Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-dev",
+      "size": "1216x1712",
+      "steps": 25,
+      "meteredNeurons": 7445.068359375,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-26T21:02:48Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-1-schnell",
+      "size": "1024x1024",
+      "steps": 4,
+      "meteredNeurons": 172.8000030517578,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T23:00:11Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/leonardo/lucid-origin",
+      "size": "1216x1712",
+      "steps": 25,
+      "meteredNeurons": 7433.15625,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T23:01:25Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/leonardo/lucid-origin",
+      "size": "1456x1024",
+      "steps": 25,
+      "meteredNeurons": 5323.5,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-22T21:25:41Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/leonardo/phoenix-1.0",
+      "size": "1456x1024",
+      "steps": 25,
+      "meteredNeurons": 3900,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-21T22:01:45Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+      "size": "1456x1024",
+      "steps": 20,
+      "meteredNeurons": 0,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T23:03:39Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "size": "1456x1024",
+      "steps": 4,
+      "meteredNeurons": 0,
+      "sampleInterval": 1,
+      "observedAt": "2026-09-23T23:04:09Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    },
+    {
+      "model": "@cf/lykon/dreamshaper-8-lcm",
+      "size": "1456x1024",
+      "steps": 8,
+      "meteredNeurons": 0.248,
+      "sampleInterval": 1,
+      "observedAt": "2026-10-22T21:25:34Z",
+      "geometryEvidence": "Matching saved preset for DreamShaper/Phoenix; otherwise equivalent area reconstructed from metered MP/tiles."
+    }
+  ]
+}

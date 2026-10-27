@@ -5,6 +5,7 @@ import UIKit
 enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case flare = "gpt-image-2.5-flare"
     case sunburst = "gpt-image-2.5-sunburst"
+    case zImageTurbo = "z-image-turbo"
     case fluxKlein4B = "flux-2-klein-4b"
     case fluxKlein9B = "flux-2-klein-9b"
     case fluxDev = "flux-2-dev"
@@ -17,14 +18,16 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
     case redmond = "coloringbook-redmond-v2"
     // Keep older cases decodable so unfinished generations can still be recovered.
     static let selectable: [ImageModel] = [
-        .flare, .sunburst, .fluxKlein4B, .fluxKlein9B, .phoenix
+        .flare, .sunburst, .zImageTurbo, .fluxKlein4B, .fluxKlein9B, .phoenix
     ]
+    var usesFalQueue: Bool { self == .redmond || self == .zImageTurbo }
     var id: String { rawValue }
     var label: String {
         switch self {
         case .redmond: return "ColoringBook.Redmond V2"
         case .flare: return "Flare"
         case .sunburst: return "Sunburst"
+        case .zImageTurbo: return "Z-Image Turbo"
         case .fluxKlein4B: return "FLUX.2 Klein 4B"
         case .fluxKlein9B: return "FLUX.2 Klein 9B"
         case .fluxDev: return "FLUX.2 Dev"
@@ -36,10 +39,48 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
         case .dreamShaper: return "DreamShaper 8 LCM"
         }
     }
+    // Reference presets and historical samples audited on 23 October 2026.
+    // Keep USD internally; these are indicative per-image prices, not quotes.
+    var referenceCostUsd: Double {
+        switch self {
+        case .flare, .sunburst: return 0.005203125
+        case .zImageTurbo: return 0.01
+        case .fluxKlein4B: return 0.001629753125
+        case .fluxKlein9B: return 0.01584375
+        case .fluxDev: return 0.05865234375
+        case .fluxSchnell: return 0.0019008
+        case .lucidOrigin: return 0.0585585
+        case .phoenix: return 0.0429
+        case .sdxl, .sdxlLightning: return 0
+        case .dreamShaper: return 0.000002728
+        case .redmond: return 0.0119645
+        }
+    }
+    var priceEvidence: String { self == .zImageTurbo ? "Billing confirmed" : "Estimate" }
+    var priceSummary: String { "\(PriceDisplay.cents(referenceCostUsd)) / image · \(priceEvidence)" }
+    var priceExplanation: String {
+        switch self {
+        case .flare, .sunburst:
+            return "Reference average from 32 audited images, calculated from reported token usage. Actual costs vary."
+        case .zImageTurbo:
+            return "Reference cost confirmed by four matching fal billing records for the current preset. Future charges may vary."
+        case .redmond:
+            return "Historical fal endpoint billing average; not matched to individual saved images. Actual costs vary with billed compute time."
+        case .fluxSchnell:
+            return "Estimate for the native 1024 × 1024, 4-step preset, supported by Cloudflare metering."
+        case .sdxl, .sdxlLightning:
+            return "Published zero beta inference rate, supported by Cloudflare metering. Other service charges are excluded."
+        case .dreamShaper:
+            return "Estimate supported by four metered 1456 × 1024, 8-step images. Other presets are unverified."
+        default:
+            return "Estimate for the 1456 × 1024 server preset, supported by Cloudflare metering. This is not a matched billing receipt."
+        }
+    }
     var detail: String {
         switch self {
         case .redmond: return "A specialist coloring-page style. Sheets may wait in a queue before drawing starts."
         case .flare, .sunburst: return "Uses OpenAI image generation."
+        case .zImageTurbo: return "A fast alternative for comparing coloring-page outlines and detail."
         case .fluxKlein4B: return "A quick option for trying out coloring-page ideas."
         case .fluxKlein9B: return "A larger version of Klein for comparing detail and composition."
         case .fluxDev: return "Try for detailed scenes. Generation can take longer."
@@ -151,6 +192,36 @@ struct GenerationRequest: Encodable, Equatable {
         let data = try JSONEncoder().encode(self)
         guard data.count <= 4096 else { throw GenerationError.validation("Please shorten the description; the request is too large.") }
         return data
+    }
+}
+
+enum PriceDisplay {
+    static func cents(_ usd: Double) -> String {
+        guard usd.isFinite, usd >= 0 else { return "Unavailable" }
+        let cents = usd * 100
+        guard cents.isFinite else { return "Unavailable" }
+        if cents > 0, cents < 0.01 { return "<¢0.01" }
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        formatter.groupingSize = 3
+        formatter.groupingSeparator = ","
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
+        return "¢" + (formatter.string(from: NSNumber(value: cents)) ?? "0")
+    }
+
+    static func text(_ explanation: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: #"\$([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)(?: USD)?"#) else { return explanation }
+        let original = explanation as NSString
+        let result = NSMutableString(string: explanation)
+        for match in regex.matches(in: explanation, range: NSRange(location: 0, length: original.length)).reversed() {
+            let amount = original.substring(with: match.range(at: 1)).replacingOccurrences(of: ",", with: "")
+            if let usd = Double(amount) { result.replaceCharacters(in: match.range, with: cents(usd)) }
+        }
+        return result as String
     }
 }
 

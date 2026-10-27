@@ -38,7 +38,7 @@ assert.equal(await getPrincipal(request('/api/config','GET',undefined,cookie),{.
 assert.equal(await getPrincipal(request('/api/config','GET',undefined,cookie+'x'),env),null);
 assert.ok(!(await createSession(env,false)).includes('Max-Age'));
 const config=await (await worker.fetch(request('/api/config','GET',undefined,cookie),env)).json();
-assert.equal(config.models.length,11);assert.equal(config.models.filter(x=>x.recommended).length,5);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
+assert.equal(config.models.length,12);assert.equal(config.models.filter(x=>x.recommended).length,6);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
 const input={id:crypto.randomUUID(),batchID:crypto.randomUUID(),description:'A friendly dinosaur gardening',age:4,composition:'front',model:'flux-2-klein-4b'};
 const post=(data=input,headers={})=>worker.fetch(request('/api/generations','POST',data,cookie,headers),env);
 assert.equal((await post({...input,age:2})).status,400);
@@ -68,3 +68,23 @@ const huge=new Request(origin+'/api/generations',{method:'POST',headers:{Origin:
 const logout=await worker.fetch(request('/api/session','DELETE',undefined,cookie),env);assert.match(logout.headers.get('Set-Cookie'),/Max-Age=0/);
 assert.equal((await worker.fetch(request('/api/config'),{...env,LAB_ACCESS_KEY:''})).status,503);
 console.log('PASS: secure sessions, key rotation, CSRF, login throttling, protected images, account isolation, model allowlist, age guidance, moderation before spend, rate limits, bounded requests, queued generation, idempotency and recovery');
+
+// Reading an existing comparison fills estimates using original upstream IDs.
+// It must not reserve jobs, change stored evidence, or price failed attempts.
+const pricingStorage=new MemoryStorage(),pricingLibrary=new ComparisonLibrary({storage:pricingStorage},env);
+const pricingGrid={id:crypto.randomUUID(),cells:[
+  {id:crypto.randomUUID(),status:'completed',model:'public-alias',metrics:{provider:'workers-ai',upstreamModel:'@cf/leonardo/phoenix-1.0',size:'1456x1024',estimatedTotalUsd:null}},
+  {id:crypto.randomUUID(),status:'failed',metrics:{provider:'workers-ai',upstreamModel:'@cf/leonardo/phoenix-1.0',size:'1456x1024',estimatedTotalUsd:null}},
+  {id:crypto.randomUUID(),status:'completed',model:'dreamshaper-8-lcm',metrics:{provider:'workers-ai',upstreamModel:'@cf/lykon/dreamshaper-8-lcm',size:'1456x1024',estimatedTotalUsd:null}}
+]};
+await pricingStorage.put('grid:'+pricingGrid.id,pricingGrid);
+const beforePricingReads=calls.length;
+const priced=await (await pricingLibrary.fetch(new Request('https://library/get',{method:'POST',body:JSON.stringify({id:pricingGrid.id})}))).json();
+assert.ok(Math.abs(priced.grid.cells[0].metrics.estimatedTotalUsd-0.0429)<1e-12);
+assert.match(priced.grid.cells[0].metrics.estimateBasis,/assumes.*25-step/);
+assert.equal(priced.grid.cells[1].metrics.estimatedTotalUsd,null);
+assert.ok(Math.abs(priced.grid.cells[2].metrics.estimatedTotalUsd-0.000002728)<1e-12);
+assert.equal(priced.grid.cells[2].metrics.costEvidence,'observed_neuron_usage');
+assert.deepEqual(await pricingStorage.get('grid:'+pricingGrid.id),pricingGrid);
+assert.equal(calls.length,beforePricingReads,'Cost enrichment requires no provider or account calls.');
+console.log('PASS: saved comparison estimates use upstream evidence without inference, mutation, or failed-image pricing.');

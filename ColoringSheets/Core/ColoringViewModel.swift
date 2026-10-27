@@ -515,13 +515,23 @@ final class ColoringViewModel: ObservableObject {
     }
 
     func refreshUsage() async {
-        guard canUseService, let selected = result, selected.requestedModel == .redmond, let generationID = selected.generationID else { return }
-        do {
-            guard let metrics = try await service.generationMetrics(generationID),
-                  let index = results.firstIndex(where: { $0.id == selected.id }) else { return }
-            results[index].metrics = metrics
-            persistState()
-        } catch { /* Keep the saved estimate if the read-only billing lookup fails. */ }
+        guard canUseService else { return }
+        // The gallery total needs refreshed estimates for every provider, not
+        // only the selected fal image. Reads never submit another generation.
+        let saved = results.compactMap { sheet in sheet.generationID.map { (sheet.id, $0) } }
+        var updated = false
+        for (sheetID, generationID) in saved {
+            guard canUseService, !Task.isCancelled else { break }
+            do {
+                guard let metrics = try await service.generationMetrics(generationID), canUseService,
+                      let index = results.firstIndex(where: { $0.id == sheetID }) else { continue }
+                // Preserve usable saved evidence when the latest read is incomplete.
+                if metrics.estimatedTotalUsd == nil, results[index].metrics?.estimatedTotalUsd != nil { continue }
+                results[index].metrics = metrics
+                updated = true
+            } catch { /* Keep saved estimates if a read-only lookup fails. */ }
+        }
+        if updated { persistState() }
     }
 
     func refreshUnfinishedSheets() async {

@@ -8,9 +8,10 @@ export class ComparisonImageRunner {
   constructor(state,env){this.state=state;this.env=env;this.queue=Promise.resolve();this.active=null;}
   log(task,outcome,result={}) {
     const metrics=result.metrics??task.metrics??{};
-    console.info(JSON.stringify({event:'comparison_image',generationID:task.id,model:task.publicModel??metrics.requestedModel,
+    const emit=outcome==='failed'||outcome==='persistence_retry'?console.error:console.info;
+    emit(JSON.stringify({event:'comparison_image',generationID:task.id,model:task.publicModel??metrics.requestedModel,
       provider:task.route?.provider??metrics.provider,stage:task.stage,outcome,errorCode:result.errorCode??null,
-      ...Object.fromEntries(['elapsedMs','queueMs','inferenceMs','failureStage','httpStatus','upstreamErrorCodes','providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'].filter(key=>metrics[key]!==undefined).map(key=>[key,metrics[key]]))}));
+      ...Object.fromEntries(['elapsedMs','queueMs','inferenceMs','failureStage','httpStatus','upstreamErrorCodes','upstreamErrorReasons','upstreamErrorParameters','upstreamErrorDetailStatus','providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'].filter(key=>metrics[key]!==undefined).map(key=>[key,metrics[key]]))}));
   }
   fetch(request){
     const result=this.queue.then(async()=>{
@@ -69,7 +70,7 @@ export class ComparisonImageRunner {
       const result=await runImageRequest(request);
       task.metrics={requestedModel:task.publicModel,provider:request.provider,upstreamModel:request.model,viaGateway:request.viaGateway,
         requestedSize:task.size.width+'x'+task.size.height,size:result.size,inputTokens:result.inputTokens,textInputTokens:result.textInputTokens??null,
-        imageInputTokens:result.imageInputTokens??null,outputTokens:result.outputTokens,totalTokens:result.totalTokens,
+        imageInputTokens:result.imageInputTokens??null,cachedInputTokens:result.cachedInputTokens??null,outputTokens:result.outputTokens,totalTokens:result.totalTokens,
         elapsedMs:Date.now()-task.createdAt,queueMs:started-task.createdAt,inferenceMs:Date.now()-started,...imageCost(request,result),...result.diagnostics};
       task.stage='saving';await this.state.storage.put('task',task);
       await this.env.GENERATIONS.put(objectKey,result.image);

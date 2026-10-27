@@ -1,8 +1,10 @@
 // Provider-native image APIs behind AI Gateway. Public model IDs are an allowlist,
 // never URLs, credentials, or arbitrary upstream request bodies from a client.
+import {providerErrorDiagnostics} from './provider-diagnostics.mjs';
 export const DEFAULT_MODEL = 'gpt-image-2.5-flare';
 const DEFAULT_ROUTES = {
   'coloringbook-redmond-v2': {provider: 'fal', model: 'coloringbook-redmond-v2'},
+  'z-image-turbo': {provider: 'fal', model: 'z-image-turbo'},
   'gpt-image-2.5-flare': {provider: 'openai', model: 'gpt-image-2.5-flare'},
   'gpt-image-2.5-sunburst': {provider: 'openai', model: 'gpt-image-2.5-sunburst'},
   'flux-2-klein-4b': {provider: 'workers-ai', model: '@cf/black-forest-labs/flux-2-klein-4b'},
@@ -44,7 +46,7 @@ export function modelCatalog(env) {
   for (const [id, route] of Object.entries(routes)) {
     if (!identifier(id) || !object(route) || !PROVIDERS.includes(route.provider) ||
         !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) :
-          route.provider === 'fal' ? route.model === 'coloringbook-redmond-v2' : identifier(route.model)) ||
+          route.provider === 'fal' ? ['coloringbook-redmond-v2', 'z-image-turbo'].includes(route.model) : identifier(route.model)) ||
         Object.keys(route).some(key => !['provider', 'model'].includes(key))) throw new Error('Invalid image model route');
   }
   const defaultModel = env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
@@ -91,7 +93,10 @@ function closestAspectRatio({width, height}) {
 
 // Build and validate everything that can fail locally before spending allowance.
 export function imageRequest(env, route, subject, size) {
-  if (route.provider === 'fal') return falImageRequest(env, subject, size);
+  if (route.provider === 'fal') {
+    validateFalConfiguration(env);
+    return falImageTask(route.model, subject, size);
+  }
   const prompt = PROMPT + subject.trim();
   if (route.provider === 'workers-ai') {
     const token = env.WORKERS_AI_API_TOKEN;
@@ -182,7 +187,8 @@ function providerFailure(request, status, body) {
   const detail = status >= 400 ? ` (HTTP ${status})` : '';
   const publicCodes=new Set(['insufficient_quota','billing_hard_limit_reached','billing_not_active','content_policy_violation','safety_violations','IMAGE_SAFETY','SAFETY','invalid_api_key','UNAUTHENTICATED','PERMISSION_DENIED','model_not_found','NOT_FOUND','rate_limit_exceeded','RESOURCE_EXHAUSTED']);
   const upstreamErrorCodes=[...new Set(codes.filter(code=>/^\d{1,8}$/.test(code)||publicCodes.has(code)))].slice(0,8);
-  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code,{upstreamErrorCodes});
+  const safeDetails = providerErrorDiagnostics(body);
+  const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code,{upstreamErrorCodes,...safeDetails});
   if (request.provider === 'workers-ai' && (known('4006') || /daily free allocation.*10,?000 neurons/.test(messages))) {
     return failure('provider_daily_quota_exhausted',
       'Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst to use OpenAI, or upgrade the Cloudflare Workers plan',
@@ -314,6 +320,11 @@ async function readImageResponse(request,response) {
 export const REDMOND_REVISION = '0e67e0de2b603db085e525e7f6194b24dc60033d';
 const FAL_ENDPOINT = 'fal-ai/lora';
 const FAL_QUEUE = 'https://queue.fal.run/' + FAL_ENDPOINT;
+export function falQueueURL(model = FAL_ENDPOINT, polling = false) {
+  if (![FAL_ENDPOINT, 'fal-ai/z-image/turbo'].includes(model)) throw new Error('Invalid fal model');
+  // Status/results use owner/app, without the model's /turbo endpoint suffix.
+  return 'https://queue.fal.run/' + (polling ? model.split('/').slice(0, 2).join('/') : model);
+}
 function falTransport(env, target) {
   if (!/^[a-fA-F0-9]{32}$/.test(env.AI_GATEWAY_ACCOUNT_ID ?? '') ||
       !identifier(env.AI_GATEWAY_ID) || !secret(env.AI_GATEWAY_TOKEN) || !secret(env.FAL_KEY)) {
@@ -324,10 +335,21 @@ function falTransport(env, target) {
       'cf-aig-authorization': 'Bearer ' + env.AI_GATEWAY_TOKEN, 'cf-aig-skip-cache': 'true',
       'cf-aig-max-attempts': '1', 'cf-aig-collect-log': 'false', 'x-fal-target-url': target}};
 }
-function falImageRequest(env, subject, size) {
+export function validateFalConfiguration(env) {
   falTransport(env, FAL_QUEUE); // Validate before consuming any allowance.
   if (!/^(0|[1-9][0-9]{0,5})$/.test(env.FAL_DAILY_GENERATION_LIMIT ?? '') ||
       Number(env.FAL_DAILY_GENERATION_LIMIT) > 100000) throw new Error('Missing fal trial limit');
+}
+// Pure request composition also serves the trusted lab, which has no provider keys.
+// The production Account validates credentials again before reserving its budget.
+export function falImageTask(model, subject, size) {
+  if (model === 'z-image-turbo') return {
+    provider: 'fal', model: 'fal-ai/z-image/turbo', viaGateway: true,
+    payload: {prompt: PROMPT + subject.trim(), image_size: {...size}, num_inference_steps: 8,
+      num_images: 1, output_format: 'png', enable_safety_checker: true,
+      enable_prompt_expansion: false, acceleration: 'regular'}
+  };
+  if (model !== 'coloringbook-redmond-v2') throw new Error('Invalid fal preset');
   // About one megapixel, retaining the requested aspect ratio and generous margins.
   const scale = Math.min(1, Math.sqrt(1048576 / (size.width * size.height)));
   const image_size = Object.fromEntries(['width', 'height'].map(edge => [edge, Math.round(size[edge] * scale / 16) * 16]));
@@ -373,16 +395,16 @@ async function falJSON(env, target, payload) {
   }
 }
 export async function submitFalRequest(env, request) {
-  const {data: result} = await falJSON(env, FAL_QUEUE, request.payload);
+  const {data: result} = await falJSON(env, falQueueURL(request.model), request.payload);
   if (typeof result.request_id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(result.request_id)) {
     throw new ImageProviderError('fal.ai did not return a usable job ID. You have not been charged.', 'provider_invalid_response');
   }
   return result.request_id;
 }
-export async function pollFalRequest(env, requestID) {
+export async function pollFalRequest(env, requestID, model = FAL_ENDPOINT) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(requestID)) throw new ImageProviderError(INVALID_IMAGE);
   // Construct trusted queue URLs; never follow provider-supplied status URLs.
-  const target = FAL_QUEUE + '/requests/' + requestID;
+  const target = falQueueURL(model, true) + '/requests/' + requestID;
   const {data: status} = await falJSON(env, target + '/status');
   if (['IN_QUEUE', 'IN_PROGRESS'].includes(status.status)) return null;
   if (status.status !== 'COMPLETED') throw new ImageProviderError(INVALID_IMAGE);
@@ -407,8 +429,8 @@ export async function pollFalRequest(env, requestID) {
 
 
 // Read billing headers for older saved jobs without downloading or generating an image.
-export async function falBillableUnits(env, requestID) {
+export async function falBillableUnits(env, requestID, model = FAL_ENDPOINT) {
   if (typeof requestID !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(requestID)) return null;
-  try { return (await falJSON(env, FAL_QUEUE + '/requests/' + requestID)).billableUnits; }
+  try { return (await falJSON(env, falQueueURL(model, true) + '/requests/' + requestID)).billableUnits; }
   catch { return null; }
 }

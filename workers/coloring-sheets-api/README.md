@@ -2,6 +2,8 @@
 
 Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated image generation. The Worker keeps provider credentials server-side and exposes `/v1` endpoints. It supports ColoringBook.Redmond V2 on fal.ai, nine Cloudflare-hosted Workers AI image models plus OpenAI and Google Gemini image generation through Cloudflare AI Gateway, with direct OpenAI retained for existing deployments until Gateway is configured.
 
+Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause categories), `upstreamErrorParameters` (known parameter names only), and `upstreamErrorDetailStatus` (`classified`, `unclassified`, or `unavailable`). Raw error messages, echoed input, credentials and image data are never retained, including hashes of provider messages. Classification identifies provider-reported symptoms, not independently verified root causes. Unknown wording remains explicitly unclassified. Image failures, persistence retries, failed starts and library outages use error-level logs, so query `outcome = "failed"` or the error-level view. The same safe fields persist with comparison jobs and appear in image details. This does not enable Gateway payload logging or retry inference.
+
 ## Files
 
 - `src/index.mjs` — dependency-free Worker entry point and Durable Object account ledger.
@@ -125,17 +127,30 @@ A batch moderation log contains its random batch ID, original description, moder
 
 ## Estimated cost in app stats
 
-New successful generations include `estimatedInputUsd`, `estimatedOutputUsd`, `estimatedTotalUsd`, `estimateBasis`, and `ratesChecked` in the existing metrics header. The app already reads these fields, so deploying this Worker fixes cost display for new sheets without an app rebuild. Saved jobs retain their original metrics; older jobs without estimates are not backfilled or regenerated.
+All displayed prices use **US cents with two decimal places** (`¢0.1` for 0.001 USD), including gallery totals, selected-image costs, unit rates, historical explanations, comparison details and exported comparisons. API and stored `*Usd` fields retain their USD units; conversion happens at the display/export boundary. Tiny nonzero prices show `<¢0.01`; true zero rates show `¢0.00`. Model choices show a reference price per image with billing-confirmed or estimate evidence. Exports retain numeric precision, rename monetary fields to `*Cents` and identify `priceUnit: "US cents"`. See the [full metering audit](../../docs/operations/2026-10-23/all-model-metering-evidence.json).
 
-Rates were checked on **23 September 2026**. Pricing follows the actual upstream provider/model, including routes behind AI Gateway:
+New successful generations include `estimatedInputUsd`, `estimatedOutputUsd`, `estimatedTotalUsd`, `estimateBasis`, and `ratesChecked` in the existing metrics header. The app already reads these fields, so deploying this Worker fixes cost display without an app rebuild. Reads of saved sheets, usage, and comparison grids enrich missing or outdated estimates using their recorded upstream model, dimensions and usage. Stored evidence and provider-reported charges are preserved; no image is regenerated. Older step-dependent jobs that omitted steps use their documented server preset with an explicit assumption in `estimateBasis`.
 
-- **OpenAI Sunburst and Flare:** $5 per million text input tokens, $8 per million image input tokens, and $30 per million image output tokens. The estimator uses returned token usage and preserves the input modality breakdown. Aggregate input is treated as text when the breakdown is missing because this adapter sends text-only generation requests. A reported cached text count receives the $1.25 per million rate. `gpt-image-2` routes use their separate $2.50/$4/$15 rates (cached text $0.625). See [OpenAI pricing](https://developers.openai.com/api/docs/pricing) and [image generation usage](https://developers.openai.com/api/docs/guides/image-generation#cost-and-latency).
-- **Cloudflare FLUX.2 Klein 4B:** returned pixel area divided by 512², multiplied by $0.000287 per output tile.
-- **Cloudflare FLUX.2 Klein 9B:** $0.015 for the first 1024² pixels, plus $0.002 per additional 1024² pixels. Images below one megapixel retain the first-megapixel minimum. See [Cloudflare image pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/#image-model-pricing).
+Rates were checked on **23 October 2026**, against official documentation, the authenticated Cloudflare model catalog, account usage, and fal billing records. Pricing follows the actual upstream provider/model, including routes behind AI Gateway:
 
-Cloudflare estimates use actual output dimensions after size fitting, with proportional fractional tiles/megapixels. This matches the shape of the Gateway observations below, though published rates are rounded and estimates can differ slightly. Klein pricing already includes its fixed inference steps; no additional step multiplier or text-token fee is applied. Text-only requests have no input-image charge. Missing Cloudflare token counts therefore do not prevent cost estimates.
+- **OpenAI Sunburst, Flare, and GPT Image 2:** Standard processing costs ¢500 per million text input tokens, ¢800 per million image input tokens, and ¢3000 per million image output tokens; cached text costs ¢125 per million. The former GPT Image 2 rate was a Batch rate and is corrected. The estimator uses returned token usage and preserves the input modality breakdown. Aggregate input is treated as text when the breakdown is missing because this adapter sends text-only generation requests. See the expanded **Standard** table in [OpenAI pricing](https://developers.openai.com/api/docs/pricing?image-pricing-expanded=true).
+- **Cloudflare FLUX.2 Klein 4B:** returned pixel area / 512² × 26.05 neurons × ¢1.1 / 1,000 neurons. This avoids the rounded ¢0.0287 dollar rate and reconciles with the earlier Gateway observation to its displayed precision.
+- **Cloudflare FLUX.2 Klein 9B:** ¢1.5 for the first 1024² pixels, plus ¢0.2 per additional 1024² pixels. Images below one megapixel retain the first-megapixel minimum. See [Cloudflare image pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/#image-model-pricing).
 
-If OpenAI omits output usage, total minus input tokens is used when both are available. If only input usage is missing, prompt input is approximated at four characters per token and the basis explicitly says so. Without enough output usage, or for unpriced custom routes (including Gemini), the estimate stays unavailable with a specific explanation rather than claiming zero cost or borrowing another model's rates.
+For the following models, generally multiply returned pixel area / 512² by `(base neurons + step neurons × inference steps)`, then by ¢1.1 / 1,000 neurons:
+
+| Model | Base neurons per tile | Additional neurons per tile per step | Server steps | Estimate at 1456×1024 |
+| --- | ---: | ---: | ---: | ---: |
+| FLUX.2 Dev | 0 | 37.5 | 25 | ¢5.865234375 |
+| FLUX.1 Schnell | 4.8 | 9.6 | 4 | ¢0.19008 at its native 1024×1024 |
+| Lucid Origin | 636 | 12 | 25 | ¢5.85585 |
+| Phoenix 1.0 | 530 | 10 | 25 | ¢4.29 using 5 observed billable tiles |
+
+Four Lucid outputs round to the observed Gateway ¢23.42, three Dev outputs to ¢17.6, and four Schnell outputs to ¢0.76. These comparisons validate estimates, not invoice-level attribution. Phoenix’s authenticated, unsampled neuron meter reports 5 billable tiles and 125 processed tiles (3,900 neurons) per image for 19 successful requests matching the 1456×1024, 25-step server preset. That observed preset estimate replaces the earlier proportional-area estimate of ¢4.879875; other configurations use a whole-tile estimate inferred from the wider meter sample (floor pixel area / 512², minimum one tile), explicitly labeled `metering_inferred_tile_rule`. Gateway’s ¢0 display is incomplete. SDXL Base and SDXL Lightning explicitly have a ¢0 inference-step price in the live Cloudflare catalog; their zero estimates are labeled `published_zero_rate`. DreamShaper has no published rate in the catalog or pricing page, but four unsampled Workers AI metering records from 22 October each show 0.248 neurons for 1456×1024 output. The matching 8-step server preset now uses **¢0.0002728 per image** (0.248 × ¢1.1 / 1,000), labeled `observed_neuron_usage`. Other dimensions or step counts remain unavailable. The dataset exposes no request ID; these are observed preset estimates, not matched billing receipts. Older zero-neuron records lack metering details and are not evidence of a free rate. See [metering evidence](../../docs/operations/2026-10-23/dreamshaper-metering-evidence.json).
+
+Cloudflare estimates use actual output dimensions after size fitting, with proportional fractional tiles/megapixels except for DreamShaper’s observed preset and Phoenix’s inferred whole-tile rule above. Klein prices already include fixed inference steps. Text-only requests have no input-image charge. Missing token counts therefore do not prevent estimates. See [Cloudflare image pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/#image-model-pricing).
+
+If OpenAI omits output usage, total minus input tokens is used when both are available. If only input usage is missing and the original prompt is available, text input is approximated at four characters per token and the basis says so. Without enough usage, or for unpriced custom routes (including Gemini), the estimate stays unavailable. fal matching billing events remain preferred; without a receipt, refresh preserves a saved job's captured unit price instead of applying today's price to historical usage. Billing history showed ¢0.125/compute second for earlier Redmond requests and ¢0.111 for the 17 October request. All four checked Z-Image requests matched 2 billable megapixels × ¢0.5 = ¢1 each.
 
 These are standard inference estimates before account credits, Cloudflare free allowances, or unreported caching discounts. They exclude Images conversion, Worker execution, storage, and failed/unfinished attempts. The gallery total covers only estimates returned with its images. Tests in `Scripts/test_image_cost.mjs` run as part of `node Scripts/test_worker.mjs` and cover arithmetic, fractional sizes, missing usage, provider remapping, and persistence through saved recovery. No live requests are needed to verify the calculations.
 
@@ -202,7 +217,7 @@ The key-source setting applies to OpenAI and Google routes. Native Workers AI ro
 
 ## Experiment with models
 
-`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the twelve built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, `workers-ai`, and `fal`. The fal adapter currently accepts only the `coloringbook-redmond-v2` preset. The Workers AI adapter accepts the nine models listed below, using each model’s documented multipart or JSON input protocol. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
+`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the thirteen built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, `workers-ai`, and `fal`. The fal adapter accepts the `coloringbook-redmond-v2` and `z-image-turbo` presets. The Workers AI adapter accepts the nine models listed below, using each model’s documented multipart or JSON input protocol. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
 
 For example, to retain both OpenAI choices and add a Gemini image model, set:
 
@@ -311,8 +326,8 @@ Live checks passed on 23 September 2026 for both models through the deployed Wor
 
 | Model | Worker duration | Gateway status | Cached | Gateway-reported inference cost |
 | --- | --- | --- | --- | --- |
-| FLUX.2 Klein 4B | 14.0 seconds | 200 | No | $0.00162976 |
-| FLUX.2 Klein 9B | 2.6 seconds | 200 | No | $0.01584374 |
+| FLUX.2 Klein 4B | 14.0 seconds | 200 | No | ¢0.162976 |
+| FLUX.2 Klein 9B | 2.6 seconds | 200 | No | ¢1.584374 |
 
 These are individual test observations, not latency guarantees or billing receipts. Images conversion and other Worker/storage usage are separate. The Gateway log IDs are `01M385NJAS2T7VNE4040G4C49F` (4B) and `01M385PNTVF10DQYSCJZ061CAB` (9B). Synthetic PNGs and metrics are saved locally in the Git-ignored `.build/flux-verification/` directory. Rebuild the iOS app to expose both FLUX options in Settings → Model; an already installed older build retains its original picker.
 
@@ -324,6 +339,20 @@ Offline Worker checks cover multipart formatting, separate credentials, size fit
 
 The signed credential stored in the device Keychain provides long-term renewal access until revoked; the 30-day expiry limits direct API use, not the lifetime of the device identity. This supports already-expired credentials from existing app installations without discarding their accounts. The renewal endpoint was deployed on 23 September 2026 as version `742dc241-7c55-4c6c-afa7-b930011c790e`. That version was subsequently superseded by the AI Gateway deployment documented above. Offline tests cover expiry, retained credits/jobs, forged credentials, and revocation. The live renewal route returns its expected HTTP 401 JSON response for an invalid credential. Cloudflare blocks the default `Python-urllib/3.9` User-Agent with error 1010; curl and Python with an explicit `ColoringSheets-DeploymentCheck/1.0` User-Agent reach the Worker. This was isolated by changing only the User-Agent header in both clients. Use an explicit deployment-check identity for Python verification requests. An authenticated live renewal flow has not been exercised; the offline tests cover it.
 
+
+## Z-Image Turbo on fal.ai
+
+The `z-image-turbo` public model is available in the app picker and WonderLines Compare. It uses `fal-ai/z-image/turbo` through the existing AI Gateway fal proxy and `FAL_KEY`. No new provider account or key is needed. Preserve the dashboard-managed `FAL_DAILY_GENERATION_LIMIT`: it caps Z-Image and Redmond generations together, including comparison requests.
+
+Each request generates one PNG at the requested dimensions using eight inference steps, the existing child-appropriate outline prompt and age/composition guidance, and the provider safety checker. Prompt expansion is explicitly disabled, avoiding its extra fee and changes to the supplied guidance. This addition does not resize or upscale outputs.
+
+App and website requests share the existing durable fal submission, polling, idempotency, moderation, budget and saved-image recovery path. The comparison Worker builds a credential-free task; the production Account validates provider configuration before spending allowance. Submission uses `/fal-ai/z-image/turbo`; status/results use `/fal-ai/z-image/requests/{id}`. Provider-supplied URLs are never used for polling. Downloads retain the existing HTTPS fal CDN allowlist and PNG validation.
+
+Pricing and billing lookups use the actual upstream endpoint, so Z-Image cannot inherit Redmond's compute-second price. Cost displays use verified billable units or a matching provider billing event; missing units remain unavailable rather than treating inference seconds as megapixels. The app's Usage view supports read-only fal billing refresh for both models. Public pricing checked 23 October 2026 is ¢0.5 per megapixel; final charges depend on provider billing units.
+
+Validation: `node Scripts/test_z_image.mjs` exercises app/website admission, missing-credential rejection before spend, endpoint-specific payload/polling/billing, restart recovery without resubmission, safety rejection and shared fal limits with synthetic responses. Run it alongside the existing Worker and comparison tests. Rebuild the app and deploy both Workers with `--keep-vars` to expose the new choice. No paid inference is required by these checks.
+
+Sources: [Z-Image schema](https://fal.ai/models/fal-ai/z-image/turbo/api), [queue URL structure](https://fal.ai/docs/documentation/model-apis/inference/queue), [pricing](https://fal.ai/models/fal-ai/z-image/turbo).
 
 ## ColoringBook.Redmond V2 on fal.ai
 
@@ -378,10 +407,10 @@ The Worker checks [fal pricing](https://fal.ai/docs/platform-apis/v1/models/pric
 
 `GET /v1/generations/{id}/usage` requires the original account credential and returns that account's saved metrics. It can refresh incomplete costs after 60 seconds, including older saved fal jobs, without sending a generation POST. The app refreshes this endpoint when opening Usage for a Redmond sheet; pull to refresh checks again. A verified reported charge is retained. Saved image recovery returns the enriched metrics too. The existing `estimatedTotalUsd` field remains compatible with older app versions; `costStatus` distinguishes reported costs from estimates.
 
-Live checks on 24 September 2026 confirmed pricing of **$0.00125 per compute second** for `fal-ai/lora`. The current key receives HTTP 403 from the billing-events API, and the earlier test's result had no billable-units header. Its recorded 11.765 inference seconds therefore supports an estimate of **$0.01470625**, excluding unknown billed overhead. That is an estimate, not a billing receipt. A key with billing access would allow later reconciliation to the provider-reported charge; no broader key permissions are needed to keep generating sheets or collecting inference-based estimates.
+Live checks on 24 September 2026 confirmed pricing of **¢0.125 per compute second** for `fal-ai/lora`. The current key receives HTTP 403 from the billing-events API, and the earlier test's result had no billable-units header. Its recorded 11.765 inference seconds therefore supports an estimate of **¢1.470625**, excluding unknown billed overhead. That is an estimate, not a billing receipt. A key with billing access would allow later reconciliation to the provider-reported charge; no broader key permissions are needed to keep generating sheets or collecting inference-based estimates.
 
 
-Cost logging was deployed as Worker version `befa6992-3a19-47ae-b700-c8066a0fdcc6`. A read-only live recovery of the original Redmond test returned HTTP 200 with `costStatus=estimated`, `costEvidence=inference_time_proxy`, the verified rate, and `$0.014706249833106994` estimated cost. No additional image was generated to validate billing. The 1,000-sheet fal cap was preserved.
+Cost logging was deployed as Worker version `befa6992-3a19-47ae-b700-c8066a0fdcc6`. A read-only live recovery of the original Redmond test returned HTTP 200 with `costStatus=estimated`, `costEvidence=inference_time_proxy`, the verified rate, and `¢1.4706249833106994` estimated cost. No additional image was generated to validate billing. The 1,000-sheet fal cap was preserved.
 
 The live Wonder Lines build with cost reporting was signed using the existing development team and installed on the connected iPhone 17 Pro (J17) on 24 September 2026. The install preserved bundle identifier `com.jordan.family.ColoringSheets` and the current Wonder Lines branding. After the phone was unlocked, devicectl confirmed that the app launched successfully. Worker/configuration tests and the iOS unit suite passed before installation.
 

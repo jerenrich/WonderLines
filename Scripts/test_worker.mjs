@@ -331,6 +331,14 @@ try {
   await falAccount.alarm(); assert.equal((await falPost(falID)).status, 200);
   assert.equal(submitted, 1); assert.equal(downloaded, downloadsBeforeReplay);
   assert.equal((await falAccount.state.storage.list({prefix: 'fal:'})).size, 0);
+  const repricingProbe = structuredClone(await falAccount.state.storage.get('job:' + falID));
+  repricingProbe.metrics.unitPriceUsd = 0.00125;
+  repricingProbe.metrics.costCheckedAt = '2026-09-24T12:00:00Z';
+  delete repricingProbe.metrics.unitPriceCheckedAt;
+  await falAccount.recordFalUsage(repricingProbe);
+  assert.equal(repricingProbe.metrics.unitPriceUsd, 0.00125, 'Current list pricing cannot reprice a historical request without a billing event.');
+  assert.equal(repricingProbe.metrics.ratesChecked, '2026-09-24');
+  assert.equal(repricingProbe.metrics.estimatedTotalUsd, 0.015625);
   const usageBefore = billingReads;
   let usageResponse = await falGet(falID + '/usage');
   assert.equal((await usageResponse.json()).metrics.costStatus, 'estimated');
@@ -636,11 +644,12 @@ try {
     assert.equal(metrics.requestedSize, width + 'x' + height); assert.equal(metrics.size, '1x1');
     assert.equal(metrics.upstreamModel, '@cf/black-forest-labs/' + model); assert.equal(metrics.totalTokens, null);
     if (model === 'flux-2-dev') {
-      assert.equal(metrics.estimatedTotalUsd, null, 'Unconfigured model rates must not use Klein pricing.');
-      assert.match(metrics.estimateBasis, /No verified pricing/);
+      assert.equal(metrics.inferenceSteps, 25);
+      assert.equal(metrics.estimatedTotalUsd, 25 * 37.5 * 0.000011 / (512 * 512));
+      assert.match(metrics.estimateBasis, /neurons/);
     } else {
       assert.ok(metrics.estimatedTotalUsd > 0, 'Workers AI estimates do not require token counts.');
-      assert.equal(metrics.estimatedTotalUsd, model === 'flux-2-klein-4b' ? 0.000287 / (512 * 512) : 0.015,
+      assert.equal(metrics.estimatedTotalUsd, model === 'flux-2-klein-4b' ? 0.00028655 / (512 * 512) : 0.015,
         'Price the actual synthetic 1x1 PNG, not the larger requested or fitted size.');
       assert.equal(metrics.estimatedInputUsd, 0);
     }
@@ -742,7 +751,13 @@ try {
       assert.equal(metrics.requestedModel, model); assert.equal(metrics.upstreamModel, upstream);
       assert.equal(metrics.provider, 'workers-ai'); assert.equal(metrics.viaGateway, true);
       assert.equal(metrics.requestedSize, width + 'x' + height); assert.equal(metrics.size, '1x1');
-      assert.equal(metrics.totalTokens, null); assert.equal(metrics.estimatedTotalUsd ?? null, null);
+      assert.equal(metrics.totalTokens, null);
+      if(model==='dreamshaper-8-lcm')assert.equal(metrics.estimatedTotalUsd,null);
+      else if(model.startsWith('stable-diffusion-xl'))assert.equal(metrics.estimatedTotalUsd,0);
+      else {
+        assert.ok(metrics.estimatedTotalUsd>0);
+        assert.equal(metrics.inferenceSteps,steps);
+      }
       assert.equal((await worker.fetch(generateRequest(model, id, {width, height}), nativeEnv)).status, 200);
       assert.deepEqual(new Uint8Array(await (await get('/v1/generations/' + id)).arrayBuffer()), savedBytes);
       assert.equal(attempts, 1); assert.equal(conversions, conversionsBefore + (binary ? 0 : 1));

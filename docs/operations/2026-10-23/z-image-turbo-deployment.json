@@ -1,0 +1,44 @@
+{
+  "verifiedAtUTC": "2026-10-23T04:47:49.754261+00:00",
+  "model": {
+    "publicId": "z-image-turbo",
+    "provider": "fal",
+    "upstream": "fal-ai/z-image/turbo",
+    "steps": 8,
+    "promptExpansion": false
+  },
+  "deployments": {
+    "coloring-sheets-api": {
+      "version": "e77dcc30-36e0-4743-9599-c602f1f44b83",
+      "url": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+    },
+    "wonderlines-compare": {
+      "version": "e5884995-4e24-45ce-8f06-0c261a612b17",
+      "url": "https://wonderlines-compare.jordan-erenrich.workers.dev"
+    }
+  },
+  "preservedLimits": {
+    "falDaily": 1000,
+    "globalDaily": 10000
+  },
+  "verification": {
+    "authenticatedWebsiteCatalog": "passed; 12 models including recommended Z-Image Turbo",
+    "falSecretPresent": true,
+    "workerRegressionTests": "passed",
+    "zImageAppAndWebsiteQueueIntegration": "passed with synthetic upstream responses",
+    "appUnitTests": {
+      "executed": 90,
+      "skipped": 5,
+      "failures": 0
+    },
+    "workerDryRuns": "passed",
+    "paidImageGenerations": 0
+  },
+  "appInstallation": "Source updated and tested in mock mode; requires a rebuilt app installation.",
+  "notes": [
+    "Deployment preserved dashboard variables and existing secrets.",
+    "Queue polling and billing use model-specific native fal endpoints.",
+    "Other diagnostics edits present in the shared workspace were preserved.",
+    "No image inference was submitted during deployment verification."
+  ]
+}

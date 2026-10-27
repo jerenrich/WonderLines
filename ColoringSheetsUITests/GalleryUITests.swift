@@ -80,23 +80,25 @@ final class GalleryUITests: XCTestCase {
     }
 
     @MainActor
-    func testStarterIdeasAndGenerateStopControlKeepComposerStable() {
+    func testOnlySurpriseStarterAndGenerateStopControlKeepComposerStable() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["--mock", "--slow-mock", "-descriptionDraft", "", "-imageCount", "1"]
         app.launch()
-        let dinosaur = app.buttons["starterIdea.dinosaurs"]
-        XCTAssertTrue(dinosaur.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["starterIdea.space"].exists)
-        XCTAssertTrue(app.buttons["starterIdea.animals"].exists)
-        XCTAssertTrue(app.buttons["starterIdea.surprise"].exists)
+        let surprise = app.buttons["starterIdea.surprise"]
+        XCTAssertTrue(surprise.waitForExistence(timeout: 5))
+        XCTAssertEqual(surprise.label, "Surprise me")
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "starterIdea.")).count, 1)
+        XCTAssertFalse(app.buttons["starterIdea.dinosaurs"].exists)
+        XCTAssertFalse(app.buttons["starterIdea.space"].exists)
+        XCTAssertFalse(app.buttons["starterIdea.animals"].exists)
         let welcome = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        welcome.name = "Starter illustration and ideas"
+        welcome.name = "Starter illustration and Surprise me"
         welcome.lifetime = .keepAlways
         add(welcome)
-        dinosaur.tap()
+        surprise.tap()
         let subject = app.descendants(matching: .any).matching(identifier: "subject").firstMatch
-        XCTAssertEqual(subject.value as? String, "A friendly dinosaur riding a bicycle on the moon")
+        XCTAssertFalse((subject.value as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         XCTAssertFalse(app.staticTexts["generationProgress"].exists, "Choosing an idea must not start generation")
         subject.typeText(" with stars")
         XCTAssertTrue((subject.value as? String)?.contains("with stars") == true)
@@ -422,6 +424,20 @@ final class GalleryUITests: XCTestCase {
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "modelSetting").firstMatch.exists)
+        let modelSetting = app.descendants(matching: .any).matching(identifier: "modelSetting").firstMatch
+        for _ in 0..<4 where !modelSetting.isHittable { app.swipeUp() }
+        modelSetting.tap()
+        XCTAssertTrue(app.navigationBars["Model"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["¢0.52 / image · Estimate"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["¢1.00 / image · Billing confirmed"].exists)
+        XCTAssertTrue(app.staticTexts["¢4.29 / image · Estimate"].exists)
+        let modelPrices = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        modelPrices.name = "Model choices show per-image cents and evidence"
+        modelPrices.lifetime = .keepAlways
+        add(modelPrices)
+        app.descendants(matching: .any).matching(identifier: "modelChoice.z-image-turbo").firstMatch.tap()
+        if app.navigationBars["Model"].exists { app.navigationBars["Model"].buttons.element(boundBy: 0).tap() }
+        XCTAssertTrue(app.navigationBars["Settings"].exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "imageCountSetting").firstMatch.exists)
         for _ in 0..<6 {
             if app.buttons["diagnostics"].exists && app.buttons["diagnostics"].isHittable { break }
@@ -517,6 +533,10 @@ final class GalleryUITests: XCTestCase {
         app.buttons["usage"].tap()
         XCTAssertTrue(app.navigationBars["Usage & cost"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Generation is free for you.")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["¢1.95"].exists, "Gallery total is displayed in cents")
+        let selectedCost = app.staticTexts["¢0.65"]
+        for _ in 0..<4 where !selectedCost.exists { app.swipeUp() }
+        XCTAssertTrue(selectedCost.exists, "Selected image cost is displayed in cents")
         XCTAssertTrue(app.buttons["Done"].isHittable)
         let usage = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         usage.name = "Portrait usage fits the display"

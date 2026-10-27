@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-23T04:43:40.877Z",
+  "workers": [
+    {
+      "name": "coloring-sheets-api",
+      "version": "3097e3d4-9acf-449b-b3e3-c4a4201f1b43",
+      "trafficPercent": 100,
+      "loggingCodeVerified": true
+    },
+    {
+      "name": "wonderlines-compare",
+      "version": "00c3a4cc-bb90-4967-83fd-482644ad2593",
+      "trafficPercent": 100,
+      "loggingCodeVerified": true
+    }
+  ],
+  "smoke": [
+    {
+      "path": "/",
+      "httpStatus": 200
+    },
+    {
+      "path": "/api/config",
+      "httpStatus": 200,
+      "models": 11
+    },
+    {
+      "path": "/api/library",
+      "httpStatus": 200,
+      "savedGrids": 8
+    }
+  ]
+}

@@ -21,7 +21,9 @@ const env={COMPARISON_ACCOUNT_ID:accountId,OPENAI_API_KEY:'PRIVATE-API-KEY-SENTI
 const task={id,accountId,fingerprint:'synthetic-fingerprint',createdAt:Date.now()-100,route:{provider:'openai',model:'gpt-image-2.5-flare'},subject:'A synthetic friendly flower',size:{width:1456,height:1024},publicModel:'gpt-image-2.5-flare'};
 const request=(input=task)=>new Request('https://runner/start',{method:'POST',body:JSON.stringify(input)});
 const originalFetch=globalThis.fetch;let calls=0,release;
-const originalInfo=console.info,logs=[];console.info=value=>logs.push(JSON.parse(value));
+const originalInfo=console.info,originalError=console.error,logs=[],errorLogs=[];
+console.info=value=>logs.push(JSON.parse(value));
+console.error=value=>{const log=JSON.parse(value);logs.push(log);errorLogs.push(log);};
 globalThis.fetch=async()=>{calls++;if(release)await new Promise(resolve=>release=resolve);return Response.json({data:[{b64_json:png}],usage:{input_tokens:1,output_tokens:2}});};
 try{
   const storage=new Storage();let runner=new ComparisonImageRunner({storage},env);
@@ -62,7 +64,7 @@ try{
   // Provider failures retain enough safe protocol metadata to investigate a
   // single image without saving provider text, prompts, keys, or raw headers.
   const failureId=crypto.randomUUID(),gatewayID=crypto.randomUUID();
-  globalThis.fetch=async()=>{calls++;return Response.json({errors:[{code:3040,message:'PRIVATE-PROVIDER-TEXT '+task.subject},{code:'PRIVATE-CODE-TEXT'},{code:'rate_limit_exceeded'}]},
+  globalThis.fetch=async()=>{calls++;return Response.json({errors:[{code:3040,message:'Capacity temporarily exceeded. PRIVATE-PROVIDER-TEXT '+task.subject},{code:'PRIVATE-CODE-TEXT'},{code:'rate_limit_exceeded'}]},
     {status:429,headers:{'x-request-id':'req_12345678','cf-aig-log-id':gatewayID,'cf-ray':'0123456789abcdef-LHR','retry-after':'30','x-secret':'PRIVATE-HEADER'}});};
   const failureRunner=new ComparisonImageRunner({storage:new Storage()},env);
   await failureRunner.fetch(request({...task,id:failureId}));await failureRunner.alarm();
@@ -71,6 +73,11 @@ try{
   assert.deepEqual(failed.metrics.upstreamErrorCodes,['3040','rate_limit_exceeded']);assert.equal(failed.metrics.retryAfterSeconds,30);
   assert.equal(failed.metrics.gatewayRequestID,gatewayID);assert.equal(failed.metrics.providerRequestID,'req_12345678');assert.equal(failed.metrics.cfRay,'0123456789abcdef-LHR');
   assert.ok(logs.some(log=>log.generationID===failureId&&log.outcome==='failed'&&log.httpStatus===429));
+  assert.deepEqual(failed.metrics.upstreamErrorReasons,['capacity_exceeded']);
+  assert.equal(failed.metrics.upstreamErrorDetailStatus,'classified');
+  assert.ok(errorLogs.some(log=>log.generationID===failureId&&log.outcome==='failed'&&log.upstreamErrorReasons.includes('capacity_exceeded')));
+  assert.ok(errorLogs.some(log=>log.outcome==='persistence_retry'));
+  assert.ok(!errorLogs.some(log=>['completed','accepted','provider_started','reported'].includes(log.outcome)));
   assert.ok(logs.some(log=>log.outcome==='persistence_retry'));
   const diagnosticJSON=JSON.stringify({logs,failed});
   for(const privateText of [task.subject,'PRIVATE-PROVIDER-TEXT','PRIVATE-CODE-TEXT','PRIVATE-HEADER',env.OPENAI_API_KEY,png])assert.ok(!diagnosticJSON.includes(privateText),'Diagnostics must omit '+privateText);
@@ -82,4 +89,4 @@ try{
   const diagnostics=jobs.get(rejectedId).metrics;assert.equal(diagnostics.httpStatus,400);assert.deepEqual(diagnostics.upstreamErrorCodes,[]);
   for(const field of ['providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'])assert.equal(diagnostics[field],undefined);
   console.log('PASS: independent image execution, durable handoff, one inference per ID, watchdog deduplication, ambiguous-submission safety, saved-image recovery, completion retries, and prompt removal; no network.');
-}finally{globalThis.fetch=originalFetch;console.info=originalInfo;}
+}finally{globalThis.fetch=originalFetch;console.info=originalInfo;console.error=originalError;}

@@ -1,0 +1,124 @@
+WonderLines pricing validation and corrections — 23 October 2026
+
+Reviewed local source and operational records, ten authenticated saved comparison
+grids (185 jobs, 177 completed), public provider documentation, authenticated
+Cloudflare model catalog and Workers AI/Gateway usage, and fal billing history.
+No paid generations were submitted for this work.
+
+Corrections and added estimates
+
+- GPT Image 2: corrected Batch rates to Standard rates. The expanded Standard
+  table shows $5/M text input, $8/M image input, $30/M image output, $1.25/M
+  cached text. Flare and Sunburst already used these correct Standard rates.
+- Klein 4B: use 26.05 neurons per returned 512² tile at $0.011/1,000 neurons,
+  avoiding the rounded $0.000287/tile dollar rate. At 1456×1024 this gives
+  $0.001629753125, consistent with the historical Gateway $0.00162976.
+- Klein 9B: retained the verified $0.015 first 1024² pixels plus $0.002 per
+  additional 1024² pixels; $0.01584375 at 1456×1024.
+- Dev: added 37.5 neurons per tile per step, 25-step preset; $0.05865234375
+  at 1456×1024. Three completed outputs round to Gateway's $0.1760.
+- Schnell: added 4.8 base + 9.6×steps neurons per tile. Four steps at its native
+  1024×1024 give $0.0019008; four outputs round to Gateway's $0.0076.
+- Lucid: added 636 base + 12×steps neurons per tile. At 25 steps and 1456×1024,
+  $0.0585585; four outputs round to Gateway's $0.2342.
+- Phoenix: 530 base + 10×steps neurons per tile. Follow-up GraphQL metering
+  found 19 successful unsampled requests at 5 billable tiles and 125 processed
+  tiles each, or 3,900 neurons. The matching 1456×1024, 25-step server preset
+  now uses $0.0429, correcting the initial proportional estimate $0.04879875.
+  Other configurations retain the published proportional estimate.
+- SDXL Base and SDXL Lightning: added explicit zero inference estimates based
+  on their $0/step price in the authenticated provider catalog. This excludes
+  Worker, storage, conversion and moderation costs.
+- DreamShaper: follow-up GraphQL metering found four successful unsampled
+  requests from 22 October, each at 0.248 neurons for 1456×1024 output.
+  The matching 8-step server preset now uses $0.000002728 per image, or
+  $0.000010912 total for the four. This fills the previously unavailable costs.
+  Other dimensions/step counts remain unpriced. No public rate is available.
+  Older zero-neuron records also lack cost metrics, so do not establish a free
+  historical rate. See dreamshaper-metering-evidence.json for records/queries.
+
+fal billing reconciliation
+
+All four saved Z-Image provider request IDs matched the dashboard's billing
+events: 2 billable megapixels × $0.005 = $0.01 each ($0.04 total). The billing
+API remains HTTP 403 for the production key, so the code correctly labels the
+billable-unit calculation an estimate. The user dashboard confirms it.
+
+Redmond billing history contained 384 compute seconds at $0.00125 and 14 at
+$0.00111, totaling $0.49554 for October as observed. Refresh now preserves a
+saved request's captured rate unless a matching billing event supplies its
+actual charge. Today's list price must not reprice historical usage. New jobs
+continue reading live endpoint-specific pricing. Inference-time proxies remain
+labeled; they do not substitute queue or wall-clock time for billable compute.
+
+Saved records and coverage
+
+Read-time enrichment uses original upstream model IDs and recorded dimensions
+and token counts. Old step-dependent jobs without step metadata explicitly
+disclose the documented server-preset assumption. Stored records and reported
+charges are preserved, and failed attempts are not priced as successful images.
+
+Applying the new code to the original saved snapshot increases priced completed
+jobs from 135/177 to 177/177 after the DreamShaper metering follow-up.
+Known gross image inference estimates total $2.169946502625 after correcting
+Phoenix. This total is not an invoice and excludes moderation, failed attempts,
+conversion, infrastructure, credits, and free allowances.
+
+Account comparisons and limitations
+
+OpenAI ColoringSheets showed $0.85 for 17–23 October, including separate image
+output and text-input charge categories; its Images activity view showed no
+data while the general usage view categorized the requests elsewhere. Gateway
+displayed $0 for the OpenAI models. The differing scopes and incomplete Gateway
+cost attribution prevent treating those totals as a matched per-request bill.
+
+Cloudflare showed Standard Workers AI billing, a Workers Paid subscription,
+and an account invoice of $5.36 dated 22 October. Its newly started billable
+usage window showed $0 in selected usage overages, not a zero subscription or
+zero total operating cost. Infrastructure is shared with other account projects.
+
+The archived App Store record lists free download prices. Current App Store
+Connect access required sign-in, so current store prices were not verified.
+Fresh Worker log API queries were denied; the signed-in dashboard supplied the
+four fal_usage rows and an expanded matching event instead.
+
+The follow-up authenticated GraphQL Analytics API did permit Workers AI
+metering queries. DreamShaper's aiInferenceAdaptive per-request rows reconcile
+with aiInferenceAdaptiveGroups: 4 requests, 0.992 total neurons, 4096 aggregate
+output height and 5824 aggregate output width. Each has sampleInterval=1.
+The dataset does not expose request IDs, so matching uses model, time window,
+count and dimensions; estimates are labeled observed_neuron_usage rather than
+reported billing receipts. inferenceSteps=0 is unpopulated in these rows;
+step counts come from the documented server presets, not that zero field.
+Gross neuron values use $0.011/1,000 before the account's daily allowance.
+No paid generations were needed to obtain this evidence.
+
+Verification
+
+Passed: image-cost arithmetic and billing examples; Worker integration;
+comparison library and runner; durable queue; Z-Image queue/billing; request
+security; privacy; reporting concurrency; batch moderation. Both Workers also
+passed deployment dry runs. The metering follow-up reran pricing, Worker,
+comparison library and runner checks; both deployments passed dry runs and
+live saved-grid verification. Live verification reads existing saved grids only.
+
+Sources
+
+OpenAI Standard pricing (expanded in browser; collapsed extraction mixes tabs):
+https://developers.openai.com/api/docs/pricing?image-pricing-expanded=true
+Cloudflare model prices and neuron conversion:
+https://developers.cloudflare.com/workers-ai/platform/pricing/
+Cloudflare model catalog API:
+https://developers.cloudflare.com/api/resources/ai/subresources/models/methods/list/
+fal Z-Image public price:
+https://fal.ai/models/fal-ai/z-image/turbo
+Authenticated fal billing:
+https://fal.ai/dashboard/usage-billing
+Authenticated Cloudflare usage:
+https://dash.cloudflare.com/994f60c144bd9dd9bc2333bd3abba832/ai/workers-ai/usage
+
+Raw local evidence is Git-ignored under .build/pricing-validation-20261023/.
+Follow-up raw metering is under .build/dreamshaper-pricing-20261023/; sanitized
+records, query text and raw-response hashes are in dreamshaper-metering-evidence.json.
+Production version IDs and read-only smoke checks are recorded separately in
+pricing-deployment-verification.json after successful verification.

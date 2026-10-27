@@ -1,9 +1,10 @@
 'use strict';
+import {formatCents, formatPriceText, displayMetric, exportComparison, modelCostSummary, matchingReferenceModel} from './cost-display.mjs';
 const $ = id => document.getElementById(id);
 const STORAGE = 'wonderlines-comparisons-v1';
 const MAX_IMAGES = 80;
 const MAX_PARALLEL_GENERATIONS = 50;
-const providerLabels = {'openai':'OpenAI', 'workers-ai':'Cloudflare', 'google-ai-studio':'Google'};
+const providerLabels = {'openai':'OpenAI', 'workers-ai':'Cloudflare', 'google-ai-studio':'Google', 'fal':'fal.ai'};
 const presets = [{age:4, range:'3–5', detail:'Very simple'}, {age:7, range:'6–8', detail:'Simple'}, {age:10, range:'9–12', detail:'Detailed'}, {age:15, range:'13–18', detail:'Intricate'}];
 const ageDetail = age => presets[age <= 5 ? 0 : age <= 8 ? 1 : age <= 12 ? 2 : 3].detail;
 const selectedModels = new Set(['gpt-image-2.5-flare', 'flux-2-klein-4b']);
@@ -110,7 +111,10 @@ function renderOptions() {
   $('model-options').replaceChildren(); $('extra-model-options').replaceChildren();
   for (const model of config.models) {
     const label = el('label','model-option'), input = el('input'); input.type = 'checkbox'; input.checked = selectedModels.has(model.id); input.value = model.id; input.disabled = busy;
-    const title = el('span'); title.append(el('span','',model.label),el('small','provider',providerLabels[model.provider] || model.provider)); label.append(input,title);
+    const title = el('span'), name = el('span','model-name-row');
+    name.append(el('span','',model.label),el('small','provider',providerLabels[model.provider] || model.provider));
+    const price = el('small','model-price',modelCostSummary(model)); price.title = formatPriceText(model.referenceCost?.basis ?? 'No verified reference price is available for this upstream route.');
+    title.append(name,price); label.append(input,title);
     input.addEventListener('change', () => { input.checked ? selectedModels.add(model.id) : selectedModels.delete(model.id); updateSummary(); });
     $(model.recommended ? 'model-options' : 'extra-model-options').append(label);
   }
@@ -151,7 +155,7 @@ function renderGrid() {
   if (!current) { $('result-count').textContent = '0 sheets'; $('progress').hidden = true; return; }
   const costed=current.cells.filter(c=>Number.isFinite(c.metrics?.estimatedTotalUsd)&&c.metrics.estimatedTotalUsd>=0);
   const total=costed.reduce((sum,c)=>sum+c.metrics.estimatedTotalUsd,0);
-  $('total-cost').textContent=costed.length?`Estimated total: $${total.toFixed(3)}`:'Estimated total: pending';
+  $('total-cost').textContent=costed.length?`Estimated total: ${formatCents(total)}`:'Estimated total: pending';
   $('total-cost').title=`${costed.length} of ${current.cells.length} images have a cost estimate. Excludes moderation, storage and other service charges.`;
   if(costed.length&&costed.length<current.cells.length)$('total-cost').textContent+=` · ${costed.length}/${current.cells.length} costed`;
   $('run-prompt').textContent = '“' + current.prompt + '”';
@@ -160,11 +164,13 @@ function renderGrid() {
   $('result-count').textContent = `${completed}/${current.cells.length} sheets`;
   $('progress').hidden = !busy;
   $('progress-label').textContent = `${done} of ${current.cells.length} finished · You can leave and return while images are drawing.`;
-  grid.style.gridTemplateColumns = `76px repeat(${current.ages.length}, minmax(160px, 1fr))`;
+  grid.style.gridTemplateColumns = `110px repeat(${current.ages.length}, minmax(160px, 1fr))`;
   grid.append(el('div','grid-head','MODEL / AGE'));
   for (const age of current.ages) { const head = el('div','grid-head',`Age ${age}`); head.append(el('small','',ageDetail(age))); grid.append(head); }
   for (const model of current.models) {
     const label = el('div','grid-model',model.label); label.append(el('small','',providerLabels[model.provider] || model.provider));
+    const reference = matchingReferenceModel(model,config.models);
+    const price = el('small','model-price',modelCostSummary(reference)); price.title = formatPriceText(reference.referenceCost?.basis ?? 'No verified reference price is available for this historical upstream route.'); label.append(price);
     const timed=current.cells.filter(c=>c.model===model.id&&c.status==='completed'&&Number.isFinite(c.metrics?.elapsedMs)&&c.metrics.elapsedMs>=0);
     const mean=timed.length?timed.reduce((sum,c)=>sum+c.metrics.elapsedMs,0)/timed.length/1000:null;
     const timing=el('small','model-mean',mean===null?'Mean: —':`Mean: ${mean.toFixed(1)}s / image`);timing.title=`Mean elapsed generation time across ${timed.length} completed images; includes queue time.`;label.append(timing);grid.append(label);
@@ -210,7 +216,7 @@ function openDetails(cell, model) {
   if(cell.error) row('Message',cell.error);
   if(cell.errorCode) row('Error code',cell.errorCode);
   row('Generation ID',cell.id);
-  for(const [key,value] of Object.entries(cell.metrics || {})) row(key,value);
+  for(const [key,value] of Object.entries(cell.metrics || {})) row(...displayMetric(key,value));
   $('details-note').hidden = !cell.metrics;
   const actions = $('details-actions'); actions.replaceChildren();
   if(['uncertain','failed'].includes(cell.status)) {
@@ -324,7 +330,7 @@ $('compare-form').addEventListener('submit',async event=>{
   try {const saved=await api('/api/library',{method:'POST',body:JSON.stringify(savePayload(current))});current=saved.grid;persist();renderGrid();message('library-status','Saved to library');if(innerWidth<761)$('comparison-grid').scrollIntoView({behavior:'smooth',block:'start'});await runCells();}
   catch(error){setBusy(false);message('library-status','Could not save the comparison. '+error.message);message('form-error',error.message);}
 });
-$('export').addEventListener('click',()=>{if(!current)return; const blob=new Blob([JSON.stringify({...current,note:'Image URLs require an authenticated session; API keys are never included.'},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=el('a'); a.href=url;a.download=`wonderlines-comparison-${current.id}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export').addEventListener('click',()=>{if(!current)return; const blob=new Blob([JSON.stringify({...exportComparison(current),note:'Prices are in US cents. Image URLs require an authenticated session; API keys are never included.'},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=el('a'); a.href=url;a.download=`wonderlines-comparison-${current.id}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('close-dialog').addEventListener('click',()=>$('image-dialog').close());
 $('image-dialog').addEventListener('click',event=>{if(event.target===$('image-dialog'))$('image-dialog').close();});
 $('image-dialog').addEventListener('close',()=>{activeCard?.focus();});

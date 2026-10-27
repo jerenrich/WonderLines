@@ -1,0 +1,347 @@
+{
+  "checkedOn": "2026-10-23",
+  "windowStart": "2026-09-23T00:00:00Z",
+  "windowEnd": "2026-10-23T05:45:00Z",
+  "rawRows": 928,
+  "query": "{viewer{accounts(filter:{accountTag:\"994f60c144bd9dd9bc2333bd3abba832\"}){\nraw:aiInferenceAdaptive(limit:10000,filter:{datetime_geq:\"2026-09-23T00:00:00Z\",datetime_lt:\"2026-10-23T05:45:00Z\"}){modelId datetime sampleInterval errorCode neurons modelIsBeta inferenceSteps inferenceTimeMs totalTiles processedTiles processedPixels costMetricName1 costMetricValue1 costMetricName2 costMetricValue2 inputTokens outputTokens}\ngroups:aiInferenceAdaptiveGroups(limit:1000,filter:{datetime_geq:\"2026-09-23T00:00:00Z\",datetime_lt:\"2026-10-23T05:45:00Z\"}){count dimensions{modelId errorCode costMetricName1 costMetricName2}sum{totalNeurons totalInferenceSteps totalTiles totalProcessedTiles totalCostMetricValue1 totalCostMetricValue2}}\n}}}",
+  "rawResponseSHA256": "c19c5ff8164e296ed9136c18dd1876decca12324e8f709e2b39e90bf8fc87afd",
+  "models": [
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-4b",
+      "successfulUnsampledRecords": 103,
+      "recordsWithCostMetrics": 103,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T22:31:01Z",
+          "neurons": 206.8736328125,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1.9853515625,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 206.8736328125,
+          "differenceNeurons": 0.0
+        },
+        {
+          "datetime": "2026-10-21T21:54:00Z",
+          "neurons": 148.159375,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1.421875,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 148.159375,
+          "differenceNeurons": 0.0
+        },
+        {
+          "datetime": "2026-09-24T09:22:39Z",
+          "neurons": 104.2,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 104.2,
+          "differenceNeurons": 0.0
+        },
+        {
+          "datetime": "2026-09-26T21:04:20Z",
+          "neurons": 191.279248046875,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1.835693359375,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 191.279248046875,
+          "differenceNeurons": 0.0
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-klein-9b",
+      "successfulUnsampledRecords": 82,
+      "recordsWithCostMetrics": 82,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T23:09:56Z",
+          "neurons": 1542.7911931812753,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1.9853515625,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 1542.7911931818182,
+          "differenceNeurons": -5.429683369584382e-10
+        },
+        {
+          "datetime": "2026-10-21T21:54:17Z",
+          "neurons": 1440.3409090904686,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1.421875,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 1440.3409090909092,
+          "differenceNeurons": -4.4065018300898373e-10
+        },
+        {
+          "datetime": "2026-09-23T22:29:53Z",
+          "neurons": 1515.5806107949388,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1.835693359375,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 1515.5806107954545,
+          "differenceNeurons": -5.156834959052503e-10
+        },
+        {
+          "datetime": "2026-10-05T12:40:11Z",
+          "neurons": 1363.636363636,
+          "costMetricName1": "processed_output_mpx",
+          "costMetricValue1": 1,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 1363.6363636363635,
+          "differenceNeurons": -3.6357050703372806e-10
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-2-dev",
+      "successfulUnsampledRecords": 6,
+      "recordsWithCostMetrics": 6,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-10-22T21:25:41Z",
+          "neurons": 5332.03125,
+          "costMetricName1": "processed_output_tiles",
+          "costMetricValue1": 142.1875,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 5332.03125,
+          "differenceNeurons": 0.0
+        },
+        {
+          "datetime": "2026-09-26T21:02:48Z",
+          "neurons": 7445.068359375,
+          "costMetricName1": "processed_output_tiles",
+          "costMetricValue1": 198.53515625,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 7445.068359375,
+          "differenceNeurons": 0.0
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/black-forest-labs/flux-1-schnell",
+      "successfulUnsampledRecords": 14,
+      "recordsWithCostMetrics": 14,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T23:00:11Z",
+          "neurons": 172.8000030517578,
+          "costMetricName1": "processed_tiles",
+          "costMetricValue1": 16,
+          "costMetricName2": "total_tiles",
+          "costMetricValue2": 4,
+          "totalTiles": 4,
+          "processedTiles": 16,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 172.79999999999998,
+          "differenceNeurons": 3.0517578295530257e-06
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/leonardo/lucid-origin",
+      "successfulUnsampledRecords": 14,
+      "recordsWithCostMetrics": 14,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T23:01:25Z",
+          "neurons": 7433.15625,
+          "costMetricName1": "total_tiles",
+          "costMetricValue1": 7.94140625,
+          "costMetricName2": "processed_tiles",
+          "costMetricValue2": 198.53515625,
+          "totalTiles": 7.94140625,
+          "processedTiles": 198.53515625,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 7433.15625,
+          "differenceNeurons": 0.0
+        },
+        {
+          "datetime": "2026-10-22T21:25:41Z",
+          "neurons": 5323.5,
+          "costMetricName1": "total_tiles",
+          "costMetricValue1": 5.6875,
+          "costMetricName2": "processed_tiles",
+          "costMetricValue2": 142.1875,
+          "totalTiles": 5.6875,
+          "processedTiles": 142.1875,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 5323.5,
+          "differenceNeurons": 0.0
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/leonardo/phoenix-1.0",
+      "successfulUnsampledRecords": 33,
+      "recordsWithCostMetrics": 33,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T23:02:59Z",
+          "neurons": 5460,
+          "costMetricName1": "total_tiles",
+          "costMetricValue1": 7,
+          "costMetricName2": "processed_tiles",
+          "costMetricValue2": 175,
+          "totalTiles": 7,
+          "processedTiles": 175,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 5460,
+          "differenceNeurons": 0
+        },
+        {
+          "datetime": "2026-10-21T22:01:45Z",
+          "neurons": 3900,
+          "costMetricName1": "total_tiles",
+          "costMetricValue1": 5,
+          "costMetricName2": "processed_tiles",
+          "costMetricValue2": 125,
+          "totalTiles": 5,
+          "processedTiles": 125,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 3900,
+          "differenceNeurons": 0
+        },
+        {
+          "datetime": "2026-10-11T20:10:26Z",
+          "neurons": 2340,
+          "costMetricName1": "total_tiles",
+          "costMetricValue1": 3,
+          "costMetricName2": "processed_tiles",
+          "costMetricValue2": 75,
+          "totalTiles": 3,
+          "processedTiles": 75,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 2340,
+          "differenceNeurons": 0
+        }
+      ],
+      "result": "Observed preset/tile metering; see limitations"
+    },
+    {
+      "model": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+      "successfulUnsampledRecords": 14,
+      "recordsWithCostMetrics": 14,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T23:03:39Z",
+          "neurons": 0,
+          "costMetricName1": "inference_steps",
+          "costMetricValue1": 20,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 0,
+          "differenceNeurons": 0
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "successfulUnsampledRecords": 14,
+      "recordsWithCostMetrics": 14,
+      "missingMeteringRecords": 0,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-09-23T23:04:09Z",
+          "neurons": 0,
+          "costMetricName1": "inference_steps",
+          "costMetricValue1": 4,
+          "costMetricName2": "",
+          "costMetricValue2": 0,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 0,
+          "differenceNeurons": 0
+        }
+      ],
+      "result": "Matches published rate within meter precision"
+    },
+    {
+      "model": "@cf/lykon/dreamshaper-8-lcm",
+      "successfulUnsampledRecords": 14,
+      "recordsWithCostMetrics": 4,
+      "missingMeteringRecords": 10,
+      "distinctMeteredCases": [
+        {
+          "datetime": "2026-10-22T21:25:34Z",
+          "neurons": 0.248,
+          "costMetricName1": "output_height",
+          "costMetricValue1": 1024,
+          "costMetricName2": "output_width",
+          "costMetricValue2": 1456,
+          "totalTiles": 0,
+          "processedTiles": 0,
+          "sampleInterval": 1,
+          "expectedNeuronsFromRate": 0.248,
+          "differenceNeurons": 0.0
+        }
+      ],
+      "result": "Observed preset/tile metering; see limitations"
+    }
+  ],
+  "limitations": [
+    "Use unsampled successful rows for rate validation; older broader queries contain adaptive sampling and are not invoice totals.",
+    "Phoenix pixel-area tile flooring is inferred from native presets and whole-tile meter behavior; only the saved landscape preset is matched by recorded dimensions. Other sizes use the inferred rule with a one-tile minimum.",
+    "DreamShaper remains scoped to its observed 1456x1024, 8-step preset. Ten older rows lack metering, not evidence of a free rate.",
+    "No Workers AI neuron rows exist for externally hosted OpenAI/fal image models. Their estimates retain provider token/billing evidence; Gateway zero costs are incomplete.",
+    "Moderation is excluded from per-image estimates. Clef meter matches 24 US cents per million input tokens. Clef Flash historical rows imply 9 cents/M, with recent rows at 3.8 cents/M, so historical usage must not be repriced at today\u2019s rate.",
+    "Gross inference estimates exclude free allocations, credits and infrastructure."
+  ],
+  "paidGenerationsSubmitted": 0
+}

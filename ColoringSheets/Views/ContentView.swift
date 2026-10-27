@@ -274,7 +274,7 @@ struct ContentView: View {
                         descriptionFocused = false
                         store.cancel()
                     } else if needsIdea {
-                        useStarterIdea(.surprise)
+                        useSurpriseIdea()
                     } else {
                         descriptionFocused = false
                         store.generate()
@@ -425,28 +425,23 @@ struct ContentView: View {
                 VStack(spacing: 6) {
                     Text("What shall we draw?")
                         .font(.title2.bold())
-                    Text("Pick an idea, or describe your own below.")
+                    Text("Try a surprise, or describe your own below.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.center)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
-                                         count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 12) {
-                    ForEach(StarterIdea.allCases) { idea in
-                        Button { useStarterIdea(idea) } label: {
-                            Label(idea.title, systemImage: idea.symbol)
-                                .font(.callout.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .padding(.horizontal, 8)
-                                .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
-                                .contentShape(RoundedRectangle(cornerRadius: 14))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Fills the description so you can edit it before generating")
-                        .accessibilityIdentifier("starterIdea.\(idea.rawValue)")
-                    }
+                Button { useSurpriseIdea() } label: {
+                    Label("Surprise me", systemImage: "shuffle")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.horizontal, 8)
+                        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                        .contentShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .frame(maxWidth: 460)
+                .buttonStyle(.plain)
+                .accessibilityHint("Fills the description so you can edit it before generating")
+                .accessibilityIdentifier("starterIdea.surprise")
+                .frame(maxWidth: 320)
             }
             .padding(20)
             .frame(maxWidth: .infinity, minHeight: size.height)
@@ -455,8 +450,8 @@ struct ContentView: View {
         .accessibilityIdentifier("starterIdeas")
     }
 
-    private func useStarterIdea(_ idea: StarterIdea) {
-        store.description = idea.prompt
+    private func useSurpriseIdea() {
+        store.description = StarterIdeas.surprisePrompt
         descriptionFocused = true
     }
 
@@ -504,12 +499,22 @@ struct ContentView: View {
                 Section("Generation") {
                     Picker("Model", selection: $store.model) {
                         ForEach(ImageModel.selectable) { model in
-                            Text(model.label).tag(model)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(model.label)
+                                Text(model.priceSummary).font(.caption).foregroundStyle(.secondary)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("modelChoice.\(model.rawValue)")
+                            .tag(model)
                         }
                     }
-                    .pickerStyle(.menu)
+                    .pickerStyle(.navigationLink)
                     .accessibilityIdentifier("modelSetting")
                     Text(store.model.detail)
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Text(store.model.priceExplanation)
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Text("Reference prices are in US cents, checked 23 Oct 2026. Tiny nonzero costs show <¢0.01. Credits and other service charges are excluded.")
                         .font(.footnote).foregroundStyle(.secondary)
                     Picker("Images per generation", selection: Binding(
                         get: { store.imageCount }, set: { store.setImageCount($0) })) {
@@ -607,12 +612,14 @@ struct ContentView: View {
                 Section("Gallery") {
                     metric("Sheets available", "\(store.results.count)")
                     let estimates = store.results.compactMap { $0.metrics?.estimatedTotalUsd }
-                    metric("Developer’s service cost", estimates.isEmpty ? "Unavailable" : String(format: "$%.6f USD", estimates.reduce(0, +)))
-                    Text("Generation is free for you. These are provider costs paid by the developer, including estimates. Failed or unfinished requests may also incur costs for the developer.")
+                    metric("Developer’s service cost", estimates.isEmpty ? "Unavailable" : PriceDisplay.cents(estimates.reduce(0, +)))
+                    Text("Prices are in US cents (¢). Generation is free for you. These are provider costs paid by the developer, including estimates. Failed or unfinished requests may also incur costs for the developer.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if let result = store.result {
                     Section("Selected sheet · \(store.selectedIndex + 1) of \(store.results.count)") {
+                        metric(result.metrics?.costStatus == "reported" ? "Reported cost" : "Estimated cost",
+                               result.metrics?.estimatedTotalUsd.map(PriceDisplay.cents) ?? "Unavailable")
                         metric("Model", result.requestedModel.label)
                         metric("Provider", result.metrics?.provider ?? "Unavailable")
                         metric("Model used", result.metrics?.upstreamModel ?? result.metrics?.requestedModel ?? "Unavailable")
@@ -623,19 +630,17 @@ struct ContentView: View {
                         metric("Output tokens", count(result.metrics?.outputTokens))
                         metric("Total tokens", count(result.metrics?.totalTokens))
                         metric("Duration", result.metrics?.elapsedMs.map { String(format: "%.1f seconds", $0 / 1000) } ?? "Unavailable")
-                        metric(result.metrics?.costStatus == "reported" ? "Reported cost" : "Estimated cost",
-                               result.metrics?.estimatedTotalUsd.map { String(format: "$%.6f USD", $0) } ?? "Unavailable")
-                        if result.requestedModel == .redmond {
+                        if result.requestedModel.usesFalQueue {
                             metric("Inference time", result.metrics?.inferenceMs.map { String(format: "%.3f seconds", $0 / 1000) } ?? "Unavailable")
                             metric("Billable units", result.metrics?.billableUnits.map { String(format: "%.6f", $0) } ?? "Not yet reported")
                             metric("Unit price", result.metrics?.unitPriceUsd.map {
-                                String(format: "$%.6f / %@", $0, result.metrics?.billingUnit ?? "billing unit")
+                                PriceDisplay.cents($0) + " / " + (result.metrics?.billingUnit ?? "billing unit")
                             } ?? "Unavailable")
                             if let requestID = result.metrics?.providerRequestID {
                                 metric("fal request ID", requestID)
                             }
                         }
-                        Text(result.metrics?.estimateBasis ?? "Provider cost details are unavailable. Generation is still free for you.")
+                        Text(result.metrics?.estimateBasis.map(PriceDisplay.text) ?? "Provider cost details are unavailable. Generation is still free for you.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                 }
@@ -688,33 +693,9 @@ struct ContentView: View {
     }
 }
 
-private enum StarterIdea: String, CaseIterable, Identifiable {
-    case dinosaurs, space, animals, surprise
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .dinosaurs: "Dinosaurs"
-        case .space: "Space"
-        case .animals: "Animals"
-        case .surprise: "Surprise me"
-        }
-    }
-    var symbol: String {
-        switch self {
-        case .dinosaurs: "fossil.shell"
-        case .space: "moon.stars"
-        case .animals: "pawprint"
-        case .surprise: "shuffle"
-        }
-    }
-    var prompt: String {
-        switch self {
-        case .dinosaurs: "A friendly dinosaur riding a bicycle on the moon"
-        case .space: "A cheerful astronaut exploring a planet with stars and a rocket"
-        case .animals: "A fox and a rabbit having a picnic in a flower garden"
-        case .surprise:
-            Self.surprisePrompts.randomElement() ?? "A dragon baking cupcakes in a cozy kitchen"
-        }
+private enum StarterIdeas {
+    static var surprisePrompt: String {
+        surprisePrompts.randomElement() ?? "A dragon baking cupcakes in a cozy kitchen"
     }
 
     private static let surprisePrompts = [

@@ -1,0 +1,161 @@
+{
+  "verifiedAt": "2026-10-23T05:40:34.435507+00:00",
+  "paidGenerations": 0,
+  "models": 12,
+  "savedGridChecks": [
+    {
+      "id": "73fe997e-31aa-4e14-9410-8179870bbdfe",
+      "models": {
+        "gpt-image-2.5-flare": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.02076
+        },
+        "gpt-image-2.5-sunburst": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.02076
+        },
+        "flux-2-klein-4b": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.0065190125
+        },
+        "flux-2-klein-9b": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.063375
+        },
+        "flux-2-dev": {
+          "completed": 3,
+          "estimated": 3,
+          "sumUsd": 0.17595703124999998
+        },
+        "flux-1-schnell": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.007603199999999999
+        },
+        "lucid-origin": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.234234
+        },
+        "phoenix-1.0": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.1716
+        },
+        "stable-diffusion-xl-base-1.0": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0
+        },
+        "stable-diffusion-xl-lightning": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0
+        },
+        "dreamshaper-8-lcm": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 1.0912e-05
+        }
+      }
+    },
+    {
+      "id": "2491bd15-613f-4e3f-b59c-4a7085ba0884",
+      "models": {
+        "z-image-turbo": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.04
+        },
+        "gpt-image-2.5-flare": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.0208
+        },
+        "gpt-image-2.5-sunburst": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.0208
+        },
+        "flux-2-klein-4b": {
+          "completed": 3,
+          "estimated": 3,
+          "sumUsd": 0.004889259375
+        },
+        "flux-2-klein-9b": {
+          "completed": 1,
+          "estimated": 1,
+          "sumUsd": 0.01584375
+        },
+        "phoenix-1.0": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.1716
+        }
+      }
+    }
+  ],
+  "deployments": {
+    "coloring-sheets-api": {
+      "id": "b1baac3e-c0b3-4931-912e-4eb5ce82961b",
+      "created_on": "2026-10-23T05:39:56.890364Z",
+      "strategy": "percentage",
+      "versions": [
+        {
+          "version_id": "08600460-0c5e-4dcd-a729-ccf30b386e83",
+          "percentage": 100
+        }
+      ]
+    },
+    "wonderlines-compare": {
+      "id": "aef0067e-1403-48f9-92c2-e9c972c9fec4",
+      "created_on": "2026-10-23T05:40:24.769323Z",
+      "strategy": "percentage",
+      "versions": [
+        {
+          "version_id": "31a4a73f-9dad-41c8-b81d-c9a55ca59864",
+          "percentage": 100
+        }
+      ]
+    }
+  },
+  "bindingsPreserved": true,
+  "savedSnapshotCoverage": {
+    "completed": 177,
+    "estimated": 177,
+    "unavailable": 0,
+    "knownInferenceTotalUsd": 2.1699465026250015
+  },
+  "sourceSHA256": {
+    "workers/coloring-sheets-api/src/image-cost.mjs": "9dfe4e8b2e12d3127bde657baaf7bd59c7fb134a58931e004db539334d4af5ae",
+    "workers/coloring-sheets-api/src/index.mjs": "bc2710d329d50b841d9adfa071e81c72962502dc8d044d6ad5c153cd8e11a97a",
+    "workers/coloring-sheets-api/src/comparison-image-runner.mjs": "de320032d7c3501f5dab8a2529ceba9079038540c3bfef63025dbf051dbc9da0",
+    "workers/generation-lab/src/catalog.mjs": "23bd1014ced75f3361944209b9c43ebf8f633d9804e91221efa976466d38bbaa",
+    "workers/generation-lab/src/library.mjs": "0c359f9e92d1edfbf45356426684c361b3a52de81827474054bea9a0a0c0f4c4"
+  },
+  "offlineTestGroups": [
+    "image cost and Worker integration",
+    "comparison library",
+    "comparison runner",
+    "comparison queue",
+    "Z-Image",
+    "request security",
+    "privacy",
+    "reporting concurrency",
+    "batch moderation"
+  ],
+  "followupChecks": [
+    "image cost arithmetic and preset boundaries",
+    "Worker integration and durable comparison queue",
+    "comparison library with DreamShaper/Phoenix enrichment and no mutation",
+    "comparison runner",
+    "both deployment dry runs",
+    "live saved-grid estimates and production settings preserved"
+  ],
+  "meteringEvidence": "dreamshaper-metering-evidence.json",
+  "checksPassed": true
+}

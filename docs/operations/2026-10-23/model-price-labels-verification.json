@@ -1,0 +1,100 @@
+{
+  "checkedAt": "2026-10-23T06:32:44.904535+00:00",
+  "comparisonVersion": "3adae980-7bbb-4114-baa6-42f8fa456b56",
+  "comparisonUrl": "https://wonderlines-compare.jordan-erenrich.workers.dev",
+  "app": {
+    "device": "J17",
+    "mode": "live",
+    "installed": true,
+    "launched": true
+  },
+  "displayPrecision": "Two fractional cent digits; <\u00a20.01 for nonzero subprecision amounts, \u00a20.00 for zero",
+  "referenceEvidence": "Billing confirmed only for Z-Image reference preset; all other references labeled Estimate. Labels describe audited samples, not guaranteed future charges.",
+  "referenceDate": "2026-10-23",
+  "checksPassed": [
+    "Every web reference model price and upstream remapping",
+    "cent formatting, historical explanations and unrounded export values",
+    "comparison Worker/library/retry checks",
+    "all nine model image-cost metering fixtures",
+    "native price metadata and formatting tests",
+    "native Settings model-list and gallery/Usage UI tests",
+    "signed live build, J17 installation and launch",
+    "site dry run and deployment",
+    "git diff --check",
+    "Live browser: 12 model choices and 11 saved-grid labels use two-decimal cents and evidence status"
+  ],
+  "paidGenerations": 0,
+  "sourceSHA256": {
+    "ColoringSheets/Core/Generation.swift": "098d03b7fc7e6fe450ecfe8a85fcebef4f7eb3c9cb960133c3573543ccaef34b",
+    "ColoringSheets/Views/ContentView.swift": "3e1b0385351f01a7035dd618d1d5119c37d2c29ff2c548194a0114e1f3961c9c",
+    "workers/generation-lab/src/model-reference-cost.mjs": "ec71c5a74138ab8c129cc155d4378ad5055f0a2245d7406ba0d88bd5a84c2edb",
+    "workers/generation-lab/src/catalog.mjs": "c0025280707b9abacf8e74bd4e5bd368873f8ec9013a7f62027c79899779256a",
+    "workers/generation-lab/public/app.js": "67e4e2219e320b08f8bc7a2b865dd270f10d960129b63c9534ee344e486a5d40",
+    "workers/generation-lab/public/cost-display.mjs": "1eb1440ae9deb5cc5276ee33cbadadf963c78eb21ce1d2a72c37fdad995aff8f",
+    "workers/generation-lab/public/index.html": "9fa66ecbe7793e4f1aa3e1f70c1a7707c2a0c3241e15726530d474a25b5a8d16",
+    "workers/generation-lab/public/style.css": "ffbf0601d25aeefc21036da6d741565e40840b663b3621941fed80e2ea53391a"
+  },
+  "liveModelChoices": [
+    {
+      "name": "Z-Image Turbo",
+      "price": "\u00a21.00 / image \u00b7 Billing confirmed"
+    },
+    {
+      "name": "Flare",
+      "price": "\u00a20.52 / image \u00b7 Estimate"
+    },
+    {
+      "name": "Sunburst",
+      "price": "\u00a20.52 / image \u00b7 Estimate"
+    },
+    {
+      "name": "FLUX.2 Klein 4B",
+      "price": "\u00a20.16 / image \u00b7 Estimate"
+    },
+    {
+      "name": "FLUX.2 Klein 9B",
+      "price": "\u00a21.58 / image \u00b7 Estimate"
+    },
+    {
+      "name": "Phoenix 1.0",
+      "price": "\u00a24.29 / image \u00b7 Estimate"
+    },
+    {
+      "name": "FLUX.2 Dev",
+      "price": "\u00a25.87 / image \u00b7 Estimate"
+    },
+    {
+      "name": "FLUX.1 Schnell",
+      "price": "\u00a20.19 / image \u00b7 Estimate"
+    },
+    {
+      "name": "Lucid Origin",
+      "price": "\u00a25.86 / image \u00b7 Estimate"
+    },
+    {
+      "name": "Stable Diffusion XL",
+      "price": "\u00a20.00 / image \u00b7 Estimate"
+    },
+    {
+      "name": "SDXL Lightning",
+      "price": "\u00a20.00 / image \u00b7 Estimate"
+    },
+    {
+      "name": "DreamShaper 8 LCM",
+      "price": "<\u00a20.01 / image \u00b7 Estimate"
+    }
+  ],
+  "liveSavedGridModelPrices": [
+    "\u00a20.52 / image \u00b7 Estimate",
+    "\u00a20.52 / image \u00b7 Estimate",
+    "\u00a20.16 / image \u00b7 Estimate",
+    "\u00a21.58 / image \u00b7 Estimate",
+    "\u00a25.87 / image \u00b7 Estimate",
+    "\u00a20.19 / image \u00b7 Estimate",
+    "\u00a25.86 / image \u00b7 Estimate",
+    "\u00a24.29 / image \u00b7 Estimate",
+    "\u00a20.00 / image \u00b7 Estimate",
+    "\u00a20.00 / image \u00b7 Estimate",
+    "<\u00a20.01 / image \u00b7 Estimate"
+  ]
+}

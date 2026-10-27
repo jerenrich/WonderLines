@@ -1,0 +1,23 @@
+{
+  "baseCommit": "1edf4c03942264062a42ac2f2175afa7a3d81e08",
+  "deployedFilesSHA256": {
+    "workers/coloring-sheets-api/src/provider-diagnostics.mjs": "14b343ea69fa5cb97c6594ee2c5c891afae6d13e6a83eb9987e195e5d486f0ef",
+    "workers/coloring-sheets-api/src/image-provider.mjs": "e84f352c4f7482ee059689b69e16c367388eac53b282e5ac1fa728027d0bf8e3",
+    "workers/coloring-sheets-api/src/comparison-image-runner.mjs": "ea816c8b5dd086941286176308e1a2bec37a56c7c3b721cb6aea9d899e592f9a",
+    "workers/generation-lab/src/library.mjs": "a6bce76c6dfe7f5162b9328fa5cf433619438d552d06f1601a4073af8ca04166",
+    "Scripts/test_provider_diagnostics.mjs": "1b1dd4708dbd55d15eb5c2e929e2fea2d55587deed6b1125c2ab168042baa510",
+    "Scripts/test_comparison_runner.mjs": "41a2e883f20f1745a3c36a90c8b03957c672be5cd90dcded24e00afb7803bfd8",
+    ".github/workflows/worker.yml": "8792c673817fc00375d3fc869207cfbc2ad5da8b7e2167b3d52b1a5571005282",
+    "workers/coloring-sheets-api/README.md": "b2bc7f47c21315b006627eb6ab234a791bcfbd3f4228e471ecc0fd1136d65685",
+    "workers/generation-lab/README.md": "36a9195fee08a33e0dcc35ac42bbee54117b18114e8495e205b46cd1665b89b1"
+  },
+  "isolation": "Clean base commit plus the attached logging patch; independent in-progress application and model changes excluded.",
+  "checks": {
+    "offlineWorkerAndLabSuites": 15,
+    "javascriptSyntaxChecks": 2,
+    "deploymentDryRuns": 2,
+    "result": "passed"
+  },
+  "privacy": "Only fixed diagnostic categories and known parameter names are recorded. Raw provider text, prompts, images, credentials and hashes of raw text are excluded. Unknown errors are explicitly unclassified. Gateway payload logging remains disabled.",
+  "verification": "logging-deployment-verification.json"
+}

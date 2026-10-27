@@ -1,4 +1,4 @@
-import {DEFAULT_MODEL, modelCatalog, imageRequest} from './image-provider.mjs';
+import {DEFAULT_MODEL, modelCatalog, imageRequest, falImageTask} from './image-provider.mjs';
 import {structuredComposition, MAX_DESCRIPTION_LENGTH, MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
 import {moderateSubject, ModerationError} from './moderation.mjs';
 
@@ -48,7 +48,8 @@ export async function startGeneration(prepared,{env,call,queueImages=false,valid
   try {routes=modelCatalog(env).routes;}catch{return failure('service_unavailable','Image model configuration is incomplete.',503);}
   if(typeof model!=='string'||!Object.hasOwn(routes,model)||allowRoute&&!allowRoute(routes[model]))return failure('invalid_request','Model is invalid.',400);
   try {
-    upstreamRequest=validateProvider?imageRequest(env,routes[model],subject,size):{provider:routes[model].provider,model:routes[model].model};
+    upstreamRequest=validateProvider?imageRequest(env,routes[model],subject,size):
+      routes[model].provider==='fal'?falImageTask(routes[model].model,subject,size):{provider:routes[model].provider,model:routes[model].model};
   }catch{return failure('service_unavailable','Image provider configuration is incomplete.',503);}
   if(rateLimit){const limited=await rateLimit();if(limited)return limited;}
   if(composed) {

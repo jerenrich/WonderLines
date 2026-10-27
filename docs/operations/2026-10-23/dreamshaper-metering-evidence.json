@@ -1,0 +1,99 @@
+{
+  "checkedOn": "2026-10-23",
+  "source": "Authenticated Cloudflare GraphQL Analytics API, aiInferenceAdaptive and aiInferenceAdaptiveGroups",
+  "endpoint": "https://api.cloudflare.com/client/v4/graphql",
+  "neuronPriceUsdPer1000": 0.011,
+  "pricingSource": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+  "dreamshaper": {
+    "model": "@cf/lykon/dreamshaper-8-lcm",
+    "query": "{\n viewer {\n  accounts(filter: {accountTag: \"994f60c144bd9dd9bc2333bd3abba832\"}) {\n   aiInferenceAdaptive(limit: 100, filter: {modelId: \"@cf/lykon/dreamshaper-8-lcm\", datetime_geq: \"2026-09-23T00:00:00Z\", datetime_lt: \"2026-10-23T05:35:00Z\"}) {\n    datetime sampleInterval errorCode neurons costMetricName1 costMetricValue1 costMetricName2 costMetricValue2 inferenceSteps modelIsBeta inferenceTimeMs\n   }\n  }\n }\n}\n",
+    "records": [
+      {
+        "costMetricName1": "output_height",
+        "costMetricName2": "output_width",
+        "costMetricValue1": 1024,
+        "costMetricValue2": 1456,
+        "datetime": "2026-10-22T21:25:34Z",
+        "errorCode": 0,
+        "inferenceSteps": 0,
+        "inferenceTimeMs": 5201,
+        "modelIsBeta": 0,
+        "neurons": 0.248,
+        "sampleInterval": 1
+      },
+      {
+        "costMetricName1": "output_height",
+        "costMetricName2": "output_width",
+        "costMetricValue1": 1024,
+        "costMetricValue2": 1456,
+        "datetime": "2026-10-22T21:25:35Z",
+        "errorCode": 0,
+        "inferenceSteps": 0,
+        "inferenceTimeMs": 6369,
+        "modelIsBeta": 0,
+        "neurons": 0.248,
+        "sampleInterval": 1
+      },
+      {
+        "costMetricName1": "output_height",
+        "costMetricName2": "output_width",
+        "costMetricValue1": 1024,
+        "costMetricValue2": 1456,
+        "datetime": "2026-10-22T21:25:45Z",
+        "errorCode": 0,
+        "inferenceSteps": 0,
+        "inferenceTimeMs": 11785,
+        "modelIsBeta": 0,
+        "neurons": 0.248,
+        "sampleInterval": 1
+      },
+      {
+        "costMetricName1": "output_height",
+        "costMetricName2": "output_width",
+        "costMetricValue1": 1024,
+        "costMetricValue2": 1456,
+        "datetime": "2026-10-22T21:25:45Z",
+        "errorCode": 0,
+        "inferenceSteps": 0,
+        "inferenceTimeMs": 11548,
+        "modelIsBeta": 0,
+        "neurons": 0.248,
+        "sampleInterval": 1
+      }
+    ],
+    "totalNeurons": 0.992,
+    "totalGrossInferenceUsd": 1.0912e-05,
+    "perImageGrossInferenceUsd": 2.728e-06,
+    "preset": {
+      "width": 1456,
+      "height": 1024,
+      "serverSteps": 8
+    },
+    "olderUnmeteredRecordCount": 10,
+    "limitations": [
+      "Request IDs are not exposed by this dataset; correlation uses model, time window, count and dimensions.",
+      "Analytics inferenceSteps=0 is unpopulated, not the requested step count; 8 steps comes from the server preset.",
+      "Older zero-neuron records also lack cost metrics, so do not establish a free historical rate.",
+      "No verified rate for other dimensions or step counts.",
+      "Gross inference value before daily allowances; not an invoice or net amount charged."
+    ]
+  },
+  "phoenix": {
+    "model": "@cf/leonardo/phoenix-1.0",
+    "query": "{viewer{accounts(filter:{accountTag:\"994f60c144bd9dd9bc2333bd3abba832\"}){aiInferenceAdaptive(limit:1000,filter:{modelId:\"@cf/leonardo/phoenix-1.0\",datetime_geq:\"2026-10-21T00:00:00Z\",datetime_lt:\"2026-10-23T05:35:00Z\"}){datetime sampleInterval errorCode neurons inferenceSteps totalTiles processedTiles costMetricName1 costMetricValue1 costMetricName2 costMetricValue2}}}}",
+    "successfulUnsampledRecords": 19,
+    "neuronsPerRequest": 3900,
+    "billableTilesPerRequest": 5,
+    "processedTilesPerRequest": 125,
+    "totalNeurons": 74100,
+    "perImageGrossInferenceUsd": 0.0429,
+    "previousAreaBasedEstimateUsd": 0.04879875,
+    "scope": "Observed 1456x1024, 25-step server preset; other configurations retain published proportional estimate."
+  },
+  "rawEvidenceSha256": {
+    "dream-requests.graphql.json": "9f031d90ba7ed2c9d96323f7e701d825c18533b79b56a4ace5f44cee735e3252",
+    "phoenix-requests.graphql.json": "dbad25dd4478605ae7dff6ce90246f8ee32c940817f30e0f6b642a2ddc2c6276",
+    "model-usage.graphql.json": "52db0815513e440c8f4e3b09fa474e83fc94214317ed6c36e6bd5fa1cb56adc0"
+  },
+  "paidGenerationsSubmitted": 0
+}

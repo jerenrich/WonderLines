@@ -5,6 +5,36 @@ import Security
 @testable import ColoringSheets
 
 final class GenerationTests: XCTestCase {
+    func testModelChoicesShowAuditedPricesAndBillingEvidence() {
+        let prices: [ImageModel: String] = [.flare: "¢0.52", .sunburst: "¢0.52", .zImageTurbo: "¢1.00",
+            .fluxKlein4B: "¢0.16", .fluxKlein9B: "¢1.58", .phoenix: "¢4.29"]
+        for model in ImageModel.selectable {
+            XCTAssertEqual(model.priceSummary, "\(prices[model]!) / image · \(model == .zImageTurbo ? "Billing confirmed" : "Estimate")")
+            XCTAssertFalse(model.priceExplanation.isEmpty)
+        }
+        XCTAssertEqual(ImageModel.dreamShaper.priceSummary, "<¢0.01 / image · Estimate")
+        XCTAssertEqual(ImageModel.sdxl.priceSummary, "¢0.00 / image · Estimate")
+        XCTAssertEqual(PriceDisplay.cents(0.0001), "¢0.01")
+        XCTAssertEqual(PriceDisplay.cents(0.000099), "<¢0.01")
+    }
+
+    func testPricesDisplayInCentsIncludingTinyCostsAndHistoricalExplanations() {
+        for (usd, expected) in [(0.0, "¢0.00"), (0.001, "¢0.10"), (0.0065, "¢0.65"),
+                                (0.0429, "¢4.29"), (0.000002728, "<¢0.01"), (12.5, "¢1,250.00"),
+                                (1e-15, "<¢0.01")] {
+            XCTAssertEqual(PriceDisplay.cents(usd), expected)
+        }
+        for invalid in [-1.0, Double.nan, Double.infinity] {
+            XCTAssertEqual(PriceDisplay.cents(invalid), "Unavailable")
+        }
+        XCTAssertEqual(PriceDisplay.text("12.5 units × $0.00125 per second; $0.015625 USD total."),
+                       "12.5 units × ¢0.13 per second; ¢1.56 total.")
+        XCTAssertEqual(PriceDisplay.text("0.248 × $0.011 / 1,000 neurons; $0.000002728 each."),
+                       "0.248 × ¢1.10 / 1,000 neurons; <¢0.01 each.")
+        let metrics = GenerationMetrics.decode(#"{"estimatedTotalUsd":0.001,"unitPriceUsd":0.005}"#)
+        XCTAssertEqual(metrics?.estimatedTotalUsd, 0.001, "The API/storage currency remains USD")
+    }
+
     @MainActor
     func testDescriptionDraftSurvivesBackgroundAndRelaunchAndExplicitClear() throws {
         let suite = "description-draft-\(UUID())"
@@ -241,7 +271,7 @@ final class GenerationTests: XCTestCase {
     func testSelectableModelsExcludeRetiredChoices() {
         XCTAssertEqual(ImageModel.selectable.map(\.rawValue), [
             "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
-            "flux-2-klein-4b", "flux-2-klein-9b", "phoenix-1.0"
+            "z-image-turbo", "flux-2-klein-4b", "flux-2-klein-9b", "phoenix-1.0"
         ])
     }
 
@@ -1179,6 +1209,14 @@ final class NetworkingTests: XCTestCase {
 @MainActor
 final class ControlledService: GenerationServing {
     var calls = 0
+    var usageRequests: [UUID] = []
+    var usageResponses: [UUID: GenerationMetrics] = [:]
+    var usageFailures: Set<UUID> = []
+    func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? {
+        usageRequests.append(id)
+        if usageFailures.contains(id) { throw GenerationError.uncertain }
+        return usageResponses[id]
+    }
     var pollingResumes = 0
     func resumePolling() async { pollingResumes += 1 }
     var recoveryCalls = 0
@@ -1235,6 +1273,32 @@ final class ControlledService: GenerationServing {
 
 @MainActor
 final class StateTests: XCTestCase {
+    func testUsageRefreshUpdatesEveryGalleryProviderWithoutGeneratingAndPreservesFailedReads() async throws {
+        let suite = "GalleryPricing-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: directory) }
+        let file = GalleryStore(url: directory.appendingPathComponent("gallery.json"))
+        let image = MockGenerator.sampleImage(), data = image.pngData()!
+        let sheets = [(ImageModel.phoenix, 0.04879875), (.flare, 0.00325), (.redmond, 0.02)].map { model, cost in
+            ColoringResult(data: data, image: image, requestedModel: model,
+                metrics: GenerationMetrics.decode("{\"estimatedTotalUsd\":\(cost)}"), generationID: UUID())
+        }
+        try file.save(GallerySnapshot(sheets: sheets.map(GallerySnapshot.Sheet.init), waitingToReveal: [],
+            selectedID: sheets[0].id, hasRevealedResults: true, generationBatchID: nil, recoveringIDs: nil, shouldResume: false))
+        let service = ControlledService()
+        service.usageResponses[sheets[0].generationID!] = GenerationMetrics.decode(#"{"estimatedTotalUsd":0.0429}"#)
+        service.usageResponses[sheets[1].generationID!] = GenerationMetrics.decode(#"{"estimatedTotalUsd":0.0065}"#)
+        service.usageFailures.insert(sheets[2].generationID!)
+        let store = ColoringViewModel(service: service, isMock: true, defaults: defaults, galleryStore: file)
+        await store.refreshUsage()
+        XCTAssertEqual(service.usageRequests, sheets.compactMap(\.generationID))
+        XCTAssertEqual(service.calls, 0, "Refreshing prices must not generate images")
+        XCTAssertEqual(store.results.compactMap { $0.metrics?.estimatedTotalUsd }, [0.0429, 0.0065, 0.02])
+        XCTAssertEqual(store.result?.id, sheets[0].id, "Keep the selected image")
+        XCTAssertEqual(file.load()?.sheets.compactMap { $0.result?.metrics?.estimatedTotalUsd }, [0.0429, 0.0065, 0.02])
+    }
+
     func testRecentEditAfterLongActiveSessionSurvivesImmediateRelaunch() async throws {
         let suite = "ActiveDraftRelaunch-\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

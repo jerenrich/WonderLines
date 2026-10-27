@@ -1,0 +1,185 @@
+{
+  "verifiedAt": "2026-10-23T06:00:35.127429+00:00",
+  "paidGenerations": 0,
+  "models": 12,
+  "savedGridChecks": [
+    {
+      "id": "73fe997e-31aa-4e14-9410-8179870bbdfe",
+      "models": {
+        "gpt-image-2.5-flare": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.02076
+        },
+        "gpt-image-2.5-sunburst": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.02076
+        },
+        "flux-2-klein-4b": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.0065190125
+        },
+        "flux-2-klein-9b": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.063375
+        },
+        "flux-2-dev": {
+          "completed": 3,
+          "estimated": 3,
+          "sumUsd": 0.17595703124999998
+        },
+        "flux-1-schnell": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.007603199999999999
+        },
+        "lucid-origin": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.234234
+        },
+        "phoenix-1.0": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.1716
+        },
+        "stable-diffusion-xl-base-1.0": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0
+        },
+        "stable-diffusion-xl-lightning": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0
+        },
+        "dreamshaper-8-lcm": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 1.0912e-05
+        }
+      }
+    },
+    {
+      "id": "2491bd15-613f-4e3f-b59c-4a7085ba0884",
+      "models": {
+        "z-image-turbo": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.04
+        },
+        "gpt-image-2.5-flare": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.0208
+        },
+        "gpt-image-2.5-sunburst": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.0208
+        },
+        "flux-2-klein-4b": {
+          "completed": 3,
+          "estimated": 3,
+          "sumUsd": 0.004889259375
+        },
+        "flux-2-klein-9b": {
+          "completed": 1,
+          "estimated": 1,
+          "sumUsd": 0.01584375
+        },
+        "phoenix-1.0": {
+          "completed": 4,
+          "estimated": 4,
+          "sumUsd": 0.1716
+        }
+      }
+    }
+  ],
+  "deployments": {
+    "coloring-sheets-api": {
+      "id": "a5184325-32c5-43ff-b18f-a70ef1f55496",
+      "created_on": "2026-10-23T05:58:51.450644Z",
+      "strategy": "percentage",
+      "versions": [
+        {
+          "version_id": "1c560ab9-00b0-4d7a-9f4c-feeb0e06414e",
+          "percentage": 100
+        }
+      ]
+    },
+    "wonderlines-compare": {
+      "id": "51d3a73b-adf2-4588-a5dd-8d034dbae01b",
+      "created_on": "2026-10-23T05:59:10.102096Z",
+      "strategy": "percentage",
+      "versions": [
+        {
+          "version_id": "1a20d49e-00f2-4635-9610-a100a019d25b",
+          "percentage": 100
+        }
+      ]
+    }
+  },
+  "bindingsPreserved": true,
+  "meteringEvidence": "all-model-metering-evidence.json",
+  "browserChecks": [
+    {
+      "model": "dreamshaper-8-lcm",
+      "expected": "\u00a20.0002728",
+      "passed": true
+    },
+    {
+      "model": "phoenix-1.0",
+      "expected": "\u00a24.29",
+      "passed": true
+    },
+    {
+      "model": "stable-diffusion-xl-base-1.0",
+      "expected": "\u00a20",
+      "passed": true
+    },
+    {
+      "model": "z-image-turbo",
+      "expected": "\u00a21 total; \u00a20.5 per megapixel",
+      "passed": true
+    }
+  ],
+  "priceDisplayUnit": "US cents",
+  "internalApiAndStorageUnit": "USD",
+  "exportMonetaryFieldSuffix": "Cents",
+  "offlineChecksPassed": [
+    "Worker integration and all nine model metering fixtures",
+    "comparison library, retry and price-display/export tests",
+    "comparison runner and Z-Image tests",
+    "25 GenerationTests cases",
+    "final cents formatting and all-provider saved-gallery refresh tests",
+    "native gallery/Usage UI test with visible total and selected cost",
+    "signed live device build",
+    "both Worker deployment dry runs",
+    "git diff --check"
+  ],
+  "app": {
+    "bundleID": "com.jordan.family.ColoringSheets",
+    "version": "1.0",
+    "build": "8",
+    "mode": "live",
+    "installedDevice": "J17",
+    "installationConfirmed": true,
+    "simulatorScreenshot": ".build/cents-final-attachments/C477BC98-27AE-4F02-A159-02216984CBB5.png",
+    "launchConfirmed": true
+  },
+  "sourceSHA256": {
+    "ColoringSheets/Core/Generation.swift": "705a6d707855a5ea552121ca129e00929fb0c44a0c805f13709a342c22c240bd",
+    "ColoringSheets/Core/ColoringViewModel.swift": "2194b0e60fdc87c3a40561c2ad031ab1732986f34405b7ae40f33dafc967a0db",
+    "ColoringSheets/Views/ContentView.swift": "6058db24ed8e405f66bf4aad387b1bc58de02202432ee665c23fdf362c953561",
+    "workers/coloring-sheets-api/src/image-cost.mjs": "8b981460d7988b3b2531edf82e47bd99573b300432cf6788ab7effa65b0dfb17",
+    "workers/generation-lab/public/app.js": "2f95f761b62536683023d48f083bfcbdd835fb3c031112c0ff2b10644b568536",
+    "workers/generation-lab/public/cost-display.mjs": "12970774da95d40b972953910bf01b5c16be1a7fe300e4275eb0727d36961232",
+    "workers/generation-lab/public/index.html": "cb86c1b902de270859f9ca902eec5827425c61e8eb965bd54272f4b91885497c",
+    "Scripts/fixtures/cloudflare-image-metering-20261023.json": "9182bd25811e0fff297705c8674874476b4d91a11c9324641fbbd512c5858e5e"
+  },
+  "checksPassed": true
+}

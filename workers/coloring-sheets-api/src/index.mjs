@@ -1,6 +1,6 @@
 // Public v1 API. An account is a random UUID; no sign-in or personal profile exists.
-import {modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits} from './image-provider.mjs';
-import {imageCost} from './image-cost.mjs';
+import {modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits, validateFalConfiguration, falQueueURL} from './image-provider.mjs';
+import {imageCost, refreshImageCostMetrics} from './image-cost.mjs';
 export {ComparisonImageRunner} from './comparison-image-runner.mjs';
 import {cleanLegacyUsageLogs} from './diagnostic-retention.mjs';
 import {falCostData} from './fal-cost.mjs';
@@ -372,6 +372,10 @@ export class Account {
     if (!/^[0-9a-f-]{36}$/.test(generationId) || typeof fingerprint !== 'string') return fail('invalid_request', 'Invalid generation.', 400);
     const jobKey = 'job:' + generationId, existing = await this.state.storage.get(jobKey);
     if (existing) return existing.fingerprint === fingerprint ? reply({job: existing, access: await this.access()}) : fail('idempotency_conflict', 'Generation ID was already used.', 409);
+    if (falTask) try {
+      validateFalConfiguration(this.env);
+      falQueueURL(falTask.request?.model);
+    } catch { return fail('service_unavailable', 'Image provider configuration is incomplete.', 503); }
     const day = new Date().toISOString().slice(0, 10), allowance = freeDailyAllowance(this.env), usage = await this.state.storage.get('usage');
     const used = usage?.day === day ? usage.used : 0; let credits = (await this.state.storage.get('credits')) ?? 0;
     if (used >= DAILY_IMAGE_LIMIT) return fail('allowance_exhausted', 'Today’s limit of 100 images has been reached. It resets at midnight UTC.', 429);
@@ -488,7 +492,7 @@ export class Account {
       const metrics = {requestedModel: job.imageTask.publicModel, provider: request.provider, upstreamModel: request.model,
         viaGateway: request.viaGateway, requestedSize: job.imageTask.size.width + 'x' + job.imageTask.size.height,
         size: result.size, inputTokens: result.inputTokens, textInputTokens: result.textInputTokens ?? null,
-        imageInputTokens: result.imageInputTokens ?? null, outputTokens: result.outputTokens, totalTokens: result.totalTokens,
+        imageInputTokens: result.imageInputTokens ?? null, cachedInputTokens: result.cachedInputTokens ?? null, outputTokens: result.outputTokens, totalTokens: result.totalTokens,
         elapsedMs: Date.now() - job.createdAt, ...imageCost(request, result)};
       job.imageTask.stage = 'saving';
       job.metrics = metrics;
@@ -538,7 +542,7 @@ export class Account {
       return;
     }
     try {
-      const result = await pollFalRequest(this.env, job.fal.requestID);
+      const result = await pollFalRequest(this.env, job.fal.requestID, job.fal.request.model);
       if (!result) return;
       const account = await this.state.storage.get('account');
       const objectKey = account.id + '/' + id + '.png';
@@ -567,16 +571,25 @@ export class Account {
         message: 'This earlier request was interrupted before its image was saved. You have not been charged. Check unfinished sheets before generating again.'}});
       job = await this.state.storage.get('job:' + generationId);
     }
+    if (job?.state === 'completed') job.metrics = refreshImageCostMetrics(job.metrics);
     return job ? reply({job, access: await this.access()}) : fail('not_found', 'Generation not found.', 404);
   }
   async recordFalUsage(job) {
     const request = job.fal.request;
-    const costData = await falCostData(this.env, job.fal.requestID, job.metrics?.billableUnits, job.createdAt);
+    const costData = await falCostData(this.env, job.fal.requestID, job.metrics?.billableUnits, job.createdAt, request.model);
+    // Current list prices must not retroactively reprice a saved request. A
+    // matching billing event can replace its estimate; otherwise keep the rate
+    // captured with the request, including when later lookups are unavailable.
+    if (costData.reportedCostUsd == null && Number.isFinite(job.metrics?.unitPriceUsd) && job.metrics.unitPriceUsd >= 0 && job.metrics.billingUnit) {
+      costData.unitPriceUsd = job.metrics.unitPriceUsd;
+      costData.billingUnit = job.metrics.billingUnit;
+      costData.unitPriceCheckedAt = job.metrics.unitPriceCheckedAt ?? job.metrics.costCheckedAt;
+    } else costData.unitPriceCheckedAt = costData.costCheckedAt;
     job.metrics = {...job.metrics, provider: 'fal', upstreamModel: request.model,
       requestedModel: job.fal.publicModel, requestedSize: job.fal.requestedSize,
       modelRevision: request.modelRevision, ...costData, ...imageCost(request, {...job.metrics, ...costData}),
       imageCount: request.payload?.num_images ?? job.metrics?.imageCount ?? 1,
-      inferenceSteps: request.payload?.num_inference_steps ?? job.metrics?.inferenceSteps ?? 30};
+      inferenceSteps: request.payload?.num_inference_steps ?? job.metrics?.inferenceSteps ?? (request.model === 'fal-ai/z-image/turbo' ? 8 : 30)};
     const audit = {event: 'fal_usage', generationID: job.id, state: job.state, errorCode: job.errorCode ?? null,
       createdAt: job.createdAt, completedAt: job.completedAt, ...job.metrics};
     // Operational diagnostics belong in the native seven-day Workers log store.
@@ -590,14 +603,14 @@ export class Account {
         (!job.metrics?.costCheckedAt || Date.now() - Date.parse(job.metrics.costCheckedAt) > 60000)) {
       job = await this.updateFalUsage(job, true);
     }
-    return reply({generationId, status: job.state, metrics: job.metrics ?? null});
+    return reply({generationId, status: job.state, metrics: job.state === 'completed' ? refreshImageCostMetrics(job.metrics) ?? null : job.metrics ?? null});
   }
   async updateFalUsage(job, refreshBillableUnits = false) {
     const existing = this.usageUpdates.get(job.id);
     if (existing) return existing;
     const update = (async () => {
       if (refreshBillableUnits && job.state === 'completed' && job.metrics?.billableUnits == null) {
-        job.metrics = {...job.metrics, billableUnits: await falBillableUnits(this.env, job.fal.requestID)};
+        job.metrics = {...job.metrics, billableUnits: await falBillableUnits(this.env, job.fal.requestID, job.fal.request.model)};
       }
       await this.recordFalUsage(job);
       // Billing awaits yield to reporting. Merge only billing fields into the
@@ -626,7 +639,7 @@ export class Account {
     if (ready.fal?.request) {
       ready.metrics = {...ready.metrics,
         imageCount: ready.fal.request.payload?.num_images ?? ready.metrics?.imageCount ?? 1,
-        inferenceSteps: ready.fal.request.payload?.num_inference_steps ?? ready.metrics?.inferenceSteps ?? 30};
+        inferenceSteps: ready.fal.request.payload?.num_inference_steps ?? ready.metrics?.inferenceSteps ?? (ready.fal.request.model === 'fal-ai/z-image/turbo' ? 8 : 30)};
       delete ready.fal.request.payload;
     }
     if (ready.imageTask) delete ready.imageTask;
@@ -644,6 +657,7 @@ export class Account {
 
 async function authenticate(request, env, allowExpired = false) { const c = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, allowExpired); if (!c) return null; const checked = await call(env, c.sub, '/authorize', {credentialId: c.cid}); return checked.status === 200 ? {id: c.sub, credentialId: c.cid, access: checked.value.access, appAttested: checked.value.appAttested} : null; }
 async function saved(env, job, access) {
+  if (job.state === 'completed') job.metrics = refreshImageCostMetrics(job.metrics);
   if (job.reported) return fail('sheet_reported', 'This sheet was reported and is no longer available for recovery.', 410);
   if (job.state === 'completed') { const image = await env.GENERATIONS.get(job.objectKey); if (!image) return fail('result_unavailable', 'Saved image is unavailable.', 410); return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}}); }
   if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
@@ -666,12 +680,12 @@ async function generate(request, env, account, raw) {
   const {model,size}=prepared;
   try {
     const started = Date.now(), result = await runImageRequest(upstreamRequest);
-    const {image, size: actualSize, inputTokens, textInputTokens, imageInputTokens, outputTokens, totalTokens} = result;
+    const {image, size: actualSize, inputTokens, textInputTokens, imageInputTokens, cachedInputTokens, outputTokens, totalTokens} = result;
     const objectKey = account.id + '/' + generationId + '.png';
     const metrics = {requestedModel: model, provider: upstreamRequest.provider, upstreamModel: upstreamRequest.model,
       viaGateway: upstreamRequest.viaGateway, requestedSize: size.width + 'x' + size.height, size: actualSize,
       inputTokens, textInputTokens: textInputTokens ?? null, imageInputTokens: imageInputTokens ?? null,
-      outputTokens, totalTokens, elapsedMs: Date.now() - started, ...imageCost(upstreamRequest, result)};
+      cachedInputTokens: cachedInputTokens ?? null, outputTokens, totalTokens, elapsedMs: Date.now() - started, ...imageCost(upstreamRequest, result)};
     const completed = await call(env, account.id, '/store-result', {generationId, image: b64(new Uint8Array(image)), metrics});
     if (completed.status !== 200) return reply(completed.value, completed.status);
     return new Response(image, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': generationId, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(metrics)), 'X-Access-Snapshot': accessHeader(completed.value.access)}});

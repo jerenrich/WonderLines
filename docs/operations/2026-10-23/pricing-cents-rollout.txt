@@ -1,0 +1,55 @@
+Cloudflare metering reconciliation and cents rollout — 23 October 2026
+
+Checked 928 raw Workers AI metering records from 23 September through
+23 October 05:45 UTC. Rate checks use 294 successful unsampled image rows,
+284 of which contain cost metrics. Full sanitized cases, query and response
+hash: all-model-metering-evidence.json. Golden arithmetic fixtures are in
+Scripts/fixtures/cloudflare-image-metering-20261023.json.
+
+Klein 4B/9B, Dev, Schnell, Lucid, SDXL Base and Lightning agree with the
+configured rate formulas across the available metered cases. Schnell has a
+negligible meter floating-point difference (about 0.0000000034 cents per image).
+No rate change is justified by that difference. Both SDXL variants explicitly
+report step usage with zero neurons, consistent with the published beta rates.
+
+Phoenix reports whole billable tile counts of 3, 5 and 7 (25 steps each).
+Its 1456x1024 saved preset exactly matches 5 tiles / 3,900 neurons / ¢4.29.
+The earlier fix covered only that preset. Estimates now floor pixel area /
+512² with a one-tile minimum for other configurations too. That rounding rule
+is an inference from metering and native presets, not a published guarantee;
+non-matched configurations are labeled metering_inferred_tile_rule.
+DreamShaper retains its observed-preset-only estimate of ¢0.0002728.
+
+Representative per-image inference prices in US cents:
+Klein 4B      ¢0.1629753125   1456x1024
+Klein 9B      ¢1.584375       1456x1024
+Dev           ¢5.865234375    1456x1024, 25 steps
+Schnell       ¢0.19008        native 1024x1024, 4 steps
+Lucid         ¢5.85585        1456x1024, 25 steps
+Phoenix       ¢4.29           1456x1024, 25 steps
+SDXL Base     ¢0              published beta inference rate
+SDXL Lightning ¢0             published beta inference rate
+DreamShaper   ¢0.0002728      observed 1456x1024, 8-step preset only
+
+The Workers AI neuron dataset cannot establish externally hosted OpenAI/fal
+image charges. Their provider token/billing evidence and estimates are retained.
+Gateway zero cost attribution must not be interpreted as free generation.
+Moderation is still excluded from image estimates. Clef matches 24 cents/M
+input tokens. Clef Flash has historical 9 cents/M rows and recent 3.8 cents/M
+rows; historical usage must not be repriced using today's list rate.
+
+All app and comparison-site price displays use US cents with the ¢ prefix:
+totals, per-image details, provider unit prices and historical explanations.
+Up to eight fractional cent digits preserve tiny nonzero costs. Amounts below
+the display precision use a less-than indicator, never an apparent zero price.
+Stored/API *Usd values retain USD units; conversion happens at presentation.
+Comparison exports use *Cents field names and priceUnit = US cents.
+The native app refreshes estimates for all saved gallery providers when Usage
+opens or refreshes, so historical local costs receive server corrections too.
+Reads retain usable saved estimates on failed or incomplete lookups and do not
+submit paid generation requests.
+
+No paid generations were submitted for this work. Gross estimates exclude free
+allowances, account credits, moderation and infrastructure; they are not invoices.
+Deployment, app installation and final validation are recorded in
+pricing-cents-deployment-verification.json.

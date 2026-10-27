@@ -1,4 +1,5 @@
 import {catalog, publicJob} from './catalog.mjs';
+import {refreshImageCostMetrics} from '../../coloring-sheets-api/src/image-cost.mjs';
 import {structuredComposition, isUUID} from '../../coloring-sheets-api/src/composition.mjs';
 import {generationFingerprints, prepareGeneration, startGeneration} from '../../coloring-sheets-api/src/generation-start.mjs';
 
@@ -20,7 +21,7 @@ export class ComparisonLibrary {
     try { return await this.handle(request); }
     catch {
       const path=new URL(request.url).pathname;
-      console.info(JSON.stringify({event:'comparison_library_unavailable',operation:['/list','/get','/lookup','/job','/save','/start'].includes(path)?path:'unknown'}));
+      console.error(JSON.stringify({event:'comparison_library_unavailable',operation:['/list','/get','/lookup','/job','/save','/start'].includes(path)?path:'unknown'}));
       return fail('The library is temporarily unavailable. Please try again.',503,'library_unavailable');
     }
     };
@@ -150,7 +151,7 @@ export class ComparisonLibrary {
       env:this.env,call:(path,value)=>this.call(path,value),queueImages:true,
       // Provider credentials remain in the production Account object. That
       // object validates the provider request again before making inference.
-      validateProvider:false,fingerprintFormat:'hex',allowRoute:route=>route.provider!=='fal',
+      validateProvider:false,fingerprintFormat:'hex',allowRoute:route=>route.provider!=='fal'||route.model==='z-image-turbo',
       rateLimit:async()=>!this.env.GENERATION_LIMITER||!(await this.env.GENERATION_LIMITER.limit({key:'shared-lab'})).success
         ? {status:429,value:{error:{code:'request_failed',message:'Please wait a minute before starting more images.'}}}:null,
       beforeReserve:async()=>{
@@ -163,7 +164,7 @@ export class ComparisonLibrary {
   }
 
   async failed(grid,cell,message,status,code='request_failed') {
-    console.info(JSON.stringify({event:'comparison_start_failed',generationID:cell.id,gridID:grid.id,model:cell.model,status,errorCode:code}));
+    console.error(JSON.stringify({event:'comparison_start_failed',generationID:cell.id,gridID:grid.id,model:cell.model,status,errorCode:code}));
     cell.status='failed';cell.error=message;cell.errorCode=code;await this.state.storage.delete('pending:'+cell.id);await this.write(grid);return fail(message,status,code);
   }
   async handle(request) {
@@ -173,7 +174,12 @@ export class ComparisonLibrary {
     if(path==='/save')return this.save(input);
     if(path==='/start')return this.start(input);
     if(!isUUID(input?.id))return fail('Invalid comparison ID.');
-    if(path==='/get') {const grid=await this.state.storage.get('grid:'+input.id);return grid?json({grid}):fail('This comparison is no longer in the library.',404);}
+    if(path==='/get') {
+      const grid=await this.state.storage.get('grid:'+input.id);
+      if(!grid)return fail('This comparison is no longer in the library.',404);
+      for(const cell of grid.cells)if(cell.status==='completed')cell.metrics=refreshImageCostMetrics(cell.metrics);
+      return json({grid});
+    }
     if(path==='/job')return this.job(input.id);
     if(path==='/lookup') {const link=await this.state.storage.get('image:'+input.id);return link?.retired?fail('This comparison has left the library.',410,'grid_expired'):json({found:!!link});}
     return fail('Not found.',404);

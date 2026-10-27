@@ -1,0 +1,205 @@
+{
+  "checkedAtUTC": "2026-10-23T04:34:01.513031+00:00",
+  "site": "https://wonderlines-compare.jordan-erenrich.workers.dev/",
+  "sources": {
+    "workersLogs": "https://dash.cloudflare.com/994f60c144bd9dd9bc2333bd3abba832/observability/logs?ds=cloudflare-workers&q=outcome+%3D+%22failed%22",
+    "gatewayLogs": "https://dash.cloudflare.com/994f60c144bd9dd9bc2333bd3abba832/ai/ai-gateway/gateways/coloring-sheets/logs",
+    "savedGridID": "73fe997e-31aa-4e14-9410-8179870bbdfe"
+  },
+  "query": {
+    "dataset": "Workers",
+    "timeRange": "Last 1 hour at inspection",
+    "filter": "outcome = \"failed\"",
+    "rows": 7
+  },
+  "findings": {
+    "failedAttempts": 7,
+    "provider": "workers-ai",
+    "httpStatus": 400,
+    "failureStage": "submitting",
+    "modelCounts": {
+      "flux-2-dev": 3,
+      "flux-2-klein-4b": 2,
+      "lucid-origin": 1,
+      "flux-1-schnell": 1
+    },
+    "codeCounts": {
+      "3030": 6,
+      "8007": 1
+    },
+    "workerExceptionsShownInUnfilteredLastHour": 0,
+    "currentGrid": {
+      "total": 44,
+      "completed": 43,
+      "failed": [
+        {
+          "id": "c07bd6d7-66bc-4187-90a3-d1fdb74020ef",
+          "model": "flux-2-dev",
+          "age": 10
+        }
+      ]
+    },
+    "classification": "Upstream Workers AI rejection/failure, before image conversion or storage. The retained fields do not identify the exact internal provider reason.",
+    "loggingGaps": [
+      "Provider error response text is discarded. Gateway image request logging is explicitly disabled with cf-aig-collect-log=false. Gateway UI has no retained records for these requests.",
+      "Unrecognized HTTP 400 errors become provider_request_rejected with generic input/parameters guidance. This does not prove the user description or dimensions caused the failure.",
+      "comparison_image failures are emitted using console.info and do not increase the Worker exception/error counter."
+    ],
+    "inference": "Successful requests for the same models, and replacement IDs in the current grid, are consistent with intermittent failures; a specific provider defect, parameter issue, safety trigger or capacity problem is not established."
+  },
+  "events": [
+    {
+      "timestampLocal": "2026-10-23 05:28:52.091 BST",
+      "event": "comparison_image",
+      "generationID": "c07bd6d7-66bc-4187-90a3-d1fdb74020ef",
+      "model": "flux-2-dev",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "3030"
+      ],
+      "inferenceMs": 9624,
+      "queueMs": 1372,
+      "elapsedMs": 10996,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a16704-ae76-73a0-b2a6-8fd3f7ab02fd",
+      "cfRay": "a4edff1d8aabc616-LHR",
+      "level": "info"
+    },
+    {
+      "timestampLocal": "2026-10-23 05:27:28.819 BST",
+      "event": "comparison_image",
+      "generationID": "cbc34939-e541-4aae-94b6-b20a1552fedb",
+      "model": "flux-2-klein-4b",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "3030"
+      ],
+      "inferenceMs": 11531,
+      "queueMs": 1745,
+      "elapsedMs": 13276,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a16703-61b4-7535-9880-7f151334f7d3",
+      "cfRay": "a4edfd091ac5ef39-LHR",
+      "level": "info"
+    },
+    {
+      "timestampLocal": "2026-10-23 05:27:25.516 BST",
+      "event": "comparison_image",
+      "generationID": "3fb86f34-bbdf-4fc8-a3eb-558624cd3f3c",
+      "model": "flux-2-dev",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "3030"
+      ],
+      "inferenceMs": 8127,
+      "queueMs": 1945,
+      "elapsedMs": 10072,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a16703-6218-75b5-b25e-d4c2b35c4acd",
+      "cfRay": "a4edfd09bacafba2-AMS",
+      "level": "info"
+    },
+    {
+      "timestampLocal": "2026-10-23 05:22:01.434 BST",
+      "event": "comparison_image",
+      "generationID": "ee9c2019-2057-4830-9865-323e0ae40377",
+      "model": "flux-2-klein-4b",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "3030"
+      ],
+      "inferenceMs": 15874,
+      "queueMs": 1900,
+      "elapsedMs": 17774,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a166fe-51e3-738e-b4ee-441fd1bea646",
+      "cfRay": "a4edf4efcc7ff365-LHR",
+      "level": "info"
+    },
+    {
+      "timestampLocal": "2026-10-23 05:21:54.576 BST",
+      "event": "comparison_image",
+      "generationID": "c85fda30-b36c-498c-ba77-cf91a0649fb8",
+      "model": "flux-2-dev",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "3030"
+      ],
+      "inferenceMs": 9025,
+      "queueMs": 2286,
+      "elapsedMs": 11311,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a166fe-51da-7222-94b2-b5537e3e43b9",
+      "cfRay": "a4edf4efc8d82abe-LHR",
+      "level": "info"
+    },
+    {
+      "timestampLocal": "2026-10-23 05:21:53.504 BST",
+      "event": "comparison_image",
+      "generationID": "7c81da9e-06c7-48e4-9280-4d4d570e5769",
+      "model": "lucid-origin",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "3030"
+      ],
+      "inferenceMs": 7959,
+      "queueMs": 1332,
+      "elapsedMs": 9291,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a166fe-51dd-717b-a803-1574a8afb986",
+      "cfRay": "a4edf4efbec0d7e3-LHR",
+      "level": "info"
+    },
+    {
+      "timestampLocal": "2026-10-23 05:21:46.779 BST",
+      "event": "comparison_image",
+      "generationID": "58d1f3d4-9506-44a7-8dcb-91c5e40d6a6d",
+      "model": "flux-1-schnell",
+      "provider": "workers-ai",
+      "stage": "submitting",
+      "outcome": "failed",
+      "errorCode": "provider_request_rejected",
+      "httpStatus": 400,
+      "upstreamErrorCodes": [
+        "8007"
+      ],
+      "inferenceMs": 1296,
+      "queueMs": 2027,
+      "elapsedMs": 3323,
+      "failureStage": "submitting",
+      "gatewayRequestID": "01a166fe-519e-7643-bc26-6b93231f0b7f",
+      "cfRay": "a4edf4ef5b4c3696-LHR",
+      "level": "info"
+    }
+  ],
+  "recommendedNextSteps": [
+    "Capture privacy-safe allowlisted provider failure categories before discarding raw error responses. Keep prompts, images, arbitrary provider text and credentials excluded.",
+    "Emit failed comparison_image events at warning or error level and filter monitoring on outcome=failed, not only Worker exceptions.",
+    "Use the existing explicit Retry image control for the remaining failed cell after reconciling job status. Avoid blind automatic retries on generic 400s."
+  ],
+  "changesMade": "Diagnostic evidence only; no code, deployments, logging configuration or paid image generations changed by this investigation."
+}

@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import * as costDisplay from '../public/cost-display.mjs';
 
 // Exercise the shipped client orchestration without a browser or paid calls.
 // Rendering is checked separately in the real browser; only DOM sinks are stubbed.
-const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
+const source=(await readFile(new URL('../public/app.js',import.meta.url),'utf8'))
+  .replace(/^import .* from '\.\/cost-display\.mjs';\n/m,'');
 const nodes=new Map(),requests=[];
 let resolveJob,lookup,submit;
-const context=vm.createContext({crypto,console,requestAnimationFrame:()=>{},
+const context=vm.createContext({...costDisplay,crypto,console,requestAnimationFrame:()=>{},
   document:{getElementById:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);},querySelectorAll:()=>[],hidden:false},
   fetch:async(path,options={})=>{
     requests.push({path,method:options.method||'GET',body:options.body&&JSON.parse(options.body)});

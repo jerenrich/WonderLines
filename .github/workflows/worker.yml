@@ -6,8 +6,10 @@ on:
     paths:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_z_image.mjs'
       - 'Scripts/test_comparison_queue.mjs'
       - 'Scripts/test_comparison_runner.mjs'
+      - 'Scripts/test_provider_diagnostics.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -23,8 +25,10 @@ on:
     paths:
       - 'workers/**'
       - 'Scripts/test_worker.mjs'
+      - 'Scripts/test_z_image.mjs'
       - 'Scripts/test_comparison_queue.mjs'
       - 'Scripts/test_comparison_runner.mjs'
+      - 'Scripts/test_provider_diagnostics.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -73,8 +77,10 @@ jobs:
       - name: Run offline Worker and image cost tests
         run: |
           node Scripts/test_worker.mjs
+          node Scripts/test_z_image.mjs
           node Scripts/test_comparison_queue.mjs
           node Scripts/test_comparison_runner.mjs
+          node Scripts/test_provider_diagnostics.mjs
           node Scripts/test_request_security.mjs
           node Scripts/test_privacy.mjs
           node Scripts/test_reporting_concurrency.mjs
@@ -84,6 +90,8 @@ jobs:
           node workers/generation-lab/tests/worker.mjs
           node workers/generation-lab/tests/library.mjs
           node workers/generation-lab/tests/retry.mjs
+          node workers/generation-lab/tests/cost-display.mjs
+          node workers/generation-lab/tests/model-reference-cost.mjs
           node workers/log-retention/tests/worker.mjs
           node Scripts/test_diagnostic_retention.mjs
           node --check workers/moderation-lab/public/app.js

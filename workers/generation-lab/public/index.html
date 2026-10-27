@@ -6,7 +6,7 @@
   <meta name="description" content="Compare WonderLines colouring sheets across image models and ages.">
   <title>Compare · WonderLines</title>
   <link rel="icon" href="/mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script>
 </head>
 <body>
   <header class="topbar">
@@ -45,6 +45,7 @@
           <div class="section-title"><span class="step">02</span><h2>Pick your models</h2><button id="select-all-models" type="button" class="text-button">Select all</button></div>
           <div id="model-options" class="model-options"></div>
           <details class="more-models"><summary>More models</summary><div id="extra-model-options" class="model-options"></div></details>
+          <p class="model-price-note">Reference costs per image in US cents, checked 23 Oct 2026. Billing confirmed refers to audited requests; estimates and future charges may vary. Tiny nonzero costs show &lt;¢0.01.</p>
           <div class="section-title"><span class="step">03</span><h2>Choose ages</h2></div>
           <p class="field-hint">Age changes the detail, from bold shapes to fine lines.</p>
           <div class="age-options" id="age-options"></div>
@@ -75,6 +76,6 @@
     <footer class="page-footer"><span>Made for curious minds.</span><span>WonderLines <span>↗</span></span></footer>
   </main>
   <dialog id="image-dialog" aria-labelledby="dialog-title"><div class="dialog-toolbar"><span id="dialog-title"></span><button id="close-dialog" aria-label="Close image preview">×</button></div><img id="dialog-image" alt=""></dialog>
-  <dialog id="details-dialog" aria-labelledby="details-title"><div class="dialog-toolbar"><span id="details-title"></span><button id="close-details" aria-label="Close image details">×</button></div><div class="details-content"><dl id="details-list"></dl><p id="details-note">Costs are estimates unless marked as provider-reported.</p><div id="details-actions"></div></div></dialog>
+  <dialog id="details-dialog" aria-labelledby="details-title"><div class="dialog-toolbar"><span id="details-title"></span><button id="close-details" aria-label="Close image details">×</button></div><div class="details-content"><dl id="details-list"></dl><p id="details-note">Prices are in US cents (¢). Costs are estimates unless marked as provider-reported.</p><div id="details-actions"></div></div></dialog>
 </body>
 </html>
