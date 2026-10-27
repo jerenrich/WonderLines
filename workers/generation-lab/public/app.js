@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const STORAGE = 'wonderlines-comparisons-v1';
 const MAX_IMAGES = 80;
 const MAX_PARALLEL_GENERATIONS = 50;
-const providerLabels = {'openai':'OpenAI', 'workers-ai':'Cloudflare', 'google-ai-studio':'Google'};
+const providerLabels = {'openai':'OpenAI', 'workers-ai':'Cloudflare', 'google-ai-studio':'Google', 'fal':'fal.ai'};
 const presets = [{age:4, range:'3–5', detail:'Very simple'}, {age:7, range:'6–8', detail:'Simple'}, {age:10, range:'9–12', detail:'Detailed'}, {age:15, range:'13–18', detail:'Intricate'}];
 const ageDetail = age => presets[age <= 5 ? 0 : age <= 8 ? 1 : age <= 12 ? 2 : 3].detail;
 const selectedModels = new Set(['gpt-image-2.5-flare', 'flux-2-klein-4b']);
@@ -113,6 +113,11 @@ function renderOptions() {
     const title = el('span'); title.append(el('span','',model.label),el('small','provider',providerLabels[model.provider] || model.provider)); label.append(input,title);
     input.addEventListener('change', () => { input.checked ? selectedModels.add(model.id) : selectedModels.delete(model.id); updateSummary(); });
     $(model.recommended ? 'model-options' : 'extra-model-options').append(label);
+  }
+  if(config.unavailableModels?.length){
+    const note=el('details','provider-setup');note.append(el('summary','','Models requiring another endpoint'));
+    for(const model of config.unavailableModels){const item=el('p');item.append(el('strong','',model.label+': '),document.createTextNode(model.reason));note.append(item);}
+    $('extra-model-options').append(note);
   }
   $('age-options').replaceChildren();
   for (const preset of presets) {

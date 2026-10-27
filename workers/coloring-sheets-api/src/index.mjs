@@ -376,7 +376,7 @@ export class Account {
     const used = usage?.day === day ? usage.used : 0; let credits = (await this.state.storage.get('credits')) ?? 0;
     if (used >= DAILY_IMAGE_LIMIT) return fail('allowance_exhausted', 'Today’s limit of 100 images has been reached. It resets at midnight UTC.', 429);
     if (used >= allowance && credits < 1) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
-    const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask ? 'fal' : undefined);
+    const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask || imageTask?.route?.provider === 'fal' ? 'fal' : undefined);
     if (global.status === 429) return fail('service_budget_exhausted', global.value.error.message, 429);
     if (global.status >= 400) return fail('service_unavailable', 'Could not reserve service capacity.', 503);
     await this.state.storage.put('usage', {day, used: used + 1});
