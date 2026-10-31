@@ -68,3 +68,58 @@ Prices throughout the studio, detail dialogs and JSON exports use US cents (¢).
 Comparison presets without matching audited price evidence show **Price unavailable**. This includes the approximately one-megapixel fal presets; the app’s audited Z-Image Turbo preset uses different dimensions, so its billing-confirmed reference is not copied to the comparison preset. Completed images can still show their own endpoint-specific billing evidence.
 
 Each model choice and comparison row shows a per-image reference cost and either **Billing confirmed** or **Estimate**. The app uses the same audited reference prices. OpenAI figures are token-based averages; Cloudflare prices are metering-backed estimates for the stated presets; Z-Image’s reference price is backed by four matched billing events. These labels describe the reference samples, not a guarantee for future requests. Current route identity must match before a historical row is given a reference price. Run `node tests/model-reference-cost.mjs` to check every model and alias remapping.
+
+## Google-protected model administration
+
+Model controls live at **`https://wonderlines-compare.jordan-erenrich.workers.dev/admin/models`**. They use Google sign-in, independently of the comparison studio's access key. Only the verified Google account **`jordan.erenrich@gmail.com`** has `models:read`, `models:write` and `models:rollback` permissions. Other Google accounts, unverified email claims and studio access-key sessions cannot access the admin APIs.
+
+### One-time Google setup
+
+There is no Google OAuth client configured yet. Until the following setup is completed, the page displays a setup message and all admin APIs stay locked. The existing comparison studio continues to work.
+
+1. Create or select a Google Cloud project. Configure its Google Auth Platform branding and choose an External audience for this Gmail account. If the app is in testing mode, add `jordan.erenrich@gmail.com` as a test user.
+2. Create an OAuth client of type **Web application**. Register this exact authorized redirect URI:
+
+   ```text
+   https://wonderlines-compare.jordan-erenrich.workers.dev/api/admin/auth/callback
+   ```
+
+3. From the repository root, configure the resulting client ID and secret on the **comparison studio Worker**, using interactive secret input. Do not paste secrets into chat, source code or command arguments:
+
+   ```sh
+   npx wrangler secret put GOOGLE_CLIENT_ID --config workers/generation-lab/wrangler.jsonc
+   npx wrangler secret put GOOGLE_CLIENT_SECRET --config workers/generation-lab/wrangler.jsonc
+   node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))" | npx wrangler secret put MODEL_ADMIN_SESSION_SECRET --config workers/generation-lab/wrangler.jsonc
+   ```
+
+4. Keep `MODEL_ADMIN_ORIGIN` equal to the HTTPS origin in `wrangler.jsonc`. If adding a custom domain, update this value and the registered Google redirect URI together. Deploy with `--keep-vars` through the existing workflow, then open Model controls and sign in with the allowed account.
+
+Only the `openid email` scopes are requested. The server uses authorization code flow with PKCE, signed expiring state, a nonce and `jose` verification of Google's RS256 ID token, issuer, audience, expiry and verified email. The Google subject is retained as the stable audit identity. Google access/refresh tokens are never stored. Admin sessions are signed, expire after eight hours and use an HttpOnly, Secure, SameSite=Strict cookie; rotating the session secret invalidates them. The short-lived OAuth round-trip cookie is SameSite=Lax so the Google redirect can return to the site. Mutation endpoints require the exact same Origin. OAuth codes, secrets and upstream error bodies are never put into application logs or page messages.
+
+References: [Google OpenID Connect server flow](https://developers.google.com/identity/openid-connect/openid-connect), [jose JWT verification](https://github.com/panva/jose).
+
+### Editing and restoring
+
+Provider switches, individual availability, picker visibility, default, order, labels, descriptions, routes and reference prices are editable. Prices are entered in **US cents** and stored as USD, matching the existing API. New entries start disabled. Use **Validate changes** to review the production validator's results and a change summary, add a short change note, then publish. Editing the document again invalidates the validation preview; the server always validates again before publishing. Hiding a model permits explicit requests, while disabling it blocks them. Validation warns when no models will be visible or when the chosen default must fall back.
+
+The history shows the timestamp, Google identity, change note and action for each accepted version. **View version** opens the immutable snapshot. **Restore this version** publishes a new version with the old settings in one click, records its source and preserves all subsequent history. Restore buttons are disabled while a draft is dirty, so rollback cannot silently discard edits. Stale tabs receive a conflict instead of overwriting newer work. An intentionally empty catalogue and all-provider pause remain valid configurations.
+
+`ModelCatalogueAdmin` is a single control-plane Durable Object (`model-catalogue-v1`) that serializes admin writes, keeps immutable snapshots and handles interrupted publication through a durable outbox and alarm. The `v2-model-catalogue-admin` migration provisions its storage. The object writes to the existing `MODEL_REGISTRY` namespace; **apps and generation admission continue to read KV directly**. Admin history does not sit on the generation path. Keep both namespaces and all migrations on subsequent deployments; never recreate the admin namespace to update code.
+
+Each publish/restore carries an idempotency key and expected base version. History is paginated in groups of 20. If a KV write or subsequent history commit fails, publishing stays pending and resumes after restart; the same request cannot create a second version or republish an old one. The UI checks an uncertain request's receipt before allowing another edit. Do not overwrite a pending publication using another tool.
+
+Direct KV edits with a **fresh revision** are imported into history the next time admin controls observe them, with an external-change attribution rather than a fabricated Google identity. Previously known snapshots can still be returned by KV caches, so restoring by manually writing an old document without a new revision cannot be distinguished from propagation delay. Use the rollback control for restores. Avoid mixing dashboard/CLI writes with admin publishing concurrently: KV does not offer compare-and-swap across those independent tools. If a direct edit makes the live document invalid, the admin page keeps the last recorded version, warns about the live value and allows a validated publish/restore to repair it.
+
+### Checks
+
+Install the pinned authentication dependency before running comparison tests:
+
+```sh
+npm ci --ignore-scripts --no-fund --no-audit --prefix workers/generation-lab
+node workers/generation-lab/tests/admin-auth.mjs
+node workers/generation-lab/tests/model-admin.mjs
+node workers/generation-lab/tests/worker.mjs
+node --check workers/generation-lab/public/admin/models.js
+```
+
+Auth tests exercise cryptographically signed synthetic Google identities, the PKCE/state/nonce flow, the owner allowlist, expiration, rotation and CSRF. Store/API tests cover invalid drafts, immutable versions, attribution, concurrent stale tabs, rollback, pagination, direct-edit imports and ambiguous publication recovery. No test calls Google or changes production KV. A real Google sign-in remains a rollout check after the OAuth client is configured.

@@ -90,6 +90,9 @@ jobs:
         id: revision
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Install comparison studio authentication dependency
+        run: npm ci --ignore-scripts --no-fund --no-audit --prefix workers/generation-lab
+
       - name: Run offline Worker and image cost tests
         run: |
           node Scripts/test_worker.mjs
@@ -111,6 +114,8 @@ jobs:
           node Scripts/test_moderation_calibration.mjs
           node workers/moderation-lab/tests/worker.mjs
           node workers/generation-lab/tests/worker.mjs
+          node workers/generation-lab/tests/admin-auth.mjs
+          node workers/generation-lab/tests/model-admin.mjs
           node workers/generation-lab/tests/library.mjs
           node workers/generation-lab/tests/retry.mjs
           node workers/generation-lab/tests/cost-display.mjs
@@ -120,6 +125,7 @@ jobs:
           node Scripts/test_diagnostic_retention.mjs
           node --check workers/moderation-lab/public/app.js
           node --check workers/generation-lab/public/app.js
+          node --check workers/generation-lab/public/admin/models.js
 
       - name: Check deployment credentials
         if: github.event_name != 'pull_request'

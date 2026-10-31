@@ -314,7 +314,7 @@ The production binding is pinned to namespace `7088d2edc1ea4422bb7cfc61ae6a08c0`
 
 ### Routine edits (no deployment)
 
-Download/back up the current value before editing: `npx wrangler@4.136.3 kv key get catalogue:v1 --binding MODEL_REGISTRY --config workers/coloring-sheets-api/wrangler.jsonc --remote > /tmp/wonderlines-model-registry.json`. Keep previous revisions for rollback. Edit the full document, change `revision`, validate it with `node Scripts/model_registry.mjs /tmp/wonderlines-model-registry.json`, then upload it using the same `kv key put` command with the edited `--path`. Alternatively edit the single key in Cloudflare's KV dashboard. The worker has no public write endpoint.
+Download/back up the current value before editing: `npx wrangler@4.136.3 kv key get catalogue:v1 --binding MODEL_REGISTRY --config workers/coloring-sheets-api/wrangler.jsonc --remote > /tmp/wonderlines-model-registry.json`. Keep previous revisions for rollback. Edit the full document, change `revision`, validate it with `node Scripts/model_registry.mjs /tmp/wonderlines-model-registry.json`, then upload it using the same `kv key put` command with the edited `--path`. Alternatively edit the single key in Cloudflare's KV dashboard. The app API worker has no public write endpoint. For validated edits, change history and one-click rollback, use the [Google-protected model controls](../generation-lab/README.md#google-protected-model-administration).
 
 - `providers.<provider>.enabled: false` blocks all new requests for that provider, including the private comparison studio's experimental fal routes when fal is disabled.
 - `models[].enabled: false` blocks that model even when submitted by a stale/older app. Removing an entry also blocks its app route.
