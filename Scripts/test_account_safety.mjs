@@ -128,6 +128,14 @@ try {
   }})}});
   await runner.fetch(new Request('https://runner/start', {method: 'POST', body: JSON.stringify({id: runnerID, accountId: runnerAccount, fingerprint: 'test', createdAt: clock, subject: 'Synthetic example', route: {provider: 'openai', model: 'gpt-image-2.5-flare'}, size: {width: 1456, height: 1024}})}));
   const beforeRunner = calls; await runner.alarm(); assert.equal(calls, beforeRunner); assert.equal(completedResult.errorCode, 'account_suspended');
+  // Deletion while a runner is queued must discard its prompt, not retry forever.
+  const deletedRunnerState = new Storage(), deletedRunner = new ComparisonImageRunner({storage: deletedRunnerState}, {
+    COMPARISON_ACCOUNT_ID: runnerAccount, OPENAI_API_KEY: 'synthetic', GENERATIONS: {delete: async () => {}},
+    ACCOUNTS: {idFromName: id => id, get: () => ({fetch: async url => Response.json({error: {code: 'account_deleted'}}, {status: new URL(url).pathname === '/generation-gate' ? 410 : 404})})}});
+  await deletedRunner.fetch(new Request('https://runner/start', {method: 'POST', body: JSON.stringify({id: crypto.randomUUID(), accountId: runnerAccount, fingerprint: 'test', createdAt: clock,
+    subject: 'Synthetic example', route: {provider: 'openai', model: 'gpt-image-2.5-flare'}, size: {width: 1456, height: 1024}})}));
+  await deletedRunner.alarm(); assert.equal((await deletedRunnerState.get('task')).stage, 'done');
+  assert.equal((await deletedRunnerState.get('task')).subject, undefined); assert.equal(calls, beforeRunner);
   clock += 2 * DAY; await cleanSafetyDirectory(directory.state.storage);
   assert.equal(await directory.state.storage.get('suspension:' + identity.accountId), undefined);
   assert.ok(!JSON.stringify(logs).includes('Synthetic example'), 'Safety operations never log descriptions.');

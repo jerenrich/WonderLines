@@ -93,6 +93,10 @@ export class ComparisonImageRunner {
     catch{return this.finish(task,{state:'failed',errorCode:'provider_unavailable',message:'The image provider is not configured for this model.'});}
     const gate=await this.account('/generation-gate',{},task.accountId);
     if(!gate.ok) {
+      if([404,410].includes(gate.status)) {
+        await gate.body?.cancel();
+        return this.finish(task,{state:'failed',errorCode:'account_deleted',message:'This account has been deleted.'});
+      }
       if(gate.status!==403) {await gate.body?.cancel();throw new Error('Account safety unavailable');}
       const blocked=await gate.json();
       if(blocked.error?.code!=='account_suspended')throw new Error('Account safety unavailable');
