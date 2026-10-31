@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {SignJWT,generateKeyPair,exportJWK,createLocalJWKSet} from 'jose';
 import worker from '../src/index.mjs';
-import {ADMIN_EMAIL,adminPrincipal,verifyGoogleIdentity,beginAdminLogin,adminConfigured} from '../src/admin-auth.mjs';
+import {ADMIN_EMAIL,adminPrincipal,comparisonPrincipal,verifyGoogleIdentity,beginAdminLogin,adminConfigured} from '../src/admin-auth.mjs';
 import {createSession} from '../src/auth.mjs';
 
 const origin='https://admin.example';
@@ -85,6 +85,16 @@ try {
   assert.equal(await adminPrincipal(request('/api/admin/models','GET',undefined,'__Host-wonderlines_admin='+expired),env),null);
   const wrongUser=await new SignJWT({purpose:'session',email:'other@gmail.com'}).setProtectedHeader({alg:'HS256'}).setIssuer('wonderlines-model-admin').setAudience(env.GOOGLE_CLIENT_ID).setSubject('other').setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.MODEL_ADMIN_SESSION_SECRET));
   assert.equal(await adminPrincipal(request('/api/admin/models','GET',undefined,'__Host-wonderlines_admin='+wrongUser),env),null);
-  assert.equal(exchanges,1);assert.equal(keyReads,1);
+  response=await worker.fetch(request('/api/admin/auth/start?destination=comparison'),env);
+  const compareLocation=new URL(response.headers.get('Location'));
+  currentNonce=compareLocation.searchParams.get('nonce');expectedVerifier=compareLocation.searchParams.get('code_challenge');
+  const compareFlow=response.headers.get('Set-Cookie').split(';')[0];
+  response=await worker.fetch(request('/api/admin/auth/callback?state='+compareLocation.searchParams.get('state')+'&code=code','GET',undefined,compareFlow),env);
+  assert.equal(response.headers.get('Location'),'/');
+  const compareCookie=response.headers.getSetCookie().find(value=>value.startsWith('__Host-wonderlines_compare_google=')).split(';')[0];
+  assert.equal((await comparisonPrincipal(request('/','GET',undefined,compareCookie),env)).email,ADMIN_EMAIL);
+  assert.equal(await adminPrincipal(request('/','GET',undefined,compareCookie),env),null);
+  assert.equal(await comparisonPrincipal(request('/','GET',undefined,cookie),env),null);
+  assert.equal(exchanges,2);assert.equal(keyReads,1);
 } finally {globalThis.fetch=originalFetch;}
 console.log('PASS: Google code/PKCE flow, signed state and nonce, RS256 identity validation, owner allowlist, separate sessions, CSRF, expiry, rotation and no token persistence; no network.');

@@ -23,7 +23,7 @@ export async function handleModelAdmin(request,env) {
       const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(request.headers.get('CF-Connecting-IP')??'unknown'));
       const key='model-admin:'+Array.from(new Uint8Array(bytes),byte=>byte.toString(16).padStart(2,'0')).join('');
       if(!(await env.LOGIN_LIMITER.limit({key})).success)return fail('Too many sign-in attempts. Please wait a minute.',429);
-      return path===CALLBACK_PATH?finishAdminLogin(request,env):beginAdminLogin(env);
+      return path===CALLBACK_PATH?finishAdminLogin(request,env):beginAdminLogin(env,url.searchParams.get('destination')==='comparison'?'comparison':'admin');
     }
     if(!['GET','POST'].includes(request.method))return fail('Method not allowed.',405);
     if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return fail('Please use this website to make the change.',403,'invalid_origin');

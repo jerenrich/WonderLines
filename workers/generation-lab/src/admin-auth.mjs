@@ -6,6 +6,7 @@ export const ADMIN_PATH = '/admin/models';
 export const CALLBACK_PATH = '/api/admin/auth/callback';
 const SESSION = '__Host-wonderlines_admin';
 const FLOW = '__Host-wonderlines_admin_oauth';
+const COMPARE_SESSION = '__Host-wonderlines_compare_google';
 const issuer = 'wonderlines-model-admin';
 const encoder = new TextEncoder();
 const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'), {
@@ -47,16 +48,19 @@ async function verifyLocal(env, token, purpose) {
   if (payload.purpose !== purpose) throw new Error('Wrong cookie purpose');
   return payload;
 }
-export async function adminPrincipal(request, env) {
+async function sessionPrincipal(request, env, cookieName, purpose) {
   if (!adminConfigured(env)) return null;
   try {
-    const token = cookie(request, SESSION);
+    const token = cookie(request, cookieName);
     if (!token || token.length > 4096) return null;
-    const payload = await verifyLocal(env, token, 'session');
+    const payload = await verifyLocal(env, token, purpose);
     if (payload.email !== ADMIN_EMAIL || typeof payload.sub !== 'string' || !payload.sub || payload.sub.length > 255) return null;
     return {id:payload.sub, email:ADMIN_EMAIL, role:'model-admin'};
   } catch { return null; }
 }
+export const adminPrincipal = (request, env) => sessionPrincipal(request, env, SESSION, 'session');
+export const comparisonPrincipal = (request, env) => sessionPrincipal(request, env, COMPARE_SESSION, 'comparison-session');
+export const endComparisonSession = () => adminCookie(COMPARE_SESSION);
 export async function verifyGoogleIdentity(token, env, nonce, keys = googleKeys) {
   const {payload} = await jwtVerify(token, keys, {algorithms:['RS256'],
     issuer:['https://accounts.google.com','accounts.google.com'], audience:env.GOOGLE_CLIENT_ID,
@@ -68,10 +72,10 @@ export async function verifyGoogleIdentity(token, env, nonce, keys = googleKeys)
       payload.azp !== undefined && payload.azp !== env.GOOGLE_CLIENT_ID) throw new Error('Google account not authorized');
   return {id:payload.sub, email:ADMIN_EMAIL};
 }
-export async function beginAdminLogin(env) {
+export async function beginAdminLogin(env, destination = 'admin') {
   const state = random(), nonce = random(), verifier = random();
   const challenge = base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(verifier))));
-  const flow = await sign(env, {purpose:'oauth', state, nonce, verifier}, 'oauth-flow', '10m');
+  const flow = await sign(env, {purpose:'oauth', state, nonce, verifier, destination:destination === 'comparison' ? 'comparison' : 'admin'}, 'oauth-flow', '10m');
   const target = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   target.search = new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID, redirect_uri:adminOrigin(env)+CALLBACK_PATH,
     response_type:'code', scope:'openid email', state, nonce, code_challenge:challenge, code_challenge_method:'S256',
@@ -80,12 +84,14 @@ export async function beginAdminLogin(env) {
 }
 export async function finishAdminLogin(request, env) {
   const clear = adminCookie(FLOW, '', 0, 'Lax');
+  let destination = ADMIN_PATH;
   try {
     const url = new URL(request.url), token = cookie(request, FLOW);
     if (!token || token.length > 4096 || url.search.length > 4096) throw new Error('Invalid callback');
     const flow = await verifyLocal(env, token, 'oauth');
+    destination = flow.destination === 'comparison' ? '/' : ADMIN_PATH;
     if (typeof flow.state !== 'string' || !await equal(url.searchParams.get('state') ?? '', flow.state)) throw new Error('Invalid state');
-    if (url.searchParams.has('error')) return redirect(ADMIN_PATH+'?login=cancelled', [clear]);
+    if (url.searchParams.has('error')) return redirect(destination+'?login=cancelled', [clear]);
     const code = url.searchParams.get('code');
     if (!code || code.length > 2048 || typeof flow.verifier !== 'string' || typeof flow.nonce !== 'string') throw new Error('Invalid authorization');
     const response = await fetch('https://oauth2.googleapis.com/token', {method:'POST', redirect:'manual',
@@ -98,12 +104,13 @@ export async function finishAdminLogin(request, env) {
     const data = JSON.parse(raw);
     if (typeof data.id_token !== 'string' || data.id_token.length > 16384) throw new Error('Missing Google identity');
     const principal = await verifyGoogleIdentity(data.id_token, env, flow.nonce);
-    const session = await sign(env, {purpose:'session', email:principal.email}, principal.id, '8h');
-    return redirect(ADMIN_PATH, [clear, adminCookie(SESSION, session, 28800)]);
+    const comparison = destination === '/';
+    const session = await sign(env, {purpose:comparison ? 'comparison-session' : 'session', email:principal.email}, principal.id, '8h');
+    return redirect(destination, [clear, adminCookie(comparison ? COMPARE_SESSION : SESSION, session, 28800)]);
   } catch {
     // OAuth codes, tokens and upstream error bodies must never appear in logs,
     // redirects or user-visible messages.
-    return redirect(ADMIN_PATH+'?login=failed', [clear, adminCookie(SESSION)]);
+    return redirect(destination+'?login=failed', [clear]);
   }
 }
 export function endAdminSession() {

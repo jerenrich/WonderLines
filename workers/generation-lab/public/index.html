@@ -6,12 +6,12 @@
   <meta name="description" content="Compare WonderLines colouring sheets across image models and ages.">
   <title>Compare · WonderLines</title>
   <link rel="icon" href="/mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/admin/models.css"><script src="/app.js" type="module"></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="WonderLines home"><img src="/mark.svg" alt="" width="34" height="34"><span>WonderLines<span class="brand-divider">/</span><span class="brand-section">Compare</span></span></a>
-    <div class="top-actions"><a class="text-button" href="/admin/models">Model controls</a><span class="private-badge"><span></span> Private workspace</span><button id="logout" class="text-button" hidden>Lock workspace <span aria-hidden="true">↗</span></button></div>
+    <div class="top-actions"><a class="text-button" href="/admin/models">Model controls</a><span class="private-badge"><span></span> Private workspace</span><button id="logout" class="text-button" hidden>Sign out <span aria-hidden="true">↗</span></button></div>
   </header>
 
   <main id="login-view" class="login-view">
@@ -19,14 +19,11 @@
     <span class="eyebrow">THE WONDERLINES PLAYGROUND</span>
     <h1>Good ideas deserve<br>a few different takes.</h1>
     <p>One prompt, different models and ages.<br>Find the lines you love, side by side.</p>
-    <form id="login-form" class="login-card">
-      <label for="access-key">Your workspace access key</label>
-      <div class="key-field"><input id="access-key" type="password" autocomplete="current-password" placeholder="Enter your private key" required maxlength="256"><button id="show-key" type="button" class="text-button" aria-label="Show access key">Show</button></div>
-      <label class="remember"><input id="remember" type="checkbox" checked> Remember me for 30 days</label>
+    <div class="login-card">
+      <p>Sign in with your authorized Google account.</p>
       <p id="login-error" role="alert" class="error" hidden></p>
-      <button class="primary" id="unlock" type="submit">Open workspace <span aria-hidden="true">→</span></button>
-      <p class="login-note">Your key is exchanged for a secure browser session.</p>
-    </form>
+      <a class="google-signin" id="google-signin" href="/api/admin/auth/start?destination=comparison"><span aria-hidden="true">G</span> Sign in with Google</a>
+    </div>
     <span class="login-footer">A small space for big imaginations.</span>
   </main>
 

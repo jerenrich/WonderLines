@@ -308,13 +308,7 @@ async function runCells(recovery = false) {
   setBusy(false); persist(); renderGrid();
 }
 async function recover() { if(current?.cells.some(c=>['processing','submitting','uncertain'].includes(c.status))) await runCells(true); }
-$('login-form').addEventListener('submit',async event=>{
-  event.preventDefault(); $('unlock').disabled=true; message('login-error','');
-  try { await api('/api/session',{method:'POST',body:JSON.stringify({key:$('access-key').value.trim(),remember:$('remember').checked})}); $('access-key').value=''; await openWorkspace(); }
-  catch(error) { message('login-error',error.message); } finally { $('unlock').disabled=false; }
-});
-$('show-key').addEventListener('click',()=>{const show=$('access-key').type==='password'; $('access-key').type=show?'text':'password'; $('show-key').textContent=show?'Hide':'Show'; $('show-key').setAttribute('aria-label',show?'Hide access key':'Show access key');});
-$('logout').addEventListener('click',async()=>{try {await api('/api/session',{method:'DELETE'});showLogin();$('access-key').focus();}catch(error){message('form-error',error.message);}});
+$('logout').addEventListener('click',async()=>{try {await api('/api/session',{method:'DELETE'});showLogin();$('google-signin').focus();}catch(error){message('form-error',error.message);}});
 $('prompt').addEventListener('input',updateSummary);
 $('studio-tab').addEventListener('click',()=>showView('studio'));
 async function browseLibrary(){showView('library');try{await refreshLibrary();message('library-error','');}catch(error){message('library-error',error.message);}}
@@ -342,4 +336,4 @@ $('image-dialog').addEventListener('close',()=>{activeCard?.focus();});
 $('close-details').addEventListener('click',()=>$('details-dialog').close());
 $('details-dialog').addEventListener('click',event=>{if(event.target===$('details-dialog'))$('details-dialog').close();});
 $('details-dialog').addEventListener('close',()=>{activeCard?.focus();});
-(async()=>{try {const session=await api('/api/session');if(session.authenticated)await openWorkspace();}catch(error){message('login-error',error.message);}})();
+(async()=>{try {const session=await api('/api/session');if(session.authenticated)await openWorkspace();else if(!session.configured)message('login-error','Google sign-in is not configured yet.');else if(new URL(location.href).searchParams.get('login'))message('login-error','Sign-in was cancelled or the Google account is not authorized. Please try again.');}catch(error){message('login-error',error.message);}})();

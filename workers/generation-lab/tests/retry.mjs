@@ -15,7 +15,7 @@ const context=vm.createContext({...costDisplay,crypto,console,requestAnimationFr
     requests.push({path,method:options.method||'GET',body:options.body&&JSON.parse(options.body)});
     return path==='/api/generations'?submit(JSON.parse(options.body)):lookup(path.split('/').at(-1));
   }});
-vm.runInContext(source.slice(0,source.indexOf("$('login-form').addEventListener")),context);
+vm.runInContext(source.slice(0,source.indexOf("$('logout').addEventListener")),context);
 vm.runInContext('renderGrid=()=>{};renderOptions=()=>{};renderHistory=()=>{};renderLibrary=()=>{};persist=()=>{};config={};',context);
 const cells=[{id:crypto.randomUUID(),model:'flux-2-klein-4b',age:4,status:'completed',metrics:{elapsedMs:12}},
   {id:crypto.randomUUID(),model:'flux-2-klein-4b',age:7,status:'failed',error:'Old failure',metrics:{httpStatus:500}}];

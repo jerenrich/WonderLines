@@ -1,4 +1,4 @@
-import {getPrincipal, createSession, sessionCookie, equal} from './auth.mjs';
+import {adminConfigured, comparisonPrincipal, endComparisonSession} from './admin-auth.mjs';
 import {catalog,unavailableModels} from './catalog.mjs';
 import {ComparisonLibrary} from './library.mjs';
 export {ComparisonLibrary};
@@ -11,7 +11,6 @@ import {observeStorage, storageFailure} from '../../shared/operational-events.mj
 const security = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY'};
 const json = (value, status = 200, headers = {}) => Response.json(value, {status, headers: {...security, ...headers}});
 const fail = (message, status, code = 'request_failed') => json({error: {message, code}}, status);
-const hash = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))), x => x.toString(16).padStart(2, '0')).join('');
 async function body(request, max = 4096) {
   if (!request.headers.get('Content-Type')?.startsWith('application/json')) throw new TypeError('JSON required');
   return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(await readBoundedBody(request, max)));
@@ -36,20 +35,20 @@ async function handle(request, env) {
   const url = new URL(request.url), path = url.pathname;
   if (path.startsWith('/api/admin/')) return handleModelAdmin(request, env);
   if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
-  if (!env.LAB_ACCESS_KEY || !isUUID(env.LAB_ACCOUNT_ID)) return fail('The comparison service needs configuration.', 503);
+  if (!isUUID(env.LAB_ACCOUNT_ID)) return fail('The comparison service needs configuration.', 503);
   if (!['GET', 'POST', 'DELETE'].includes(request.method)) return fail('Method not allowed.', 405);
   if (request.method !== 'GET' && request.headers.get('Origin') !== url.origin) return fail('Please use this website to make the request.', 403);
   if (path === '/api/session') {
-    if (request.method === 'GET') return json({authenticated: !!await getPrincipal(request, env)});
-    if (request.method === 'DELETE') return json({authenticated: false}, 200, {'Set-Cookie': sessionCookie()});
-    const address = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-    if (!env.LOGIN_LIMITER || !(await env.LOGIN_LIMITER.limit({key: await hash(address)})).success) return fail('Too many attempts. Try again in a minute.', 429);
-    const input = await body(request);
-    if (typeof input?.key !== 'string' || input.key.length > 256 || !await equal(input.key, env.LAB_ACCESS_KEY)) return fail('That access key isn’t correct.', 401);
-    return json({authenticated: true}, 200, {'Set-Cookie': await createSession(env, input.remember === true)});
+    if (request.method === 'GET') {
+      const identity = await comparisonPrincipal(request, env);
+      return json({configured:adminConfigured(env), authenticated:!!identity, ...(identity?{email:identity.email}:{})});
+    }
+    if (request.method === 'DELETE') return json({authenticated:false}, 200, {'Set-Cookie':endComparisonSession()});
+    return fail('Method not allowed.',405);
   }
-  const principal = await getPrincipal(request, env);
-  if (!principal) return fail('Enter your access key to continue.', 401, 'unauthorized');
+  const identity = await comparisonPrincipal(request, env);
+  if (!identity) return fail('Sign in with your authorized Google account.', 401, 'unauthorized');
+  const principal = {id:identity.id, accountId:env.LAB_ACCOUNT_ID, method:'google'};
   const stub = account(env, principal);
   if (path === '/api/config' && request.method === 'GET') {
     if (!await ensureAccount(stub, principal)) return fail('Could not open the comparison account.', 503);

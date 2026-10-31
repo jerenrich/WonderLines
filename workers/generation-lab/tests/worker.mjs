@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import worker from '../src/index.mjs';
-import {getPrincipal, createSession} from '../src/auth.mjs';
+import {SignJWT} from 'jose';
+import {comparisonPrincipal, ADMIN_EMAIL} from '../src/admin-auth.mjs';
 import {ComparisonLibrary} from '../src/library.mjs';
 import {MemoryStorage} from './storage.mjs';
 const origin='https://compare.example';
@@ -20,23 +21,20 @@ const stub={fetch:async(url,options)=>{
   }
   throw Error('Unexpected account route '+path);
 }};
-const env={LAB_ACCESS_KEY:'test-private-key',LAB_ACCOUNT_ID:accountId,LOGIN_LIMITER:{limit:async()=>({success:true})},GENERATION_LIMITER:{limit:async()=>({success:true})},ACCOUNTS:{idFromName:id=>{assert.equal(id,accountId);return id;},get:()=>stub},GENERATIONS:{get:async key=>{assert.match(key,new RegExp('^'+accountId+'/'));return {body:new Uint8Array([137,80,78,71])};}},ASSETS:{fetch:async()=>new Response('<html>Public login shell</html>')}};
+const env={MODEL_ADMIN_ORIGIN:origin,GOOGLE_CLIENT_ID:'synthetic-client.apps.googleusercontent.com',GOOGLE_CLIENT_SECRET:'synthetic-secret',MODEL_ADMIN_SESSION_SECRET:'synthetic-admin-session-secret-at-least-32-characters',LAB_ACCESS_KEY:'test-private-key',LAB_ACCOUNT_ID:accountId,LOGIN_LIMITER:{limit:async()=>({success:true})},GENERATION_LIMITER:{limit:async()=>({success:true})},ACCOUNTS:{idFromName:id=>{assert.equal(id,accountId);return id;},get:()=>stub},GENERATIONS:{get:async key=>{assert.match(key,new RegExp('^'+accountId+'/'));return {body:new Uint8Array([137,80,78,71])};}},ASSETS:{fetch:async()=>new Response('<html>Public login shell</html>')}};
 const library=new ComparisonLibrary({storage:new MemoryStorage()},env);
 env.LIBRARY={idFromName:id=>id,get:()=>({fetch:(url,options)=>library.fetch(new Request(url,options))})};
 const request=(path,method='GET',input,cookie,extra={})=>new Request(origin+path,{method,headers:{'Content-Type':'application/json',...(method!=='GET'?{Origin:origin}:{}),...(cookie?{Cookie:cookie}:{}),...extra},...(input!==undefined?{body:JSON.stringify(input)}:{})});
 assert.equal((await worker.fetch(request('/'),env)).status,200);
 for(const path of ['/api/config','/api/generations/'+crypto.randomUUID(),'/api/images/'+crypto.randomUUID()])assert.equal((await worker.fetch(request(path),env)).status,401);
 assert.equal(calls.length,0);
-assert.equal((await worker.fetch(request('/api/session','POST',{key:'wrong'}),env)).status,401);
-assert.equal((await worker.fetch(request('/api/session','POST',{key:env.LAB_ACCESS_KEY},null,{Origin:'https://evil.example'}),env)).status,403);
-assert.equal((await worker.fetch(request('/api/session','POST',{key:env.LAB_ACCESS_KEY}),{...env,LOGIN_LIMITER:{limit:async()=>({success:false})}})).status,429);
-const login=await worker.fetch(request('/api/session','POST',{key:env.LAB_ACCESS_KEY,remember:true}),env);
-assert.equal(login.status,200); const header=login.headers.get('Set-Cookie'),cookie=header.split(';')[0];
-assert.match(header,/HttpOnly; Secure; SameSite=Strict; Max-Age=2592000/);assert.ok(!header.includes(env.LAB_ACCESS_KEY));
+assert.equal((await worker.fetch(request('/api/session','POST',{key:env.LAB_ACCESS_KEY}),env)).status,405);
+assert.equal((await worker.fetch(request('/api/session','DELETE',undefined,null,{Origin:'https://evil.example'}),env)).status,403);
+const signed=await new SignJWT({purpose:'comparison-session',email:ADMIN_EMAIL}).setProtectedHeader({alg:'HS256'}).setIssuer('wonderlines-model-admin').setAudience(env.GOOGLE_CLIENT_ID).setSubject('google-user').setIssuedAt().setExpirationTime('8h').sign(new TextEncoder().encode(env.MODEL_ADMIN_SESSION_SECRET));
+const cookie='__Host-wonderlines_compare_google='+signed;
 assert.equal((await (await worker.fetch(request('/api/session','GET',undefined,cookie),env)).json()).authenticated,true);
-assert.equal(await getPrincipal(request('/api/config','GET',undefined,cookie),{...env,LAB_ACCESS_KEY:'rotated'}),null);
-assert.equal(await getPrincipal(request('/api/config','GET',undefined,cookie+'x'),env),null);
-assert.ok(!(await createSession(env,false)).includes('Max-Age'));
+assert.equal(await comparisonPrincipal(request('/api/config','GET',undefined,cookie),{...env,MODEL_ADMIN_SESSION_SECRET:'rotated-secret-at-least-32-characters'}),null);
+assert.equal(await comparisonPrincipal(request('/api/config','GET',undefined,cookie+'x'),env),null);
 const config=await (await worker.fetch(request('/api/config','GET',undefined,cookie),env)).json();
 assert.equal(config.models.length,24);assert.equal(config.models.filter(x=>x.recommended).length,6);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
 assert.ok(config.models.some(x=>x.id==='sana-sprint'&&x.provider==='fal'));
@@ -81,7 +79,7 @@ limited.LIBRARY={idFromName:id=>id,get:()=>({fetch:(url,options)=>limitedLibrary
 assert.equal((await worker.fetch(request('/api/generations','POST',{...input,id:crypto.randomUUID()},cookie),limited)).status,429);
 const huge=new Request(origin+'/api/generations',{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({...input,description:'x'.repeat(5000)})});assert.equal((await worker.fetch(huge,env)).status,413);
 const logout=await worker.fetch(request('/api/session','DELETE',undefined,cookie),env);assert.match(logout.headers.get('Set-Cookie'),/Max-Age=0/);
-assert.equal((await worker.fetch(request('/api/config'),{...env,LAB_ACCESS_KEY:''})).status,503);
+assert.equal((await worker.fetch(request('/api/config'),{...env,LAB_ACCOUNT_ID:''})).status,503);
 console.log('PASS: secure sessions, key rotation, CSRF, login throttling, protected images, account isolation, model allowlist, age guidance, moderation before spend, rate limits, bounded requests, queued generation, idempotency and recovery');
 
 // Reading an existing comparison fills estimates using original upstream IDs.
