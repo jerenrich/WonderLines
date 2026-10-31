@@ -526,7 +526,7 @@ struct ContentView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     Text(store.selectedModel?.price?.explanation ?? "Reference price unavailable.")
                         .font(.footnote).foregroundStyle(.secondary)
-                    Text("Reference prices are in US cents. Tiny nonzero costs show <¢0.01. Actual costs may vary; credits and other service charges are excluded.")
+                    Text("Generation is free for you. Prices are the developer’s estimated cost per image, in US cents.")
                         .font(.footnote).foregroundStyle(.secondary)
                     if let message = store.modelCatalogueMessage {
                         Text(message).font(.footnote).foregroundStyle(.secondary)
@@ -580,7 +580,7 @@ struct ContentView: View {
                         Label("Diagnostics", systemImage: "waveform.path.ecg")
                     }
                     .accessibilityIdentifier("diagnostics")
-                    Text("Recent connection and service events stay on this iPad. Descriptions, images, and credentials are never included.")
+                    Text("Recent connection and service events stay on this device. Descriptions, images, and credentials are never included.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }

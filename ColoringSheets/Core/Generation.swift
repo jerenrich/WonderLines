@@ -363,16 +363,16 @@ enum GenerationError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
-        case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
+        case .configuration: return "The coloring service is temporarily unavailable. Please try again later, or check the App Store for an update."
         case .modelUnavailable: return "Image generation is temporarily unavailable. Please try again shortly."
         case .deviceVerification: return "Secure device verification failed before the generation request was sent. Check Settings → Diagnostics for the failing step and code."
-        case .deviceRejected: return "The service rejected secure device verification before image generation. Check Diagnostics for the Worker error code."
+        case .deviceRejected: return "The service rejected secure device verification before image generation. Please try again, or contact support in Settings."
         case .allowance: return "Today’s image allowance has been used. Please try again after midnight UTC."
         case .serviceBudget: return "The coloring service has reached today’s limit. Please try again after it resets."
-        case .server(let status): return "The service could not complete the request (HTTP \(status)). Contact the developer if this continues."
-        case .invalidImage: return "The service did not return a usable sheet. You have not been charged. Check unfinished sheets before generating again."
-        case .uncertain: return "The connection was interrupted or timed out. Your sheet may still finish. You have not been charged. Check unfinished sheets before generating again."
-        case .cancelled: return "Stopped waiting. Your sheet may still finish. You have not been charged. Check unfinished sheets before generating again."
+        case .server(let status): return "The service could not complete the request (HTTP \(status)). Please try again, or contact support in Settings if this continues."
+        case .invalidImage: return "The service did not return a usable sheet. Check unfinished sheets before generating again."
+        case .uncertain: return "The connection was interrupted or timed out. Your sheet may still finish. Check unfinished sheets before generating again."
+        case .cancelled: return "Stopped waiting. Your sheet may still finish. Check unfinished sheets before generating again."
         case .resultMissing: return "The service has no saved job for this sheet, so it cannot be recovered. No new generation was started automatically."
         }
     }
@@ -984,18 +984,18 @@ final class WorkerClient: GenerationServing {
                     throw GenerationError.serviceBudget
                 }
                 throw GenerationError.allowance
-            case 400, 413: throw GenerationError.validation("The service rejected the description or page size. Revise the description or check the app and Worker versions.")
+            case 400, 413: throw GenerationError.validation("The service rejected the description or page size. Revise the description and try again.")
             case 504: throw GenerationError.uncertain
             case 502:
                 // Only display the known sanitized Worker messages, never arbitrary response text.
                 let body = contentType == "text/plain" ? String(data: data.prefix(512), encoding: .utf8) ?? "" : ""
                 if body.contains("insufficient credit or quota") || body.contains("rate or quota limit") {
-                    throw GenerationError.upstream("The image provider reports a credit or quota limit. Ask the developer to check API billing and limits before trying again.")
+                    throw GenerationError.upstream("This image model is temporarily unavailable. Choose another model in Settings, or try again later.")
                 }
                 if body.contains("rejected the API key") || body.contains("denied model access") {
-                    throw GenerationError.upstream("Image provider access needs attention. Ask the developer to check the server’s API key and model access.")
+                    throw GenerationError.upstream("This image model is temporarily unavailable. Choose another model in Settings, or try again later.")
                 }
-                throw GenerationError.upstream("The image provider could not return a sheet. Review the description and service usage before trying again.")
+                throw GenerationError.upstream("The image provider could not return a sheet. Please try again, or choose another model in Settings.")
             default: throw GenerationError.server(response.statusCode)
             }
         }
