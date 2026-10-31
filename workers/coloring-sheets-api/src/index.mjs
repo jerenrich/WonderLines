@@ -3,6 +3,7 @@ import {modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitF
 import {imageCost, refreshImageCostMetrics} from './image-cost.mjs';
 export {ComparisonImageRunner} from './comparison-image-runner.mjs';
 import {cleanLegacyUsageLogs} from './diagnostic-retention.mjs';
+import {MODERATION_CANARY_CRON, runModerationCanary} from './moderation-canary.mjs';
 import {falCostData} from './fal-cost.mjs';
 import {isUUID} from './composition.mjs';
 import {prepareGeneration, startGeneration} from './generation-start.mjs';
@@ -739,6 +740,7 @@ function bindingRejection(request) {
 
 export default {
   async scheduled(_event, env) {
+    if (_event.cron === MODERATION_CANARY_CRON) return runModerationCanary(env);
     try { console.info(JSON.stringify(await cleanLegacyUsageLogs(env.GENERATIONS))); }
     catch {
       console.error(JSON.stringify({event: 'legacy_usage_log_retention_failed'}));

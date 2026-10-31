@@ -39,10 +39,26 @@ Durable Object enforces the grace period and shared batch limit. Email delivery
 also depends on log ingestion and Cloudflare scheduling, so it is not an exact
 two-minute delivery SLA.
 
-This is **traffic-based failure monitoring**, not an active availability probe.
-No requests means no evidence of a provider outage. Cloudflare-wide outages may
-affect both the API and monitoring. An external uptime check is still needed for
-independent availability coverage. No inference calls are made by monitoring.
+The API also runs a **one-minute moderation canary** with a fixed benign
+description. It calls the same production `moderateSubject` function, configured
+providers and eight-second deadline. It waits for both provider observations so
+fallback cannot hide a lost moderator. An unavailable check, unexpected exception
+or rejection of this fixed benign text qualifies immediately; partial availability
+uses the two-minute recurrence rule. All share the existing hourly batch limit.
+
+Healthy canaries write a small `moderation_canary` event and send no email. They
+never register an account, reserve allowance, generate an image, create jobs or
+touch R2. No customer descriptions are used. The normal Gateway configuration
+keeps prompt collection disabled and caching skipped. The schedule is 1,440
+checks per day, normally 2,880 text moderation calls with the two-provider strategy;
+these use the providers' normal quotas/billing. Existing hourly R2 diagnostic
+cleanup remains a separate cron invocation.
+
+The canary exercises the configured production strategy. It does not simulate
+client registration, App Attest, the legacy consent routing, account coordination,
+image generation, or storage. Cloudflare-wide outages can affect the API, cron and
+monitoring together. An external uptime check is still needed for independent
+availability coverage.
 
 ## Deploy and verify
 
