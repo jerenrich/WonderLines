@@ -1,4 +1,5 @@
-import {DEFAULT_MODEL, modelCatalog, imageRequest, falImageTask} from './image-provider.mjs';
+import {DEFAULT_MODEL, imageRequest, falImageTask} from './image-provider.mjs';
+import {loadModelCatalog} from './model-registry.mjs';
 import {structuredComposition, MAX_DESCRIPTION_LENGTH, MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
 import {moderateSubject, ModerationError, moderationEnvironment} from './moderation.mjs';
 
@@ -31,21 +32,31 @@ export async function prepareGeneration(input,generationId,env={}) {
   const subjectLimit=composed?MAX_COMPOSED_SUBJECT_LENGTH:MAX_DESCRIPTION_LENGTH;
   if(typeof subject!=='string'||!subject.trim()||subject.length>subjectLimit||!size)return failure('invalid_request','Description or dimensions are invalid.',400);
   const model=input.model??env.IMAGE_DEFAULT_MODEL??DEFAULT_MODEL;
-  return {generationId,subject,model,size,composed,fingerprints:await generationFingerprints(subject,model,size)};
+  return {generationId,subject,model,size,composed,modelWasOmitted:input.model===undefined,fingerprints:await generationFingerprints(subject,model,size)};
 }
 
 // Authentication, HTTP/image responses and library storage belong to the
 // caller. Validation, recovery, moderation and reservation follow one path.
 export async function startGeneration(prepared,{env,call,queueImages=false,comparisonModels=false,validateProvider=true,fingerprintFormat='base64url',allowRoute,rateLimit,beforeReserve,onModeration,sharingVersion,waitUntil}) {
   if(prepared.value?.error)return prepared;
-  const {generationId,subject,model,size,composed,fingerprints}=prepared;
+  const {generationId,subject,size,composed}=prepared;
+  let {model,fingerprints}=prepared;
   const existing=await call('/job',{generationId});
+  if(existing.status===200&&prepared.modelWasOmitted&&existing.value.job.publicModel) {
+    fingerprints=await generationFingerprints(subject,existing.value.job.publicModel,size);
+  }
   if(existing.status===200)return Object.values(fingerprints).includes(existing.value.job.fingerprint)
     ? {status:200,job:existing.value.job,access:existing.value.access,recovered:true}
     : failure('idempotency_conflict','Generation ID was already used.',409);
   if(existing.status!==404)return failure('service_unavailable','Could not check generation.',503);
-  let routes,upstreamRequest;
-  try {routes=modelCatalog(env,{comparison:comparisonModels}).routes;}catch{return failure('service_unavailable','Image model configuration is incomplete.',503);}
+  let routes,upstreamRequest,catalog;
+  try {catalog=await loadModelCatalog(env,{comparison:comparisonModels});routes=catalog.routes;}catch{return failure('service_unavailable','Image model configuration is incomplete.',503);}
+  if(prepared.modelWasOmitted) {
+    model=catalog.defaultModel;
+    fingerprints=await generationFingerprints(subject,model,size);
+    prepared.model=model;prepared.fingerprints=fingerprints;
+  }
+  if(env.MODEL_REGISTRY!==undefined && (model===null||typeof model==='string'&&!Object.hasOwn(routes,model)))return failure('model_unavailable','This model is no longer available. Refresh the model list and choose another model.',409);
   if(typeof model!=='string'||!Object.hasOwn(routes,model)||allowRoute&&!allowRoute(routes[model]))return failure('invalid_request','Model is invalid.',400);
   try {
     upstreamRequest=validateProvider?imageRequest(env,routes[model],subject,size):
@@ -67,10 +78,10 @@ export async function startGeneration(prepared,{env,call,queueImages=false,compa
     return failure(error.code,error.message,error.status,{reasonCodes:error.reasonCodes});
   }
   await beforeReserve?.();
-  const result=await call('/reserve',{generationId,fingerprint:fingerprints[fingerprintFormat],
+  const result=await call('/reserve',{generationId,publicModel:model,modelRoute:routes[model],fingerprint:fingerprints[fingerprintFormat],
     ...(upstreamRequest.provider==='fal'&&!comparisonModels?{falTask:{request:upstreamRequest,publicModel:model,requestedSize:size.width+'x'+size.height}}:
       queueImages?{imageTask:{route:routes[model],subject,size,publicModel:model}}:{})});
-  if(result.status===429)return result;
+  if(result.status===429||result.value?.error?.code==='model_unavailable')return result;
   if(result.status>=400)return failure('generation_unavailable','Could not start generation.',result.status);
   return {status:result.status,job:result.value.job,access:result.value.access,recovered:result.status===200,upstreamRequest};
 }

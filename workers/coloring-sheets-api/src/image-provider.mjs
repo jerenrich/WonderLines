@@ -45,14 +45,18 @@ export function modelCatalog(env, {comparison = false} = {}) {
   const routes = {...DEFAULT_ROUTES, ...(comparison ? comparisonRoutes() : {}), ...overrides};
   if (Object.keys(routes).length > 32) throw new Error('Too many image model routes');
   for (const [id, route] of Object.entries(routes)) {
-    if (!identifier(id) || !object(route) || !PROVIDERS.includes(route.provider) ||
-        !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) :
-          route.provider === 'fal' ? ['coloringbook-redmond-v2', 'z-image-turbo'].includes(route.model) || comparison && !!falComparisonConfig(route.model) : identifier(route.model)) ||
-        Object.keys(route).some(key => !['provider', 'model'].includes(key))) throw new Error('Invalid image model route');
+    validateModelRoute(id, route, {comparison});
   }
   const defaultModel = env.IMAGE_DEFAULT_MODEL ?? DEFAULT_MODEL;
   if (!identifier(defaultModel) || !Object.hasOwn(routes, defaultModel)) throw new Error('Invalid default model');
   return {defaultModel, routes};
+}
+
+export function validateModelRoute(id, route, {comparison = false} = {}) {
+  if (!identifier(id) || !object(route) || !PROVIDERS.includes(route.provider) ||
+      !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) :
+        route.provider === 'fal' ? ['coloringbook-redmond-v2', 'z-image-turbo'].includes(route.model) || comparison && !!falComparisonConfig(route.model) : identifier(route.model)) ||
+      Object.keys(route).some(key => !['provider', 'model'].includes(key))) throw new Error('Invalid image model route');
 }
 
 // An absent gateway preserves existing deployments. Partial configuration fails

@@ -294,37 +294,45 @@ Add your OpenAI key under the gateway's **Provider Keys**, using the `default` a
 
 The key-source setting applies to OpenAI and Google routes. Native Workers AI routes use a Cloudflare token instead. In `worker` mode, OpenAI routes require `OPENAI_API_KEY` and Google routes require `GOOGLE_AI_STUDIO_API_KEY`. In `gateway` mode, configure each provider's key in Gateway. The Worker cannot inspect whether a stored key is valid or whether Gateway has Unified Billing enabled; those remain Gateway settings. Only `ACCOUNT_TOKEN_SECRET` is unconditionally required by Wrangler; conditional credentials are checked before a new generation reserves capacity.
 
-## Experiment with models
+## Backend-controlled model catalogue (KV)
 
-`IMAGE_MODEL_ROUTES` is a dashboard-managed Worker **text variable containing JSON**. Entries add to or override the thirteen built-in public IDs. Each entry must have exactly `provider` and `model`; supported adapters are `openai`, `google-ai-studio`, `workers-ai`, and `fal`. The fal adapter accepts the `coloringbook-redmond-v2` and `z-image-turbo` presets. The Workers AI adapter accepts the nine models listed below, using each model’s documented multipart or JSON input protocol. The allowlist has a maximum of 32 routes. The client cannot supply a provider, URL, API key, or provider options.
+The iOS app now loads its model picker, descriptions, order, reference prices and default from authenticated `GET /v1/models`. Model IDs are open string identifiers, so new compatible image models do not need another app release. Model/provider availability is checked on new generation admission and again before Account reserves allowance. Existing queued jobs retain their resolved provider route, and saved results/recovery do not depend on KV availability.
 
-For example, to retain both OpenAI choices and add a Gemini image model, set:
+`MODEL_REGISTRY` binds a Workers KV namespace. Its **single text value**, key `catalogue:v1`, is the complete authoritative document. Start from [`model-registry.initial.json`](model-registry.initial.json): it preserves the current six visible choices and Sunburst app default, with older routes hidden for compatibility. The array order is the picker order. KV uses `cacheTtl: 60`, with no additional server cache; Cloudflare propagation can take 60 seconds or more. A provider credential/access failure is still handled separately; the catalogue does not probe provider health.
 
-```json
-{
-  "gemini-image": {
-    "provider": "google-ai-studio",
-    "model": "gemini-2.5-flash-image"
-  }
-}
-```
+### Initial rollout
 
-Configure a Google provider key using the chosen key-source mode. Gemini requires Gateway; it never uses the OpenAI key. An authenticated API client can now send `model: "gemini-image"` to the existing generation endpoint. Model availability/access depends on the provider account. This adapter uses Google's `generateContent` API through Cloudflare's [Google AI Studio endpoint](https://developers.cloudflare.com/ai-gateway/usage/providers/google-ai-studio/).
+Deploy this backend before releasing the updated iOS app. From the repository root:
 
-`IMAGE_DEFAULT_MODEL` optionally selects the public ID used when a request omits `model`; otherwise it remains `gpt-image-2.5-flare`. `GET /v1/models` requires the existing account bearer token and returns `{defaultModel, models: [{id, provider, model}]}`. This lists configured routes, not a live provider availability check. Unknown IDs return HTTP 400 before allowance is spent; malformed server configuration returns HTTP 503.
+1. Run `node Scripts/model_registry.mjs` and `node Scripts/test_model_registry.mjs`.
+2. Create a namespace: `npx wrangler@4.136.3 kv namespace create MODEL_REGISTRY --config workers/coloring-sheets-api/wrangler.jsonc`. Copy the returned namespace ID into the `MODEL_REGISTRY` entry in `wrangler.jsonc` as `"id"`. The deployment token needs Workers KV Storage Edit as well as the existing Worker permissions.
+3. Seed the namespace **before deployment**: `npx wrangler@4.136.3 kv key put catalogue:v1 --binding MODEL_REGISTRY --config workers/coloring-sheets-api/wrangler.jsonc --path workers/coloring-sheets-api/model-registry.initial.json --remote`.
+4. Deploy with the existing `--keep-vars` procedure, preserving secrets, quotas and bindings. Verify authenticated `/v1/models` returns `schemaVersion: 1`, revision `initial-2026-10-31`, Sunburst as default and six visible models. Verify unauthenticated access returns 401. No paid generation is necessary for discovery.
+5. Build and release the app. Existing installed app versions keep their compiled picker, but the backend still rejects disabled choices before spending allowance.
 
-The iOS picker offers Flare, Sunburst, and all nine Cloudflare-hosted models listed below after rebuilding the app, with a short description of each selection. It sends the selected explicit ID; changing the server default does not change those requests. Other custom catalog entries do not automatically appear in the picker. To experiment with another provider without an app release, temporarily override an existing ID:
+The production binding is pinned to namespace `7088d2edc1ea4422bb7cfc61ae6a08c0`, created and seeded on 31 October 2026 before the first deployment of this feature. Subsequent CI deployments reuse it and never overwrite the live catalogue. The create/seed/pin sequence above applies when bootstrapping another environment; use that environment’s own namespace ID. Recovery remains available even if a bound registry becomes unavailable.
 
-```json
-{
-  "gpt-image-2.5-sunburst": {
-    "provider": "google-ai-studio",
-    "model": "gemini-2.5-flash-image"
-  }
-}
-```
+### Routine edits (no deployment)
 
-The app's existing picker label will remain Sunburst. The response metrics record both the public `requestedModel` and actual `upstreamModel`, plus `provider` and `viaGateway`. Other OpenAI image models can be configured the same way if they support the adapter's existing Images API payload (`size`, `quality: low`, `output_format: png`, base64 output). This is an image-generation API, not a generic chat-model proxy. Providers with different protocols need another adapter in `image-provider.mjs`.
+Download/back up the current value before editing: `npx wrangler@4.136.3 kv key get catalogue:v1 --binding MODEL_REGISTRY --config workers/coloring-sheets-api/wrangler.jsonc --remote > /tmp/wonderlines-model-registry.json`. Keep previous revisions for rollback. Edit the full document, change `revision`, validate it with `node Scripts/model_registry.mjs /tmp/wonderlines-model-registry.json`, then upload it using the same `kv key put` command with the edited `--path`. Alternatively edit the single key in Cloudflare's KV dashboard. The worker has no public write endpoint.
+
+- `providers.<provider>.enabled: false` blocks all new requests for that provider, including the private comparison studio's experimental fal routes when fal is disabled.
+- `models[].enabled: false` blocks that model even when submitted by a stale/older app. Removing an entry also blocks its app route.
+- `models[].visible: false` hides it from the current picker while allowing explicit requests. **Hiding is not disabling.** To pause all generation, disable every provider or model.
+- `defaultModel` selects the default public ID. If it is disabled or hidden, the first available visible entry is used. An empty visible catalogue returns `defaultModel: null`. New installations use the server default; existing valid user selections are preserved.
+- Each model has `id`, `provider`, `model` (upstream identifier/preset), `enabled`, `visible`, `label`, `detail`, and `price`. Price is either `null` (displayed as unavailable) or `{usd, evidence, explanation}`. Reference prices do not change billing and must describe the configured preset accurately.
+
+Documents must have `schemaVersion: 1`, a nonempty `revision`, provider switches, at most 32 unique model IDs and at most 64 KiB of UTF-8 text. Validation rejects unknown fields, unsupported routes and invalid prices. Credentials and URLs are never catalogue fields. With a KV binding present, missing values, bad JSON, invalid configuration and read failures return 503 for discovery/new work; there is no fallback that could re-enable disabled models. Restore a previous **complete valid document** to roll back. Deleting the key is not a rollback.
+
+The app refreshes on launch, foreground and opening Settings, and has a **Refresh models** button. It caches the last valid catalogue per service URL, including an intentionally empty one. Consent is required before fetching/registering with the service. A removed selection silently moves to the server default for the next generation. A stale submission receiving HTTP 409 `model_unavailable` (no job or allowance reserved) refreshes the list and retries once with the server default, or the first available model excluding the rejected choice. Every image in a batch shares the replacement. The retry preserves the captured description, age, size and composition. A rejected replacement, no alternative, or a service-wide pause produces a temporary-unavailability message. Timeouts, uncertain submissions and provider failures never trigger model fallback. Saved galleries/pending jobs retain their IDs and display-name snapshots even if the model is later removed.
+
+### Supported adapters and legacy configuration
+
+Supported providers remain `openai`, `google-ai-studio`, `workers-ai`, and `fal`. New models using the existing OpenAI Images or Gemini `generateContent` payload can be added in KV alone after configuring server credentials. OpenAI models must support the adapter's `size`, `quality: low`, `output_format: png` and base64 output. Gemini requires AI Gateway and its own provider key. Workers AI and fal models must use one of the explicitly implemented presets; new input/output protocols or providers still require a **backend** adapter deployment, but no app release for ordinary image generation. This is not a generic chat-model proxy.
+
+For deployments **without** `MODEL_REGISTRY`, the migration path still accepts `IMAGE_MODEL_ROUTES` (add/override routes) and `IMAGE_DEFAULT_MODEL`. The metadata endpoint supplies compatible built-in labels and prices, omitting reference prices when a route is remapped. Once KV is bound, these environment variables are ignored for new model routing and defaults. The private comparison studio retains its separate experimental picker; production Account admission applies the provider switches and app-model routes from KV.
+
+Tests: `node Scripts/test_model_registry.mjs`, `node Scripts/test_worker.mjs`, and app `GenerationTests`, `NetworkingTests`, `ModelCatalogueStateTests`. These cover additions, provider/model switches, hidden routes, defaults, invalid documents/outages, stale submissions without spending, immutable queued routes, omitted-model idempotency, compatible persistence, cache/relaunch, silent model fallback, bounded retries and no repeated paid inference. They use synthetic provider responses.
 
 Gemini accepts preset aspect ratios rather than arbitrary pixel dimensions. The adapter chooses the nearest supported ratio and leaves resolution at the model default. PNG bytes are preserved; no resizing or cropping occurs. `requestedSize` records the client request and `size` records the actual PNG dimensions for all providers. Gemini token usage is normalized into the existing metrics fields; absent usage remains null. Non-PNG responses fail explicitly. See Google's [image generation guide](https://ai.google.dev/gemini-api/docs/generate-content/image-generation).
 

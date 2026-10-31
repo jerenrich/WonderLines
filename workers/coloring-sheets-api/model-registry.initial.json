@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "revision": "initial-2026-10-31",
+  "defaultModel": "gpt-image-2.5-sunburst",
+  "providers": {
+    "openai": {
+      "enabled": true
+    },
+    "google-ai-studio": {
+      "enabled": true
+    },
+    "workers-ai": {
+      "enabled": true
+    },
+    "fal": {
+      "enabled": true
+    }
+  },
+  "models": [
+    {
+      "id": "gpt-image-2.5-flare",
+      "provider": "openai",
+      "model": "gpt-image-2.5-flare",
+      "enabled": true,
+      "visible": true,
+      "label": "Flare",
+      "detail": "Uses OpenAI image generation.",
+      "price": {
+        "usd": 0.005203125,
+        "evidence": "Estimate",
+        "explanation": "Reference average from 32 audited images, calculated from reported token usage. Actual costs vary."
+      }
+    },
+    {
+      "id": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "enabled": true,
+      "visible": true,
+      "label": "Sunburst",
+      "detail": "Uses OpenAI image generation.",
+      "price": {
+        "usd": 0.005203125,
+        "evidence": "Estimate",
+        "explanation": "Reference average from 32 audited images, calculated from reported token usage. Actual costs vary."
+      }
+    },
+    {
+      "id": "z-image-turbo",
+      "provider": "fal",
+      "model": "z-image-turbo",
+      "enabled": true,
+      "visible": true,
+      "label": "Z-Image Turbo",
+      "detail": "A fast alternative for comparing coloring-page outlines and detail.",
+      "price": {
+        "usd": 0.01,
+        "evidence": "Billing confirmed",
+        "explanation": "Reference cost confirmed by four matching fal billing records for the current preset. Future charges may vary."
+      }
+    },
+    {
+      "id": "flux-2-klein-4b",
+      "provider": "workers-ai",
+      "model": "@cf/black-forest-labs/flux-2-klein-4b",
+      "enabled": true,
+      "visible": true,
+      "label": "FLUX.2 Klein 4B",
+      "detail": "A quick option for trying out coloring-page ideas.",
+      "price": {
+        "usd": 0.001629753125,
+        "evidence": "Estimate",
+        "explanation": "Estimate for the 1456 × 1024 server preset, supported by Cloudflare metering. This is not a matched billing receipt."
+      }
+    },
+    {
+      "id": "flux-2-klein-9b",
+      "provider": "workers-ai",
+      "model": "@cf/black-forest-labs/flux-2-klein-9b",
+      "enabled": true,
+      "visible": true,
+      "label": "FLUX.2 Klein 9B",
+      "detail": "A larger version of Klein for comparing detail and composition.",
+      "price": {
+        "usd": 0.01584375,
+        "evidence": "Estimate",
+        "explanation": "Estimate for the 1456 × 1024 server preset, supported by Cloudflare metering. This is not a matched billing receipt."
+      }
+    },
+    {
+      "id": "phoenix-1.0",
+      "provider": "workers-ai",
+      "model": "@cf/leonardo/phoenix-1.0",
+      "enabled": true,
+      "visible": true,
+      "label": "Phoenix 1.0",
+      "detail": "Try for scenes with several objects and detailed instructions.",
+      "price": {
+        "usd": 0.0429,
+        "evidence": "Estimate",
+        "explanation": "Estimate for the 1456 × 1024 server preset, supported by Cloudflare metering. This is not a matched billing receipt."
+      }
+    },
+    {
+      "id": "flux-2-dev",
+      "provider": "workers-ai",
+      "model": "@cf/black-forest-labs/flux-2-dev",
+      "enabled": true,
+      "visible": false,
+      "label": "FLUX.2 Dev",
+      "detail": "Try for detailed scenes. Generation can take longer.",
+      "price": {
+        "usd": 0.05865234375,
+        "evidence": "Estimate",
+        "explanation": "Estimate for the 1456 × 1024 server preset, supported by Cloudflare metering. This is not a matched billing receipt."
+      }
+    },
+    {
+      "id": "flux-1-schnell",
+      "provider": "workers-ai",
+      "model": "@cf/black-forest-labs/flux-1-schnell",
+      "enabled": true,
+      "visible": false,
+      "label": "FLUX.1 Schnell",
+      "detail": "A quick alternative that uses a fixed image size. The whole image fits on the printed page.",
+      "price": {
+        "usd": 0.0019008,
+        "evidence": "Estimate",
+        "explanation": "Estimate for the native 1024 × 1024, 4-step preset, supported by Cloudflare metering."
+      }
+    },
+    {
+      "id": "lucid-origin",
+      "provider": "workers-ai",
+      "model": "@cf/leonardo/lucid-origin",
+      "enabled": true,
+      "visible": false,
+      "label": "Lucid Origin",
+      "detail": "Try for illustrated scenes and specific style instructions.",
+      "price": {
+        "usd": 0.0585585,
+        "evidence": "Estimate",
+        "explanation": "Estimate for the 1456 × 1024 server preset, supported by Cloudflare metering. This is not a matched billing receipt."
+      }
+    },
+    {
+      "id": "stable-diffusion-xl-base-1.0",
+      "provider": "workers-ai",
+      "model": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+      "enabled": true,
+      "visible": false,
+      "label": "Stable Diffusion XL",
+      "detail": "A classic illustration alternative. Available in beta.",
+      "price": {
+        "usd": 0.0,
+        "evidence": "Estimate",
+        "explanation": "Published zero beta inference rate, supported by Cloudflare metering. Other service charges are excluded."
+      }
+    },
+    {
+      "id": "stable-diffusion-xl-lightning",
+      "provider": "workers-ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "enabled": true,
+      "visible": false,
+      "label": "SDXL Lightning",
+      "detail": "A faster Stable Diffusion alternative. Available in beta.",
+      "price": {
+        "usd": 0.0,
+        "evidence": "Estimate",
+        "explanation": "Published zero beta inference rate, supported by Cloudflare metering. Other service charges are excluded."
+      }
+    },
+    {
+      "id": "dreamshaper-8-lcm",
+      "provider": "workers-ai",
+      "model": "@cf/lykon/dreamshaper-8-lcm",
+      "enabled": true,
+      "visible": false,
+      "label": "DreamShaper 8 LCM",
+      "detail": "An alternative to compare for imaginative subjects and illustration styles.",
+      "price": {
+        "usd": 2.728e-06,
+        "evidence": "Estimate",
+        "explanation": "Estimate supported by four metered 1456 × 1024, 8-step images. Other presets are unverified."
+      }
+    },
+    {
+      "id": "coloringbook-redmond-v2",
+      "provider": "fal",
+      "model": "coloringbook-redmond-v2",
+      "enabled": true,
+      "visible": false,
+      "label": "ColoringBook.Redmond V2",
+      "detail": "A specialist coloring-page style. Sheets may wait in a queue before drawing starts.",
+      "price": {
+        "usd": 0.0119645,
+        "evidence": "Estimate",
+        "explanation": "Historical fal endpoint billing average; not matched to individual saved images. Actual costs vary with billed compute time."
+      }
+    }
+  ]
+}

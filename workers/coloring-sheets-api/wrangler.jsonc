@@ -7,6 +7,7 @@
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "tail_consumers": [{"service": "wonderlines-monitoring"}],
   "images": { "binding": "IMAGES" },
+  "kv_namespaces": [{"binding": "MODEL_REGISTRY", "id": "7088d2edc1ea4422bb7cfc61ae6a08c0"}],
   "ai": { "binding": "AI" },
   "ratelimits": [{"name": "REGISTRATION_LIMITER", "namespace_id": "1005", "simple": {"limit": 5, "period": 60}}],
   "vars": {

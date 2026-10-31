@@ -1209,6 +1209,22 @@ final class NetworkingTests: XCTestCase {
 
 @MainActor
 final class ControlledService: GenerationServing {
+    var modelCatalogueCacheKey: String?
+    var catalogue: ModelCatalogue = .preview
+    var catalogueError: Error?
+    var catalogueCalls = 0
+    var holdsCatalogue = false
+    var catalogueContinuation: CheckedContinuation<ModelCatalogue, Error>?
+    var deletionCalls = 0
+    func deleteAccount() async throws { deletionCalls += 1 }
+    func modelCatalogue() async throws -> ModelCatalogue {
+        catalogueCalls += 1
+        if let catalogueError { throw catalogueError }
+        if holdsCatalogue {
+            return try await withCheckedThrowingContinuation { catalogueContinuation = $0 }
+        }
+        return catalogue
+    }
     var calls = 0
     var usageRequests: [UUID] = []
     var usageResponses: [UUID: GenerationMetrics] = [:]
@@ -2545,5 +2561,329 @@ final class KeyboardFocusTests: XCTestCase {
             capture("Post-generation composer \(device)", view: host.view)
             host.willMove(toParent: nil); host.view.removeFromSuperview(); host.removeFromParent()
         }
+    }
+}
+
+extension GenerationTests {
+    func testOpenModelIdentifiersPreserveLegacyEncodingAndUnknownPendingJobs() throws {
+        let model = try XCTUnwrap(ImageModel(rawValue: "server-model-2027"))
+        XCTAssertEqual(String(data: try JSONEncoder().encode(model), encoding: .utf8), "\"server-model-2027\"")
+        XCTAssertEqual(try JSONDecoder().decode(ImageModel.self, from: Data("\"gpt-image-2.5-sunburst\"".utf8)), .sunburst)
+        let pending = PendingGeneration(id: UUID(), model: model, createdAt: Date(), modelLabel: "Future Artist")
+        let decoded = try JSONDecoder().decode(PendingGeneration.self, from: JSONEncoder().encode(pending))
+        XCTAssertEqual(decoded.model, model)
+        XCTAssertEqual(decoded.modelLabel, "Future Artist")
+        let legacy = Data("{\"id\":\"\(UUID())\",\"model\":\"retired-server-model\",\"createdAt\":0}".utf8)
+        XCTAssertEqual(try JSONDecoder().decode(PendingGeneration.self, from: legacy).model.rawValue, "retired-server-model")
+        XCTAssertEqual(model.priceSummary, "Reference price unavailable")
+        XCTAssertNil(ImageModel(rawValue: "../untrusted"))
+        XCTAssertNil(ImageModel(rawValue: String(repeating: "x", count: 129)))
+    }
+
+    func testServerCatalogueMetadataAndValidation() throws {
+        let raw = Data(#"{"schemaVersion":1,"revision":"r1","defaultModel":"new-model","models":[{"id":"new-model","provider":"openai","model":"upstream","label":"New Artist","detail":"Server description","price":null}]}"#.utf8)
+        let catalogue = try JSONDecoder().decode(ModelCatalogue.self, from: raw).validated()
+        XCTAssertEqual(catalogue.models[0].label, "New Artist")
+        XCTAssertEqual(catalogue.models[0].priceSummary, "Reference price unavailable")
+        XCTAssertThrowsError(try ModelCatalogue(schemaVersion: 2, revision: "r", defaultModel: nil, models: []).validated())
+        XCTAssertThrowsError(try ModelCatalogue(schemaVersion: 1, revision: "r", defaultModel: .flare, models: catalogue.models).validated())
+        XCTAssertThrowsError(try ModelCatalogue(schemaVersion: 1, revision: "r", defaultModel: catalogue.defaultModel, models: catalogue.models + catalogue.models).validated())
+        XCTAssertNoThrow(try ModelCatalogue(schemaVersion: 1, revision: "paused", defaultModel: nil, models: []).validated())
+    }
+
+    func testUnavailableModelResponseHasDedicatedError() throws {
+        let response = HTTPURLResponse(url: WorkerClient.endpoint, statusCode: 409, httpVersion: nil, headerFields: ["Content-Type":"application/json"])!
+        let data = Data(#"{"error":{"code":"model_unavailable","message":"Refresh models"}}"#.utf8)
+        XCTAssertThrowsError(try WorkerClient.parse(data, response: response, requestedModel: .sunburst)) {
+            XCTAssertEqual($0 as? GenerationError, .modelUnavailable)
+        }
+    }
+
+    func testFallbackPrefersServerDefaultAndPreservesRequestSnapshot() throws {
+        let models = ModelCatalogue.preview.models
+        let catalogue = ModelCatalogue(schemaVersion: 1, revision: "r", defaultModel: .phoenix, models: models)
+        let replacement = try XCTUnwrap(catalogue.fallback(excluding: .sunburst))
+        XCTAssertEqual(replacement.id, .phoenix)
+        XCTAssertEqual(catalogue.fallback(excluding: .phoenix)?.id, models.first?.id)
+        XCTAssertNil(ModelCatalogue(schemaVersion: 1, revision: "paused", defaultModel: nil, models: []).fallback(excluding: .sunburst))
+        let original = try GenerationRequest(description: "A flower", age: 9, model: .sunburst,
+            size: GenerationSize(width: 1024, height: 1456), composition: .wide, batchID: UUID(), modelLabel: "Old model")
+        let retry = try original.replacingModel(with: replacement)
+        XCTAssertEqual(retry.model, .phoenix)
+        XCTAssertEqual(retry.modelLabel, replacement.label)
+        XCTAssertEqual(retry.originalDescription, original.originalDescription)
+        XCTAssertEqual(retry.age, original.age)
+        XCTAssertEqual(retry.composition, original.composition)
+        XCTAssertEqual(retry.batchID, original.batchID)
+        XCTAssertEqual(retry.width, original.width)
+        XCTAssertEqual(retry.height, original.height)
+    }
+
+    func testGalleryRetainsServerModelLabelAfterModelIsRemoved() throws {
+        let image = MockGenerator.sampleImage()
+        let model = try XCTUnwrap(ImageModel(rawValue: "later-retired-model"))
+        let result = ColoringResult(data: image.pngData()!, image: image, requestedModel: model, metrics: nil, modelLabel: "Original Artist")
+        let snapshot = GallerySnapshot.Sheet(result)
+        let restored = try JSONDecoder().decode(GallerySnapshot.Sheet.self, from: JSONEncoder().encode(snapshot))
+        XCTAssertEqual(restored.result?.displayModelLabel, "Original Artist")
+        XCTAssertEqual(restored.result?.requestedModel, model)
+    }
+}
+
+@MainActor
+final class ModelCatalogueStateTests: XCTestCase {
+    private func catalogue(_ id: String = "new-server-model", label: String = "New Artist") -> ModelCatalogue {
+        let model = ImageModel(rawValue: id)!
+        return ModelCatalogue(schemaVersion: 1, revision: id, defaultModel: model, models: [
+            ModelDescriptor(id: model, label: label, detail: "Server controlled description.", price: nil)
+        ])
+    }
+
+    func testRemoteModelsCacheAndReplaceDisabledSelection() async throws {
+        let name = "CatalogueTests-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"
+        service.catalogue = catalogue()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        XCTAssertTrue(store.availableModels.isEmpty, "Live clients must not fall back to compiled picker choices.")
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(store.model.rawValue, "new-server-model")
+        XCTAssertEqual(store.selectedModel?.label, "New Artist")
+        XCTAssertEqual(store.selectedModel?.priceSummary, "Reference price unavailable")
+        let restored = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        XCTAssertEqual(restored.availableModels, store.availableModels)
+        service.catalogue = catalogue("replacement", label: "Replacement")
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(store.model.rawValue, "replacement")
+        XCTAssertNil(store.modelCatalogueMessage, "Unavailable selections switch silently.")
+        service.catalogueError = GenerationError.uncertain
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(store.model.rawValue, "replacement")
+        XCTAssertEqual(store.availableModels.count, 1)
+        XCTAssertTrue(store.modelCatalogueMessage?.contains("last saved list") == true)
+    }
+
+    func testNewInstallUsesBackendDefaultAndPreservesAnExplicitSelection() async {
+        let name = "ServerDefault-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"
+        service.catalogue = ModelCatalogue(schemaVersion: 1, revision: "flare-default", defaultModel: .flare, models: ModelCatalogue.preview.models)
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(store.model, .flare, "The old Sunburst placeholder is not a saved user preference.")
+        store.model = .sunburst
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(store.model, .sunburst)
+        service.catalogue = ModelCatalogue(schemaVersion: 2, revision: "unsupported", defaultModel: nil, models: [])
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(store.availableModels.count, 6, "Invalid updates cannot replace the last valid catalogue.")
+        XCTAssertEqual(store.model, .sunburst)
+    }
+
+    func testDeletionDrainsSharedCatalogueRegistrationBeforeDeletingAccount() async throws {
+        let name = "CatalogueDeletion-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.set(PrivacyConsent.currentVersion, forKey: PrivacyConsent.key)
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"; service.holdsCatalogue = true
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        let first = Task { await store.refreshModelCatalogue() }
+        for _ in 0..<100 where service.catalogueContinuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        let second = Task { await store.refreshModelCatalogue() }
+        try await Task.sleep(for: .milliseconds(20))
+        XCTAssertEqual(service.catalogueCalls, 1)
+        let deletion = Task { await store.deleteAccountAndData() }
+        for _ in 0..<100 where !store.deletionPending { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(service.deletionCalls, 0, "Deletion must wait for an in-flight catalogue registration.")
+        service.catalogueContinuation?.resume(returning: catalogue())
+        service.catalogueContinuation = nil
+        await first.value; await second.value; await deletion.value
+        XCTAssertEqual(service.deletionCalls, 1)
+        XCTAssertTrue(store.availableModels.isEmpty)
+        XCTAssertNil(defaults.data(forKey: "catalogue.test"))
+        XCTAssertFalse(store.hasConsent)
+    }
+
+    func testEmptyCatalogueStaysEmptyAcrossFailureAndRelaunch() async {
+        let name = "PausedCatalogue-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"
+        service.catalogue = ModelCatalogue(schemaVersion: 1, revision: "paused", defaultModel: nil, models: [])
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        await store.refreshModelCatalogue()
+        store.description = "A flower"
+        XCTAssertNotNil(store.validationMessage)
+        store.generate()
+        XCTAssertEqual(service.calls, 0)
+        service.catalogueError = GenerationError.uncertain
+        await store.refreshModelCatalogue()
+        let restored = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        XCTAssertTrue(restored.availableModels.isEmpty)
+        XCTAssertNotNil(restored.validationMessage)
+        XCTAssertEqual(service.calls, 0)
+    }
+
+    func testModelRefreshWaitsForConsentAndFirstGenerationLoadsCatalogue() async throws {
+        let name = "CatalogueConsent-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"
+        service.catalogue = catalogue()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults)
+        store.description = "A flower"; store.setImageCount(1)
+        await store.refreshModelCatalogue()
+        XCTAssertEqual(service.catalogueCalls, 0)
+        XCTAssertNil(store.validationMessage, "The first generation must remain reachable so consent can be requested.")
+        store.generate()
+        XCTAssertTrue(store.showsConsent)
+        store.acceptConsent()
+        for _ in 0..<100 where service.calls == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(service.calls, 1)
+        XCTAssertEqual(service.captured.first?.model.rawValue, "new-server-model")
+        XCTAssertEqual(service.captured.first?.modelLabel, "New Artist")
+        service.succeed()
+        for _ in 0..<100 where store.isGenerating { try await Task.sleep(for: .milliseconds(10)) }
+    }
+
+    func testDisabledModelSilentlyRetriesOnceWithCapturedContent() async throws {
+        let name = "StaleCatalogue-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"; service.catalogue = catalogue()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        await store.refreshModelCatalogue()
+        store.description = "A flower"; store.setImageCount(1); store.generate()
+        for _ in 0..<100 where service.calls == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        let original = try XCTUnwrap(service.captured.first)
+        store.description = "An edited description"; store.age = 12; store.pageFormat = .square
+        service.catalogue = catalogue("replacement")
+        service.continuations.removeValue(forKey: 0)?.resume(throwing: GenerationError.modelUnavailable)
+        for _ in 0..<100 where service.calls < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(store.model.rawValue, "replacement")
+        XCTAssertNil(store.modelCatalogueMessage)
+        XCTAssertTrue(store.isGenerating)
+        XCTAssertEqual(store.failedCount, 0)
+        XCTAssertEqual(service.calls, 2)
+        let retry = try XCTUnwrap(service.captured.last)
+        XCTAssertEqual(retry.model.rawValue, "replacement")
+        XCTAssertEqual(retry.originalDescription, original.originalDescription)
+        XCTAssertEqual(retry.age, original.age)
+        XCTAssertEqual(retry.composition, original.composition)
+        XCTAssertEqual(retry.batchID, original.batchID)
+        XCTAssertEqual(retry.width, original.width); XCTAssertEqual(retry.height, original.height)
+        service.succeed()
+        for _ in 0..<100 where store.isGenerating { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(store.phase, .result)
+        XCTAssertEqual(store.failedCount, 0)
+    }
+
+    func testBatchSharesOneFallbackAndDoesNotRetryARejectedReplacement() async throws {
+        let name = "BatchFallback-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"; service.catalogue = catalogue()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        await store.refreshModelCatalogue()
+        store.description = "A flower"; store.generate()
+        for _ in 0..<100 where service.calls < 3 { try await Task.sleep(for: .milliseconds(10)) }
+        service.catalogue = catalogue("replacement")
+        service.continuations.removeValue(forKey: 0)?.resume(throwing: GenerationError.modelUnavailable)
+        for _ in 0..<100 where service.calls < 4 { try await Task.sleep(for: .milliseconds(10)) }
+        service.catalogue = catalogue("later-default")
+        for index in [1, 2] { service.continuations.removeValue(forKey: index)?.resume(throwing: GenerationError.modelUnavailable) }
+        for _ in 0..<100 where service.calls < 6 { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(service.captured.dropFirst(3).map(\.model.rawValue), Array(repeating: "replacement", count: 3))
+        XCTAssertEqual(service.catalogueCalls, 2, "Late rejections share the already chosen batch fallback.")
+        for index in [3, 4, 5] { service.continuations.removeValue(forKey: index)?.resume(throwing: GenerationError.modelUnavailable) }
+        for _ in 0..<100 where store.isGenerating { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(service.calls, 6, "Each image has at most one pre-admission fallback.")
+        XCTAssertEqual(store.failedCount, 3)
+    }
+
+    func testNoFallbackForUncertainFailuresOrWhenNoAlternativeExists() async throws {
+        for failure in [GenerationError.uncertain, .modelUnavailable] {
+            let name = "NoFallback-\(UUID())", service = ControlledService()
+            let defaults = UserDefaults(suiteName: name)!
+            defer { defaults.removePersistentDomain(forName: name) }
+            service.modelCatalogueCacheKey = "catalogue.test"; service.catalogue = catalogue()
+            let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+            await store.refreshModelCatalogue()
+            store.description = "A flower"; store.setImageCount(1); store.generate()
+            for _ in 0..<100 where service.calls == 0 { try await Task.sleep(for: .milliseconds(10)) }
+            service.continuations.removeValue(forKey: 0)?.resume(throwing: failure)
+            for _ in 0..<100 where store.isGenerating { try await Task.sleep(for: .milliseconds(10)) }
+            XCTAssertEqual(service.calls, 1)
+            XCTAssertEqual(store.failedCount, 1)
+            XCTAssertEqual(service.catalogueCalls, failure == .uncertain ? 1 : 2)
+        }
+    }
+
+    func testCancelledBatchDoesNotStartFallbackAfterCatalogueRefresh() async throws {
+        let name = "CancelledFallback-\(UUID())", service = ControlledService()
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        service.modelCatalogueCacheKey = "catalogue.test"; service.catalogue = catalogue()
+        let store = ColoringViewModel(service: service, isMock: false, defaults: defaults, requiresConsent: false)
+        await store.refreshModelCatalogue()
+        store.description = "A flower"; store.setImageCount(1); store.generate()
+        for _ in 0..<100 where service.calls == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        service.holdsCatalogue = true
+        service.continuations.removeValue(forKey: 0)?.resume(throwing: GenerationError.modelUnavailable)
+        for _ in 0..<100 where service.catalogueContinuation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        let refresh = try XCTUnwrap(service.catalogueContinuation)
+        store.cancel()
+        refresh.resume(returning: catalogue("replacement")); service.catalogueContinuation = nil
+        for _ in 0..<100 where store.isRefreshingModels { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(service.calls, 1)
+        XCTAssertFalse(store.isGenerating)
+    }
+
+}
+
+extension NetworkingTests {
+    func testAuthenticatedCatalogueFetchUsesServerMetadata() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil }
+        var calls = 0
+        MockURLProtocol.handler = { request in
+            calls += 1
+            XCTAssertEqual(request.url?.path, "/v1/models")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer synthetic-catalogue")
+            let data = Data(#"{"schemaVersion":1,"revision":"r","defaultModel":"future-model","models":[{"id":"future-model","label":"Future","detail":"A model added remotely.","price":{"usd":0.01,"evidence":"Estimate","explanation":"Reference only."}}]}"#.utf8)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type":"application/json"])!, data)
+        }
+        let client = WorkerClient(credential: "synthetic-catalogue", session: session)
+        let catalogue = try await client.modelCatalogue()
+        XCTAssertEqual(catalogue.defaultModel?.rawValue, "future-model")
+        XCTAssertEqual(catalogue.models.first?.priceSummary, "¢1.00 / image · Estimate")
+        XCTAssertEqual(calls, 1)
+    }
+
+    func testUnavailableModelDoesNotLeaveUnreservedPendingGeneration() async throws {
+        let suite = "UnavailableModel-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        let identities = AnonymousIdentityStore(service: suite)
+        try await identities.save(AnonymousSession(accountID: UUID(), accessToken: "synthetic", expiresAt: Date().addingTimeInterval(3600)))
+        addTeardownBlock { await identities.remove() }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); MockURLProtocol.handler = nil; defaults.removePersistentDomain(forName: suite) }
+        var calls = 0
+        MockURLProtocol.handler = { request in
+            calls += 1
+            let data = Data(#"{"error":{"code":"model_unavailable","message":"Refresh models"}}"#.utf8)
+            return (HTTPURLResponse(url: request.url!, statusCode: 409, httpVersion: nil, headerFields: ["Content-Type":"application/json"])!, data)
+        }
+        let client = WorkerClient(session: session, identities: identities, pendingStore: PendingGenerationStore(defaults: defaults))
+        do { _ = try await client.generate(GenerationRequest(description: "A flower", age: 6, model: .sunburst)); XCTFail("Expected rejection") }
+        catch { XCTAssertEqual(error as? GenerationError, .modelUnavailable) }
+        let pending = await client.pendingGenerations()
+        XCTAssertTrue(pending.isEmpty)
+        XCTAssertEqual(calls, 1)
     }
 }
