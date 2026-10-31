@@ -96,6 +96,14 @@ struct ContentView: View {
             }
         }
         .task { await store.enteredForeground() }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                guard !Task.isCancelled else { return }
+                await store.refreshModelCatalogue()
+            }
+        }
         .onChange(of: store.sessionID) { _, _ in
             descriptionFocused = false
             showSettings = false

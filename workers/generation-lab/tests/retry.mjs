@@ -10,7 +10,8 @@ const source=(await readFile(new URL('../public/app.js',import.meta.url),'utf8')
 const nodes=new Map(),requests=[];
 let resolveJob,lookup,submit;
 const context=vm.createContext({...costDisplay,crypto,console,requestAnimationFrame:()=>{},
-  document:{getElementById:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);},querySelectorAll:()=>[],hidden:false},
+  window:{addEventListener:()=>{}},setInterval:()=>{},
+  document:{addEventListener:()=>{},getElementById:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);},querySelectorAll:()=>[],hidden:false},
   fetch:async(path,options={})=>{
     requests.push({path,method:options.method||'GET',body:options.body&&JSON.parse(options.body)});
     return path==='/api/generations'?submit(JSON.parse(options.body)):lookup(path.split('/').at(-1));

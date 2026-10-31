@@ -2,6 +2,9 @@
 import {formatCents, formatPriceText, displayMetric, exportComparison, modelCostSummary, matchingReferenceModel} from './cost-display.mjs';
 const $ = id => document.getElementById(id);
 const STORAGE = 'wonderlines-comparisons-v1';
+const logoutKey='wonderlines.logout.v1';
+function broadcastLogout(){try{localStorage.setItem(logoutKey,crypto.randomUUID());}catch{}}
+window.addEventListener('storage',event=>{if(event.key===logoutKey)showLogin();});
 const MAX_IMAGES = 80;
 const MAX_PARALLEL_GENERATIONS = 50;
 const providerLabels = {'openai':'OpenAI', 'workers-ai':'Cloudflare', 'google-ai-studio':'Google', 'fal':'fal.ai'};
@@ -34,7 +37,11 @@ function runSummary(run) {
     previews:run.cells.filter(c=>c.status==='completed').slice(0,4).map(c=>c.id)};
 }
 function persist() {
-  if(current)history=[runSummary(current),...history.filter(r=>r.id!==current.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id)).slice(0,100);
+  if(current){
+    const ordered=[runSummary(current),...history.filter(r=>r.id!==current.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id));
+    let count=0;history=[];
+    for(const run of ordered){if(count+run.count>2500)break;count+=run.count;history.push(run);}
+  }
   renderHistory();$('library-count').textContent=history.length;if(!$('library-view').hidden)renderLibrary();
 }
 function savePayload(run, imported=false) {
@@ -107,6 +114,15 @@ async function openWorkspace() {
   if(!current&&history.length){const saved=await api('/api/library/'+history[0].id);current=saved.grid;$('prompt').value=current.prompt;$('composition').value=current.composition;selectedModels.clear();current.models.forEach(m=>selectedModels.add(m.id));renderOptions();}
   renderGrid(); await recover();
 }
+async function refreshModels() {
+  const fresh=await api('/api/config');
+  config=fresh;
+  const available=new Set(config.models.map(model=>model.id));
+  for(const id of selectedModels)if(!available.has(id))selectedModels.delete(id);
+  updateAccess(config.access);renderOptions();
+}
+setInterval(()=>{if(config&&!busy&&!document.hidden)refreshModels().catch(()=>{});},60000);
+document.addEventListener('visibilitychange',()=>{if(config&&!busy&&!document.hidden)refreshModels().catch(()=>{});});
 function renderOptions() {
   $('model-options').replaceChildren(); $('extra-model-options').replaceChildren();
   for (const model of config.models) {
@@ -308,7 +324,7 @@ async function runCells(recovery = false) {
   setBusy(false); persist(); renderGrid();
 }
 async function recover() { if(current?.cells.some(c=>['processing','submitting','uncertain'].includes(c.status))) await runCells(true); }
-$('logout').addEventListener('click',async()=>{try {await api('/api/session',{method:'DELETE'});showLogin();$('google-signin').focus();}catch(error){message('form-error',error.message);}});
+$('logout').addEventListener('click',async()=>{try {await api('/api/session',{method:'DELETE'});broadcastLogout();showLogin();$('google-signin').focus();}catch(error){message('form-error',error.message);}});
 $('prompt').addEventListener('input',updateSummary);
 $('studio-tab').addEventListener('click',()=>showView('studio'));
 async function browseLibrary(){showView('library');try{await refreshLibrary();message('library-error','');}catch(error){message('library-error',error.message);}}
@@ -320,6 +336,9 @@ $('select-all-models').addEventListener('click',()=>{config.models.forEach(model
 document.querySelectorAll('[data-example]').forEach(button=>button.addEventListener('click',()=>{$('prompt').value=button.dataset.example; updateSummary(); $('prompt').focus();}));
 $('compare-form').addEventListener('submit',async event=>{
   event.preventDefault(); if(busy) return;
+  setBusy(true);
+  try {await refreshModels();} catch(error) {setBusy(false);message('form-error','Could not refresh models. '+error.message);return;}
+  setBusy(false);
   const count=selectedModels.size*selectedAges.size;
   if(!count || count>MAX_IMAGES || !$('prompt').value.trim()) return;
   const models=config.models.filter(m=>selectedModels.has(m.id)); const ages=[...selectedAges].sort((a,b)=>a-b);

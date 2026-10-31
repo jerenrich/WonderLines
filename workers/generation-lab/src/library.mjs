@@ -1,4 +1,4 @@
-import {catalog, publicJob} from './catalog.mjs';
+import {catalog, liveCatalog, publicJob} from './catalog.mjs';
 import {refreshImageCostMetrics} from '../../coloring-sheets-api/src/image-cost.mjs';
 import {structuredComposition, isUUID} from '../../coloring-sheets-api/src/composition.mjs';
 import {generationFingerprints, prepareGeneration, startGeneration} from '../../coloring-sheets-api/src/generation-start.mjs';
@@ -38,9 +38,10 @@ export class ComparisonLibrary {
     const next=[summary(grid),...index.filter(g=>g.id!==grid.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id));
     await this.state.storage.transaction(async storage=>{await storage.put('grid:'+grid.id,grid);await storage.put('index',next);});
   }
-  normalize(input) {
+  async normalize(input) {
     if(!input||!isUUID(input.id)||typeof input.prompt!=='string'||!input.prompt.trim()||input.prompt.length>240||!Array.isArray(input.models)||!Array.isArray(input.ages)||!Array.isArray(input.cells)||!input.cells.length||input.cells.length>80)return null;
-    const models=input.models.map(m=>catalog(this.env).find(x=>x.id===m?.id));
+    const available=await liveCatalog(this.env);
+    const models=input.models.map(m=>available.find(x=>x.id===m?.id) ?? (input.imported===true ? catalog(this.env).find(x=>x.id===m?.id) : undefined));
     const ages=input.ages;
     if(models.some(m=>!m)||new Set(models.map(m=>m.id)).size!==models.length||!ages.length||ages.some(a=>!Number.isInteger(a)||a<3||a>18)||new Set(ages).size!==ages.length||models.length*ages.length>80)return null;
     const ids=new Set(),combos=new Set(),cells=[];
@@ -61,7 +62,7 @@ export class ComparisonLibrary {
     if(['completed','failed'].includes(cell.status))await this.state.storage.delete('pending:'+cell.id);
   }
   async save(input) {
-    const grid=this.normalize(input);if(!grid)return fail('The saved comparison is invalid.');
+    const grid=await this.normalize(input);if(!grid)return fail('The saved comparison is invalid.');
     if(await this.state.storage.get('retired:'+grid.id))return fail('This comparison has left the library.',410,'grid_expired');
     const existing=await this.state.storage.get('grid:'+grid.id);
     if(existing) {
@@ -121,7 +122,7 @@ export class ComparisonLibrary {
     const prepared=await prepareGeneration({description:input.description,age:input.age,composition:input.composition,batchID:input.batchID,model:input.model,width:1456,height:1024},input.id,this.env);
     if(prepared.value?.error)return json(prepared.value,prepared.status);
     const composed=prepared.composed;
-    const selected=catalog(this.env).find(m=>m.id===input.model);
+    const selected=(await liveCatalog(this.env)).find(m=>m.id===input.model);
     if(!composed||!selected)return fail('Shorten the prompt or check your model and age settings.');
     if(await this.state.storage.get('retired:'+input.batchID))return fail('This comparison has left the library.',410,'grid_expired');
     let grid=await this.state.storage.get('grid:'+input.batchID);

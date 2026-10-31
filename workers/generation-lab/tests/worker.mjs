@@ -101,3 +101,17 @@ assert.equal(priced.grid.cells[2].metrics.costEvidence,'observed_neuron_usage');
 assert.deepEqual(await pricingStorage.get('grid:'+pricingGrid.id),pricingGrid);
 assert.equal(calls.length,beforePricingReads,'Cost enrichment requires no provider or account calls.');
 console.log('PASS: saved comparison estimates use upstream evidence without inference, mutation, or failed-image pricing.');
+
+// The comparison picker and library must use the same live registry as admission.
+const registry=JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../../coloring-sheets-api/model-registry.initial.json',import.meta.url)));
+registry.models.find(model=>model.id==='gpt-image-2.5-flare').enabled=false;
+registry.models.push({id:'new-comparison-model',provider:'openai',model:'gpt-image-2.5-flare',enabled:true,visible:true,label:'New comparison model',detail:'Test model',price:null});
+const liveEnv={...env,MODEL_REGISTRY:{get:async()=>JSON.stringify(registry)}};
+const liveLibrary=new ComparisonLibrary({storage:new MemoryStorage()},liveEnv);
+liveEnv.LIBRARY={idFromName:id=>id,get:()=>({fetch:(url,options)=>liveLibrary.fetch(new Request(url,options))})};
+const liveConfig=await (await worker.fetch(request('/api/config','GET',undefined,cookie),liveEnv)).json();
+assert.ok(!liveConfig.models.some(model=>model.id==='gpt-image-2.5-flare'));
+assert.ok(liveConfig.models.some(model=>model.id==='new-comparison-model'));
+const liveGrid={id:crypto.randomUUID(),prompt:'A friendly dinosaur',composition:'front',models:[{id:'new-comparison-model'}],ages:[4],cells:[{id:crypto.randomUUID(),model:'new-comparison-model',age:4}]};
+assert.equal((await worker.fetch(request('/api/library','POST',liveGrid,cookie),liveEnv)).status,201);
+console.log('PASS: comparison configuration and library accept dynamic registry routes and omit disabled models.');
