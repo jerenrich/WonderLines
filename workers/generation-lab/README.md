@@ -75,7 +75,9 @@ Model controls live at **`https://wonderlines-compare.jordan-erenrich.workers.de
 
 ### One-time Google setup
 
-There is no Google OAuth client configured yet. Until the following setup is completed, the page displays a setup message and all admin APIs stay locked. The existing comparison studio continues to work.
+Production Google sign-in was configured and verified on **31 October 2026**. The **WonderLines Admin** web client belongs to **My First Project** (`brave-framework-465820-u0`). Its External audience remains in Testing with `jordan.erenrich@gmail.com` as the sole test user. The client ID, client secret and admin session secret are configured as comparison Worker secrets; no credential file is kept in this repository. A real Google sign-in loaded the live catalogue and change history successfully.
+
+For a replacement client or another deployment, follow these setup steps. Until all required secrets are present, the page displays a setup message and admin APIs stay locked.
 
 1. Create or select a Google Cloud project. Configure its Google Auth Platform branding and choose an External audience for this Gmail account. If the app is in testing mode, add `jordan.erenrich@gmail.com` as a test user.
 2. Create an OAuth client of type **Web application**. Register this exact authorized redirect URI:
@@ -122,4 +124,4 @@ node workers/generation-lab/tests/worker.mjs
 node --check workers/generation-lab/public/admin/models.js
 ```
 
-Auth tests exercise cryptographically signed synthetic Google identities, the PKCE/state/nonce flow, the owner allowlist, expiration, rotation and CSRF. Store/API tests cover invalid drafts, immutable versions, attribution, concurrent stale tabs, rollback, pagination, direct-edit imports and ambiguous publication recovery. No test calls Google or changes production KV. A real Google sign-in remains a rollout check after the OAuth client is configured.
+Auth tests exercise cryptographically signed synthetic Google identities, the PKCE/state/nonce flow, the owner allowlist, expiration, rotation and CSRF. Store/API tests cover invalid drafts, immutable versions, attribution, concurrent stale tabs, rollback, pagination, direct-edit imports and ambiguous publication recovery. No test calls Google or changes production KV. After replacing OAuth credentials, repeat a real Google sign-in as a rollout check; the initial production sign-in passed on 31 October 2026.
