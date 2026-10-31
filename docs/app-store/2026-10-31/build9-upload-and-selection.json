@@ -1,0 +1,21 @@
+{
+  "recordedAtUTC": "2026-10-31T09:24:32.971654+00:00",
+  "version": "1.0",
+  "build": "9",
+  "appID": "6817505650",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "uploadSucceeded": true,
+  "appleProcessingStatus": "Upload command reported uploaded package processing; browser confirmation pending",
+  "uploadLog": ".build/build9/upload.log",
+  "archive": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build9/WonderLines-1.0-9.xcarchive",
+  "originalVerifiedIPASHA256": "910cf9cf507c24c54e4d731edc89cde13a8f8166507f86c1b0ec826b9e989766",
+  "buildSelectedForVersion": false,
+  "selectionBlocker": "App Store Connect browser sign-in required",
+  "reviewNotesDraft": "build9-review-notes.txt",
+  "reviewNotesSHA256": "8c05209def2600d918a46190f57ef2ca2263cb5c4cee6aa40607d5c029d246b0",
+  "reviewTextSent": false,
+  "submittedForReview": false,
+  "userApprovalRequired": "User requested review of the exact text before submission.",
+  "reviewNotesApprovalStatus": "Awaiting user approval of revised moderation-availability explanation",
+  "draftUpdatedAtUTC": "2026-10-31T09:34:17.118577+00:00"
+}

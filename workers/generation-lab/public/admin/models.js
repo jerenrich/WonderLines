@@ -2,6 +2,18 @@ const $=id=>document.getElementById(id);
 const providers={openai:'OpenAI','google-ai-studio':'Google','workers-ai':'Cloudflare',fal:'fal.ai'};
 const state={head:null,draft:null,validation:null,history:[],cursor:null,busy:false,pending:null,uncertain:null,lastSubmission:null,timer:null,conflict:false};
 const copy=value=>structuredClone(value);
+const draftKey='wonderlines.admin.draft.v1', logoutKey='wonderlines.logout.v1';
+function saveDraft(){
+  if(!state.head||!state.draft)return;
+  try {
+    if(dirty() || $('change-note').value.trim()) sessionStorage.setItem(draftKey,JSON.stringify({base:state.draftBase??state.head.id,document:state.draft,note:$('change-note').value}));
+    else sessionStorage.removeItem(draftKey);
+  } catch { message('Your draft could not be saved in this browser. Keep this tab open until you publish.',true); }
+}
+function clearDraft(){try{sessionStorage.removeItem(draftKey);}catch{}}
+function broadcastLogout(){try{localStorage.setItem(logoutKey,crypto.randomUUID());}catch{}}
+function lockAdmin(){saveDraft();clearTimeout(state.timer);$('admin-workspace').hidden=true;$('admin-login').hidden=false;$('sign-out').hidden=true;$('google-signin').hidden=false;$('login-status').textContent='Sign in again to continue. Your draft is saved in this tab.';}
+window.addEventListener('storage',event=>{if(event.key===logoutKey)lockAdmin();});
 const element=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
 const dirty=()=>!!state.head&&JSON.stringify(state.draft)!==JSON.stringify(state.head.document);
 function message(text,error=false){$('message').textContent=text;$('message').hidden=!text;$('message').classList.toggle('error',error);}
@@ -9,12 +21,12 @@ async function api(path,options={}) {
   const response=await fetch('/api/admin'+path,{credentials:'same-origin',cache:'no-store',...options,
     headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers}});
   const data=await response.json();
-  if(response.status===401){clearTimeout(state.timer);$('admin-workspace').hidden=true;$('admin-login').hidden=false;$('google-signin').hidden=false;$('login-status').textContent='Your session expired. Sign in again to continue.';}
+  if(response.status===401)lockAdmin();
   if(!response.ok){const error=new Error(data.error?.message??'The request could not be completed.');error.code=data.error?.code;error.status=response.status;error.details=data;throw error;}
   return data;
 }
 async function run(action){if(state.busy)return;state.busy=true;updateControls();try{await action();}catch(error){message(error.message,true);}finally{state.busy=false;updateControls();}}
-function changed(){state.validation=null;$('validation-result').hidden=true;updateControls();updateSummary();}
+function changed(){saveDraft();state.validation=null;$('validation-result').hidden=true;updateControls();updateSummary();}
 function updateSummary(){
   const available=state.draft?.models.filter(model=>model.enabled&&model.visible&&state.draft.providers[model.provider]?.enabled)??[];
   $('visible-count').textContent=String(available.length);
@@ -22,8 +34,8 @@ function updateSummary(){
 function updateControls(){
   const blocked=state.busy||!!state.pending||!!state.uncertain||!state.head||!state.draft;
   $('editor-fields').disabled=blocked;
-  $('validate').disabled=blocked||!dirty();
-  $('publish').disabled=blocked||!dirty()||!state.validation?.valid||!$('change-note').value.trim();
+  $('validate').disabled=blocked||state.conflict||!dirty();
+  $('publish').disabled=blocked||state.conflict||!dirty()||!state.validation?.valid||!$('change-note').value.trim();
   $('discard').disabled=blocked||(!dirty()&&!state.conflict);
   $('review-draft').disabled=blocked||!dirty();
   $('draft-state').textContent=state.pending?'Publishing recorded change…':state.uncertain?'Checking publishing status…':dirty()?'Unsaved draft':'Published catalogue';
@@ -127,8 +139,14 @@ async function loadHistory(append=false){const result=await api('/models/history
 async function loadCurrent(reset=true){
   const data=await api('/models');state.head=data.head;state.pending=data.pending;
   $('current-version').textContent=`Version ${data.head.sequence} · ${data.head.revision}`;
-  if(reset){state.conflict=false;state.draft=copy(data.head.document);state.validation=null;$('validation-result').hidden=true;$('change-note').value='';renderEditor();}
-  message(data.warning??'');renderHistory();updateControls();
+  if(reset){state.conflict=false;state.draft=copy(data.head.document);state.draftBase=data.head.id;state.validation=null;$('validation-result').hidden=true;$('change-note').value='';
+    let saved;try{saved=JSON.parse(sessionStorage.getItem(draftKey));}catch{}
+    if(saved && saved.document && typeof saved.document==='object' && typeof saved.base==='string'){
+      state.draft=saved.document;state.draftBase=saved.base;$('change-note').value=typeof saved.note==='string'?saved.note:'';
+      state.conflict=saved.base!==data.head.id;
+    }
+    renderEditor();}
+  message(state.conflict?'Your saved draft was based on an older catalogue. Copy any changes you need, then discard the draft and reload before editing.':data.warning??'',state.conflict);renderHistory();updateControls();
   if(data.pending)pollPublication();
 }
 function pollPublication(){
@@ -136,7 +154,7 @@ function pollPublication(){
   state.timer=setTimeout(async()=>{
     try{const data=await api('/models');state.pending=data.pending;
       if(data.pending){message('Your change is recorded and still publishing. You can leave this page; publishing will continue.');pollPublication();}
-      else{state.uncertain=null;await loadCurrent();await loadHistory();message('Catalogue published. Devices will receive the update as their catalogue refreshes.');}
+      else{state.uncertain=null;clearDraft();await loadCurrent();await loadHistory();message('Catalogue published. Devices will receive the update as their catalogue refreshes.');}
     }catch(error){message(error.message+' Your recorded change is still being checked.',true);if(state.pending)pollPublication();}
     updateControls();
   },4000);
@@ -146,7 +164,7 @@ async function checkUncertain(){
   if(!request)return;
   try{const result=await api('/models/operations/'+request.requestId);state.uncertain=null;
     if(result.status==='publishing'){state.pending=result.version;message('Your change is recorded and still publishing.');pollPublication();}
-    else{await loadCurrent();await loadHistory();message('Your change was published.');}
+    else{clearDraft();await loadCurrent();await loadHistory();message('Your change was published.');}
   }catch(error){if(error.status===404){state.uncertain=null;message('No completed change was found. Your draft is kept; you can retry publishing.');}else throw error;}
 }
 async function submitChange(path,input){
@@ -161,10 +179,10 @@ async function submitChange(path,input){
   }
   state.uncertain=null;
   if(result.status==='publishing'){state.pending=result.version;message('Your change is recorded and still publishing. You can leave this page; publishing will continue.');pollPublication();}
-  else{await loadCurrent();await loadHistory();message(path.endsWith('rollback')?'Previous catalogue restored. A new version has been added to the history.':'Catalogue published. Devices will receive the update as their catalogue refreshes.');}
+  else{clearDraft();await loadCurrent();await loadHistory();message(path.endsWith('rollback')?'Previous catalogue restored. A new version has been added to the history.':'Catalogue published. Devices will receive the update as their catalogue refreshes.');}
 }
 $('default-model').addEventListener('change',()=>{state.draft.defaultModel=$('default-model').value||null;changed();});
-$('change-note').addEventListener('input',updateControls);
+$('change-note').addEventListener('input',()=>{saveDraft();updateControls();});
 $('add-model').addEventListener('click',()=>{if(state.draft.models.length>=32){message('A catalogue can contain at most 32 models.',true);return;}
   let index=1;while(state.draft.models.some(model=>model.id==='new-model-'+index))index++;
   state.draft.models.push({id:'new-model-'+index,provider:'openai',model:'',enabled:false,visible:true,label:'New model',detail:'',price:null});renderEditor();changed();$('model-controls').lastElementChild?.scrollIntoView({block:'center'});
@@ -183,11 +201,11 @@ $('catalogue-form').addEventListener('submit',event=>{event.preventDefault();if(
   });
 });
 $('review-draft').addEventListener('click',()=>{$('change-note').scrollIntoView({block:'center'});$('change-note').focus({preventScroll:true});});
-$('discard').addEventListener('click',()=>run(async()=>{await loadCurrent();await loadHistory();}));
+$('discard').addEventListener('click',()=>run(async()=>{clearDraft();await loadCurrent();await loadHistory();}));
 $('refresh-history').addEventListener('click',()=>run(async()=>{if(state.uncertain)await checkUncertain();if(!state.head)await loadCurrent();await loadHistory();}));
 $('more-history').addEventListener('click',()=>run(()=>loadHistory(true)));
 $('close-version').addEventListener('click',()=>$('version-dialog').close());
-$('sign-out').addEventListener('click',()=>run(async()=>{await api('/logout',{method:'POST',body:'{}'});location.replace('/admin/models');}));
+$('sign-out').addEventListener('click',()=>run(async()=>{await api('/logout',{method:'POST',body:'{}'});broadcastLogout();location.replace('/admin/models');}));
 window.addEventListener('beforeunload',event=>{if(dirty()&&!state.pending){event.preventDefault();event.returnValue='';}});
 async function start(){
   try{const session=await api('/session');

@@ -1,30 +1,24 @@
-Hello,
+Hello App Review team,
 
-Please review Wonder Lines 1.0 (9).
+Please review Wonder Lines 1.0 (build 9).
 
-We investigated the generation error and found an eight-second timeout in the description safety check in a service session matching the review. The image provider was never reached in that session. The backend now runs Cloudflare Clef and direct TypeSafe Jev independently. The first valid approval starts generation immediately; both checks continue for up to eight seconds for operational diagnostics. If no service approves, generation is blocked. This removes the dependency on a single safety service responding successfully.
+We investigated the latest generation failure and identified a moderation-service availability issue. The Cloudflare-hosted content safety check did not return within our eight-second timeout, preventing image generation from starting. This was separate from the earlier disabled Generate button issue, which had already been fixed.
 
-Build 9 updates the AI sharing notice to name TypeSafe AI and requires renewed consent before generation. The public privacy policy has also been updated. No user descriptions or raw provider responses are retained in our new moderation diagnostic logs.
+We have deployed redundant moderation using two independent services, Cloudflare Clef and TypeSafe Jev, in parallel. Generation now starts as soon as either service approves the description, so a slow or unavailable service does not block a description approved by the other. If neither service approves, generation remains blocked. We also added diagnostics to investigate service availability and disagreements without recording user descriptions.
 
-How to test
+Build 9 explicitly names TypeSafe AI in the sharing notice and requires renewed consent before generation. The public privacy policy has also been updated.
+
+We verified three-sheet generation on a physical iPhone 17 Pro running iOS 27.2, including device verification and consent. The updated backend also passed live generation checks, and unit and privacy UI tests passed on iPhone and iPad simulators.
+
+To test:
 1. Open Wonder Lines with an internet connection.
 2. Enter "A friendly dinosaur riding a bicycle on the moon".
-3. Tap Generate/the sparkle button. Tap Agree and Generate on the AI sharing disclosure.
-4. Wait for the sheets. Defaults are drawing difficulty 6, Sunburst, and three sheets. Use the arrows or swipe to view each result.
+3. Tap Generate and then Agree and Generate on the AI sharing notice.
+4. Wait for the three sheets, then swipe or use the arrows to view them.
 
-No sign-in, configuration change or purchase is required. An anonymous service account is created automatically. Generation is free for users, subject to provider availability and the daily allowance of 100 images per anonymous account per UTC day. Usage & cost shows developer-paid estimates; it does not charge users.
-
-Verification
-The build 9 Release configuration generated all three real sheets on a physical iPhone 17 Pro running iOS 27.2, including App Attest enrollment, renewed consent, and successful account deletion afterward. Unit and privacy UI tests passed on iPhone 17e and iPad Air 11-inch (M3) simulators running OS 27.0. The final deployed first-approval policy also passed real provider checks and a production generation smoke test. The final policy was deployed after the physical three-sheet test; the app and request protocol were unchanged.
-
-Privacy and controls
-Cancel sends no generation request. Settings includes consent withdrawal, the privacy policy, support, and Delete account and data. Saved sheets can be reported privately for support review; there is no public feed or messaging. The app includes a privacy manifest and has no advertising or analytics SDK. Exported copies and independent provider retention are described in the privacy policy.
-
-Services
-Cloudflare hosts the backend and Clef safety check. Updated consenting clients also send the description directly to TypeSafe AI for the Jev safety check. Image generation uses OpenAI, Cloudflare Workers AI or fal.ai, according to the selected model. The safety checks do not require a name or email address. TypeSafe receives the original description for moderation, without the account credentials, generated image, drawing difficulty or selected image model.
+No sign-in, purchase or settings change is required. Generation is free for users, subject to service availability and a daily allowance of 100 images per anonymous account. Settings includes consent withdrawal, account and data deletion, the privacy policy, and support.
 
 Privacy: https://jerenrich.github.io/WonderLines/privacy.html
 Support: https://jerenrich.github.io/WonderLines/#support
-Support email: jordan.erenrich@gmail.com
 
 Thank you.

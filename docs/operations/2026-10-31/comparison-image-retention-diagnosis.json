@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-31T12:39:22.920552+00:00",
+  "finding": "The shared image bucket has an enabled bucket-wide 24-hour deletion rule. Comparison grid/job metadata outlives its R2 image files.",
+  "liveBucket": "coloring-sheets-generations",
+  "liveLifecycleRules": [
+    {
+      "id": "recovery-images",
+      "enabled": true,
+      "conditions": {},
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      },
+      "abortMultipartUploadsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      }
+    }
+  ],
+  "bindingsVerified": {
+    "wonderlines-compare": "coloring-sheets-generations",
+    "coloring-sheets-api": "coloring-sheets-generations"
+  },
+  "recentLogSample": {
+    "queryTimeframe": {
+      "from": 1793446713838,
+      "to": 1793450313838
+    },
+    "eventLimit": 100,
+    "imageResponseStatuses": {
+      "410": 30
+    },
+    "imageMissingEvents": 30,
+    "distinctMissingImages": 24
+  },
+  "comparisonLibraryPolicy": "Newest 100 grids; image cleanup only when a grid is evicted. This does not override bucket lifecycle deletion.",
+  "changesMade": "Read-only production investigation; no storage rule changes, image generation, or deployments."
+}

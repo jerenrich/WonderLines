@@ -1,3 +1,4 @@
+import {loadModelCatalog} from '../../coloring-sheets-api/src/model-registry.mjs';
 import {modelCatalog} from '../../coloring-sheets-api/src/image-provider.mjs';
 import {refreshImageCostMetrics} from '../../coloring-sheets-api/src/image-cost.mjs';
 import {modelReferenceCost} from './model-reference-cost.mjs';
@@ -17,6 +18,20 @@ export function catalog(env) {
   return Object.entries(result.routes).map(([id, route]) => ({id,
     label: kleinLabels[id] ?? FAL_COMPARISON_MODELS[id]?.label ?? (id === 'coloringbook-redmond-v2' ? 'ColoringBook Redmond V2' : names[id] ?? id),
     recommended: recommended.includes(id), ...route, referenceCost: modelReferenceCost(route)}));
+}
+// Use the same KV-backed routes as generation admission. Comparison-only
+// presets remain available when their provider is enabled.
+export async function liveCatalog(env) {
+  if (!env.MODEL_REGISTRY) return catalog(env);
+  const result = await loadModelCatalog(env, {comparison:true});
+  const defaults = new Map(catalog(env).map(model => [model.id, model]));
+  const visible = new Map(result.models.map(model => [model.id, model]));
+  return Object.entries(result.routes).map(([id, route]) => {
+    const prior = defaults.get(id), entry = visible.get(id);
+    return {id, ...route, label:entry?.label ?? prior?.label ?? id,
+      recommended:entry ? true : (prior?.recommended ?? false),
+      referenceCost:modelReferenceCost(route)};
+  });
 }
 // These are visible as setup information, never selectable pretend integrations.
 export const unavailableModels = [

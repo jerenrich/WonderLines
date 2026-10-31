@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-29",
+  "app": "Wonder Lines",
+  "platform": "iOS",
+  "appleID": "6817505650",
+  "currentSubmissionID": "5f204859-39b1-47fe-87ce-01e4d224d02a",
+  "version": "1.0",
+  "build": 8,
+  "confirmation": "We’ll expedite review for Wonder Lines.",
+  "resubmissionGuidance": "If rejected during this review, the resubmission will automatically return to the expedited queue.",
+  "formFieldsSubmitted": [
+    "App Name: Wonder Lines (selected from matching app suggestion)",
+    "Platform: iOS"
+  ],
+  "reasonFieldAvailable": false,
+  "proof": "expedited-review-confirmation.jpg"
+}
