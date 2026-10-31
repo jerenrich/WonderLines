@@ -40,7 +40,7 @@ function persist() {
   if(current){
     const ordered=[runSummary(current),...history.filter(r=>r.id!==current.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id));
     let count=0;history=[];
-    for(const run of ordered){if(count+run.count>2500)break;count+=run.count;history.push(run);}
+    for(const run of ordered){if(history.length===100||count+run.count>2500)break;count+=run.count;history.push(run);}
   }
   renderHistory();$('library-count').textContent=history.length;if(!$('library-view').hidden)renderLibrary();
 }

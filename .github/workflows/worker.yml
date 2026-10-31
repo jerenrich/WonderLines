@@ -19,6 +19,7 @@ on:
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
       - 'Scripts/test_diagnostic_retention.mjs'
+      - 'Scripts/test_image_retention.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -46,6 +47,7 @@ on:
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
       - 'Scripts/test_diagnostic_retention.mjs'
+      - 'Scripts/test_image_retention.mjs'
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
@@ -123,6 +125,7 @@ jobs:
           node workers/generation-lab/tests/fal.mjs
           node workers/log-retention/tests/worker.mjs
           node Scripts/test_diagnostic_retention.mjs
+          node Scripts/test_image_retention.mjs
           node --check workers/moderation-lab/public/app.js
           node --check workers/generation-lab/public/app.js
           node --check workers/generation-lab/public/admin/models.js

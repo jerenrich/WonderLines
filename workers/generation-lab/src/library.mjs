@@ -3,7 +3,19 @@ import {refreshImageCostMetrics} from '../../coloring-sheets-api/src/image-cost.
 import {structuredComposition, isUUID} from '../../coloring-sheets-api/src/composition.mjs';
 import {generationFingerprints, prepareGeneration, startGeneration} from '../../coloring-sheets-api/src/generation-start.mjs';
 
-const LIMIT = 100;
+export const IMAGE_LIMIT = 2500;
+const GRID_LIMIT = 100;
+const newestFirst = (a,b) => b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id);
+class GridExpired extends Error {}
+function retained(grids) {
+  let count=0;
+  const ordered=[...grids].sort(newestFirst), keep=[];
+  for(const grid of ordered) {
+    if(keep.length===GRID_LIMIT||count+grid.count>IMAGE_LIMIT)break;
+    count+=grid.count;keep.push(grid);
+  }
+  return {keep,evicted:ordered.slice(keep.length),count};
+}
 const json = (value,status=200) => Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
 const fail = (message,status=400,code='invalid_request') => json({error:{message,code}},status);
 const summary = grid => ({id:grid.id,prompt:grid.prompt,createdAt:grid.createdAt,sequence:grid.sequence,models:grid.models,ages:grid.ages,count:grid.cells.length,
@@ -14,18 +26,21 @@ const summary = grid => ({id:grid.id,prompt:grid.prompt,createdAt:grid.createdAt
 // and upstream status checks do not wait behind network-bound generation starts.
 // In-flight images belonging to an evicted grid are cleaned after they finish.
 export class ComparisonLibrary {
-  constructor(state,env) { this.state=state;this.env=env;this.queue=Promise.resolve(); }
+  constructor(state,env) { this.state=state;this.env=env;this.queue=Promise.resolve();this.ready=null; }
   serial(operation) { const result=this.queue.then(operation);this.queue=result.catch(()=>{});return result; }
-  fetch(request) {
-    const operation=async()=>{
-    try { return await this.handle(request); }
-    catch {
+  async fetch(request) {
+    try {
+      this.ready??=this.serial(()=>this.migrateRetention()).catch(error=>{this.ready=null;throw error;});
+      await this.ready;
+      const operation=()=>this.handle(request);
+      return await (['/list','/get','/lookup','/job'].includes(new URL(request.url).pathname)?operation():this.serial(operation));
+    }
+    catch (error) {
+      if(error instanceof GridExpired)return fail('This comparison falls outside the newest 2,500 images in the library.',410,'grid_expired');
       const path=new URL(request.url).pathname;
       console.error(JSON.stringify({event:'comparison_library_unavailable',operation:['/list','/get','/lookup','/job','/save','/start'].includes(path)?path:'unknown'}));
       return fail('The library is temporarily unavailable. Please try again.',503,'library_unavailable');
     }
-    };
-    return ['/list','/get','/lookup','/job'].includes(new URL(request.url).pathname)?operation():this.serial(operation);
   }
   async call(path,input={}) {
     const stub=this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName(this.env.LAB_ACCOUNT_ID));
@@ -33,10 +48,39 @@ export class ComparisonLibrary {
     return {status:response.status,value:await response.json()};
   }
   async schedule() { if(await this.state.storage.getAlarm()===null)await this.state.storage.setAlarm(Date.now()+5000); }
-  async write(grid) {
+  async retire(storage,entry) {
+    const grid=await storage.get('grid:'+entry.id);
+    if(!grid)throw new Error('Missing retained comparison');
+    await storage.put('retired:'+grid.id,true);
+    for(const cell of grid.cells){await storage.put('image:'+cell.id,{gridId:grid.id,retired:true});await storage.put('cleanup:'+cell.id,true);await storage.delete('pending:'+cell.id);}
+    await storage.delete('grid:'+grid.id);
+  }
+  async migrateRetention() {
+    if(await this.state.storage.get('retention-version')===IMAGE_LIMIT)return;
+    const plan=retained((await this.state.storage.get('index'))??[]);
+    await this.state.storage.transaction(async storage=>{
+      for(const entry of plan.evicted)await this.retire(storage,entry);
+      await storage.put('index',plan.keep);await storage.put('retention-version',IMAGE_LIMIT);
+      if(plan.evicted.length)await storage.setAlarm(Date.now()+5000);
+    });
+  }
+  async write(grid, isNew = false) {
+    if(await this.state.storage.get('retired:'+grid.id))throw new GridExpired();
     const index=(await this.state.storage.get('index'))??[];
-    const next=[summary(grid),...index.filter(g=>g.id!==grid.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id));
-    await this.state.storage.transaction(async storage=>{await storage.put('grid:'+grid.id,grid);await storage.put('index',next);});
+    const plan=retained([summary(grid),...index.filter(g=>g.id!==grid.id)]);
+    if(!plan.keep.some(entry=>entry.id===grid.id))throw new GridExpired();
+    await this.state.storage.transaction(async storage=>{
+      for(const entry of plan.evicted)await this.retire(storage,entry);
+      await storage.put('grid:'+grid.id,grid);await storage.put('index',plan.keep);
+      // Membership, capacity, and eviction commit together, including legacy-tab additions.
+      for(const cell of grid.cells)await storage.put('image:'+cell.id,{gridId:grid.id});
+      if(isNew) {
+        await storage.put('sequence',grid.sequence);
+        for(const cell of grid.cells)if(cell.status==='processing')await storage.put('pending:'+cell.id,grid.id);
+        if(grid.cells.some(cell=>cell.status==='processing'))await storage.setAlarm(Date.now()+5000);
+      }
+      if(plan.evicted.length)await storage.setAlarm(Date.now()+5000);
+    });
   }
   async normalize(input) {
     if(!input||!isUUID(input.id)||typeof input.prompt!=='string'||!input.prompt.trim()||input.prompt.length>240||!Array.isArray(input.models)||!Array.isArray(input.ages)||!Array.isArray(input.cells)||!input.cells.length||input.cells.length>80)return null;
@@ -82,22 +126,9 @@ export class ComparisonLibrary {
         } else if(found.status!==404)return fail('Could not import the saved comparison.',503);
       }
     }
-    const index=(await this.state.storage.get('index'))??[];
     grid.sequence=((await this.state.storage.get('sequence'))??0)+1;
     // Retain by creation time, including imports: an old import cannot evict a newer grid.
-    const ordered=[...index,summary(grid)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id));
-    if(ordered.length>LIMIT&&ordered.at(-1).id===grid.id)return fail('This older comparison falls outside the newest 100 grids.',410,'grid_expired');
-    const evicted=ordered.length>LIMIT?await this.state.storage.get('grid:'+ordered.at(-1).id):null;
-    await this.state.storage.transaction(async storage=>{
-      if(evicted) {
-        await storage.put('retired:'+evicted.id,true);
-        for(const cell of evicted.cells){await storage.put('image:'+cell.id,{gridId:evicted.id,retired:true});await storage.put('cleanup:'+cell.id,true);await storage.delete('pending:'+cell.id);}
-        await storage.delete('grid:'+evicted.id);
-      }
-      for(const cell of grid.cells){await storage.put('image:'+cell.id,{gridId:grid.id});if(cell.status==='processing')await storage.put('pending:'+cell.id,grid.id);}
-      await storage.put('grid:'+grid.id,grid);await storage.put('index',ordered.slice(0,LIMIT));await storage.put('sequence',grid.sequence);
-    });
-    if(evicted||grid.cells.some(c=>c.status==='processing'))await this.schedule();
+    await this.write(grid,true);
     return json({grid},201);
   }
   async job(id) {
@@ -147,7 +178,7 @@ export class ComparisonLibrary {
       await this.state.storage.put('image:'+cell.id,{gridId:grid.id,retired:true});await this.state.storage.put('cleanup:'+cell.id,true);
       cell.id=input.id;cell.status='queued';cell.metrics=null;cell.error=null;cell.errorCode=null;await this.schedule();
     }
-    await this.state.storage.put('image:'+cell.id,{gridId:grid.id});await this.write(grid);
+    await this.write(grid);
     const result=await startGeneration(prepared,{
       env:this.env,call:(path,value)=>this.call(path,value),queueImages:true,comparisonModels:true,
       // Provider credentials remain in the production Account object. That
@@ -170,7 +201,10 @@ export class ComparisonLibrary {
   }
   async handle(request) {
     const path=new URL(request.url).pathname;
-    if(path==='/list')return json({grids:(await this.state.storage.get('index'))??[],limit:LIMIT});
+    if(path==='/list') {
+      const grids=(await this.state.storage.get('index'))??[];
+      return json({grids,limit:GRID_LIMIT,imageLimit:IMAGE_LIMIT,imageCount:grids.reduce((count,grid)=>count+grid.count,0)});
+    }
     const input=await request.json();
     if(path==='/save')return this.save(input);
     if(path==='/start')return this.start(input);
@@ -186,6 +220,7 @@ export class ComparisonLibrary {
     return fail('Not found.',404);
   }
   alarm() { return this.serial(async()=>{
+    await this.migrateRetention();
     const pending=await this.state.storage.list({prefix:'pending:',limit:24});
     for(const [key,gridId] of pending) {
       const id=key.slice('pending:'.length),grid=await this.state.storage.get('grid:'+gridId),cell=grid?.cells.find(c=>c.id===id);

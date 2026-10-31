@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {ComparisonLibrary} from '../src/library.mjs';
+import {ComparisonLibrary, IMAGE_LIMIT} from '../src/library.mjs';
+import {catalog} from '../src/catalog.mjs';
 import {MemoryStorage} from './storage.mjs';
 const storage=new MemoryStorage(),jobs=new Map(),deleted=[];
 const accountId='f66c3047-7ae6-4a1d-9144-7514e7a44961';
@@ -34,12 +35,20 @@ assert.equal((await storage.list({prefix:'pending:'})).size,0);
 assert.equal((await call('/save',second)).status,201);
 // Keep one evicted image in flight to verify cleanup waits for the eventual write.
 const inFlight={...second.cells[0],state:'processing',id:second.cells[0].id};jobs.set(inFlight.id,inFlight);
-for(let i=2;i<100;i++)assert.equal((await call('/save',run(first.createdAt+i))).status,201);
-assert.equal((await (await call('/list')).json()).grids.length,100);
+const manyRun=(createdAt,count=80)=>{
+  const grid=run(createdAt),models=['flux-2-klein-4b',...catalog(env).map(m=>m.id).filter(id=>id!=='flux-2-klein-4b')].slice(0,Math.ceil(count/16));
+  const ages=[4,...Array.from({length:16},(_,i)=>i+3).filter(age=>age!==4)].slice(0,Math.min(count,16));
+  grid.models=models.map(id=>({id}));grid.ages=ages;grid.cells=[];
+  for(const model of models)for(const age of ages)if(grid.cells.length<count)grid.cells.push({id:crypto.randomUUID(),model,age});
+  return grid;
+};
+for(let i=2;i<33;i++)assert.equal((await call('/save',manyRun(first.createdAt+i))).status,201);
+assert.equal((await call('/save',manyRun(first.createdAt+33,18))).status,201);
+assert.equal((await (await call('/list')).json()).imageCount,IMAGE_LIMIT);
 const newest=run(first.createdAt+100);
 assert.equal((await call('/save',newest)).status,201);
 let list=await (await call('/list')).json();
-assert.equal(list.grids.length,100);assert.equal(list.grids[0].id,newest.id);assert.ok(!list.grids.some(g=>g.id===first.id));
+assert.ok(list.imageCount<=IMAGE_LIMIT);assert.equal(list.grids[0].id,newest.id);assert.ok(!list.grids.some(g=>g.id===first.id));
 assert.equal((await call('/get',{id:first.id})).status,404);
 assert.equal((await call('/lookup',{id:input.id})).status,410);
 assert.equal((await call('/save',first)).status,410);
@@ -50,17 +59,17 @@ await library.alarm();assert.ok(!deleted.includes(accountId+'/'+inFlight.id+'.pn
 inFlight.state='completed';jobs.set(inFlight.id,inFlight);await library.alarm();assert.ok(deleted.includes(accountId+'/'+inFlight.id+'.png'));
 assert.ok(deleted.every(key=>key.startsWith(accountId+'/')));
 const tooOld=run(first.createdAt-1);assert.equal((await call('/save',tooOld)).status,410);
-assert.equal((await (await call('/list')).json()).grids.length,100);
+assert.ok((await (await call('/list')).json()).imageCount<=IMAGE_LIMIT);
 // Concurrent saves are serialized and never exceed the retained-grid limit.
 const concurrent=Array.from({length:6},(_,i)=>run(first.createdAt+200+i));
 const responses=await Promise.all(concurrent.map(grid=>call('/save',grid)));assert.ok(responses.every(r=>r.status===201));
-list=await (await call('/list')).json();assert.equal(list.grids.length,100);assert.equal(new Set(list.grids.map(g=>g.id)).size,100);
+list=await (await call('/list')).json();assert.ok(list.imageCount<=IMAGE_LIMIT);assert.equal(new Set(list.grids.map(g=>g.id)).size,list.grids.length);
 // A failed R2 deletion keeps its durable cleanup marker for the next alarm.
 const cleanupKeys=await storage.list({prefix:'cleanup:'});assert.ok(cleanupKeys.size>0);
 const failureKey=cleanupKeys.keys().next().value;env.GENERATIONS.delete=async()=>{throw Error('R2 unavailable');};
 await library.alarm();assert.equal(await storage.get(failureKey),true);
 env.GENERATIONS.delete=async key=>deleted.push(key);await library.alarm();assert.equal(await storage.get(failureKey),undefined);
-console.log('PASS: persistent library, input validation, idempotent saves, server-owned status/costs, restart reconciliation, 100-grid retention, chronological import, concurrent eviction, image cleanup, cleanup retries, in-flight eviction and tombstones preventing regeneration');
+console.log('PASS: persistent library, input validation, idempotent saves, server-owned status/costs, restart reconciliation, 2,500-image retention, chronological import, concurrent eviction, image cleanup, cleanup retries, in-flight eviction and tombstones preventing regeneration');
 // Read-only endpoints remain responsive while a generation mutation is waiting.
 let releaseMutation;const held=library.serial(()=>new Promise(resolve=>{releaseMutation=resolve;}));
 await new Promise(resolve=>setImmediate(resolve));
@@ -97,3 +106,63 @@ assert.equal((await call('/job',{id:failedCell.id})).status,410);
 assert.equal((await call('/start',{...retryInput,id:crypto.randomUUID()})).status,409);
 assert.equal((await call('/start',{...startCell(sibling),id:crypto.randomUUID()})).status,409);assert.equal(reservations,beforeRetry+1);
 console.log('PASS: retries preserve successful siblings, replace only failed slots, retire old IDs, clear errors, persist diagnostics and recover reservations idempotently.');
+
+// Count image slots of every status, evict whole oldest grids, and never let an
+// old import evict newer work. One new grid can require several retirements.
+const capacityStorage=new MemoryStorage();
+let capacityLibrary=new ComparisonLibrary({storage:capacityStorage},env);
+const capacityCall=(path,input={})=>capacityLibrary.fetch(new Request('https://library'+path,{method:'POST',body:JSON.stringify(input)}));
+const capacityBase=Date.now()-1000000,capacityGrids=[];
+for(const [i,count] of [10,15,...Array(30).fill(80),75].entries()){
+  const grid=manyRun(capacityBase+i,count);capacityGrids.push(grid);
+  assert.equal((await capacityCall('/save',grid)).status,201);
+}
+assert.equal((await (await capacityCall('/list')).json()).imageCount,2500);
+const incoming=manyRun(capacityBase+100,80);
+assert.equal((await capacityCall('/save',incoming)).status,201);
+const capacityList=await (await capacityCall('/list')).json();assert.equal(capacityList.imageCount,2475);assert.equal(capacityList.imageLimit,2500);
+for(const grid of capacityGrids.slice(0,3)){
+  assert.equal((await capacityCall('/get',{id:grid.id})).status,404);
+  for(const cell of grid.cells)assert.equal((await capacityCall('/lookup',{id:cell.id})).status,410);
+}
+const beforeImport=await capacityStorage.get('index');
+assert.equal((await capacityCall('/save',manyRun(capacityBase-1,80))).status,410);
+assert.deepEqual(await capacityStorage.get('index'),beforeImport);
+capacityLibrary=new ComparisonLibrary({storage:capacityStorage},env);
+assert.equal((await (await capacityCall('/list')).json()).imageCount,2475);
+assert.equal((await capacityCall('/save',capacityGrids[0])).status,410);
+
+// Upgrade a pre-existing 100-grid library on the first read after deployment.
+const legacyStorage=new MemoryStorage(),legacyGrids=Array.from({length:100},(_,i)=>manyRun(capacityBase+i,80));
+for(const [i,grid] of legacyGrids.entries()){
+  await legacyStorage.put('grid:'+grid.id,grid);
+  for(const cell of grid.cells)await legacyStorage.put('image:'+cell.id,{gridId:grid.id});
+}
+await legacyStorage.put('index',legacyGrids.map(grid=>({id:grid.id,createdAt:grid.createdAt,count:grid.cells.length})));
+const legacyLibrary=new ComparisonLibrary({storage:legacyStorage},env);
+const migrated=await (await legacyLibrary.fetch(new Request('https://library/list'))).json();
+assert.equal(migrated.imageCount,2480);assert.equal(migrated.grids.length,31);
+assert.equal(migrated.grids[0].id,legacyGrids.at(-1).id);
+assert.equal(await legacyStorage.get('retired:'+legacyGrids[0].id),true);
+assert.ok(await legacyStorage.getAlarm());
+assert.equal((await legacyStorage.list({prefix:'cleanup:'})).size,69*80);
+
+// The existing 100-grid safety limit also remains in force for small grids.
+const smallStorage=new MemoryStorage(),smallLibrary=new ComparisonLibrary({storage:smallStorage},env);
+for(let i=0;i<101;i++)assert.equal((await smallLibrary.fetch(new Request('https://library/save',{method:'POST',body:JSON.stringify(run(capacityBase+i))}))).status,201);
+assert.equal((await (await smallLibrary.fetch(new Request('https://library/list'))).json()).grids.length,100);
+
+// An older browser can append slots through /start; enforce the same cap before
+// paid reservation, even when it expands an existing rather than a new grid.
+const expansionStorage=new MemoryStorage(),expansionLibrary=new ComparisonLibrary({storage:expansionStorage},env);
+const expansionCall=(path,input={})=>expansionLibrary.fetch(new Request('https://library'+path,{method:'POST',body:JSON.stringify(input)}));
+const oldest=run(capacityBase);assert.equal((await expansionCall('/save',oldest)).status,201);
+for(let i=1;i<=31;i++)assert.equal((await expansionCall('/save',manyRun(capacityBase+i,80))).status,201);
+assert.equal((await expansionCall('/save',manyRun(capacityBase+32,19))).status,201);
+const addInput={id:crypto.randomUUID(),batchID:oldest.id,description:oldest.prompt,age:7,composition:oldest.composition,model:oldest.cells[0].model};
+const beforeExpansion=reservations;
+assert.equal((await expansionCall('/start',addInput)).status,410);assert.equal(reservations,beforeExpansion);
+assert.equal(await expansionStorage.get('image:'+addInput.id),undefined);
+assert.equal((await (await expansionCall('/list')).json()).imageCount,2500);
+assert.equal((await (await expansionCall('/get',{id:oldest.id})).json()).grid.cells.length,1);
+console.log('PASS: weighted capacity, multiple whole-grid evictions, old imports, restart persistence, legacy migration, existing grid limit and legacy-tab expansion before spending.');
