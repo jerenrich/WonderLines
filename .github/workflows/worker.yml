@@ -11,6 +11,7 @@ on:
       - 'Scripts/test_comparison_runner.mjs'
       - 'Scripts/test_provider_diagnostics.mjs'
       - 'Scripts/test_operational_events.mjs'
+      - 'Scripts/test_monitoring.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -34,6 +35,7 @@ on:
       - 'Scripts/test_comparison_runner.mjs'
       - 'Scripts/test_provider_diagnostics.mjs'
       - 'Scripts/test_operational_events.mjs'
+      - 'Scripts/test_monitoring.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -91,6 +93,7 @@ jobs:
           node Scripts/test_comparison_runner.mjs
           node Scripts/test_provider_diagnostics.mjs
           node Scripts/test_operational_events.mjs
+          node Scripts/test_monitoring.mjs
           node Scripts/test_request_security.mjs
           node Scripts/test_privacy.mjs
           node Scripts/test_reporting_concurrency.mjs
@@ -120,6 +123,16 @@ jobs:
             echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in repository Settings > Secrets and variables > Actions."
             exit 1
           fi
+
+      - name: Deploy monitoring before its producers
+        if: github.event_name != 'pull_request'
+        uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/monitoring
+          wranglerVersion: '4.136.3'
+          command: deploy --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
       - name: Deploy Worker
         if: github.event_name != 'pull_request'
@@ -169,7 +182,7 @@ jobs:
         run: |
           {
             echo '### API and comparison labs deployed'
-            echo "Workers: coloring-sheets-api, coloring-sheets-moderation-lab, wonderlines-compare"
+            echo "Workers: wonderlines-monitoring, coloring-sheets-api, coloring-sheets-moderation-lab, wonderlines-compare"
             echo "Commit: [$DEPLOYED_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$DEPLOYED_SHA)"
             echo 'API/lab dashboard variables and existing Worker secrets are preserved.'
             echo 'R2 diagnostic cleanup: hourly, seven-day policy. Gateway cleanup requires its dedicated credential and bootstrap.'

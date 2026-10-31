@@ -1,0 +1,19 @@
+{
+  "queriedAt": 1793435996078,
+  "count": 1,
+  "events": [
+    {
+      "timestamp": 1793435972560,
+      "worker": "wonderlines-monitoring",
+      "outcome": "ok",
+      "eventType": "trace",
+      "event": null,
+      "level": "info"
+    }
+  ],
+  "backendSmoke": {
+    "apiHTTP": 401,
+    "comparisonSessionHTTP": 200
+  },
+  "deliveryTestEmailsSent": 0
+}

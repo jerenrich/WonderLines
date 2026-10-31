@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-31T07:28:16.498302+00:00",
+  "storageQuery": {
+    "label": "storage",
+    "queriedFrom": "2026-10-31T07:00:00Z",
+    "queriedTo": "2026-10-31T07:27:46.937000+00:00",
+    "status": "COMPLETED",
+    "count": 0,
+    "events": []
+  },
+  "recentStructuredEvents": [
+    {
+      "timestamp": 1793431463626,
+      "service": "coloring-sheets-api",
+      "worker": "coloring-sheets-api",
+      "event": "generation_result",
+      "outcome": "completed",
+      "operation": null,
+      "errorCode": null,
+      "level": "info",
+      "timeUTC": "2026-10-31T07:24:23.626000+00:00"
+    },
+    {
+      "timestamp": 1793431448581,
+      "service": "coloring-sheets-api",
+      "worker": "coloring-sheets-api",
+      "event": "description_moderation_complete",
+      "outcome": "approved",
+      "operation": null,
+      "errorCode": null,
+      "level": "info",
+      "timeUTC": "2026-10-31T07:24:08.581000+00:00"
+    },
+    {
+      "timestamp": 1793431448411,
+      "service": "coloring-sheets-api",
+      "worker": "coloring-sheets-api",
+      "event": "description_moderation",
+      "outcome": "approved",
+      "operation": null,
+      "errorCode": null,
+      "level": "info",
+      "timeUTC": "2026-10-31T07:24:08.411000+00:00"
+    }
+  ],
+  "emailFinding": {
+    "count": 3,
+    "allMatchRecordedDeliveryTests": true,
+    "timestampsUTC": [
+      "2026-10-31T07:21:23Z",
+      "2026-10-31T07:22:23Z",
+      "2026-10-31T07:22:33Z"
+    ],
+    "noAdditionalCloudflareAlertEmailsFound": true
+  },
+  "changesMade": "Read-only diagnosis; monitoring remains enabled and unchanged."
+}

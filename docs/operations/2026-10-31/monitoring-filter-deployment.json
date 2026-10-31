@@ -1,0 +1,54 @@
+{
+  "verifiedAt": "2026-10-31T08:37:25.533112+00:00",
+  "monitorDeployment": {
+    "id": "caf86da9-42bf-4b71-a5f7-d2f5649f9053",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "jordan.erenrich@gmail.com",
+    "annotations": {
+      "workers/message": "Suppress isolated failures; globally batch sust...",
+      "workers/triggered_by": "upload"
+    },
+    "versions": [
+      {
+        "version_id": "b2416959-1e8a-496e-a0c2-ee3bd81622d2",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-31T08:37:00.308971Z"
+  },
+  "producers": [
+    {
+      "worker": "coloring-sheets-api",
+      "versions": [
+        {
+          "version_id": "b044c641-6096-41d3-9364-b364e876c54c",
+          "percentage": 100
+        }
+      ],
+      "tailConsumers": [
+        {
+          "service": "wonderlines-monitoring"
+        }
+      ],
+      "applicationRedeployed": false,
+      "otherScriptSettingsPreserved": true
+    },
+    {
+      "worker": "wonderlines-compare",
+      "versions": [
+        {
+          "version_id": "29e331a8-1bf5-49d5-9b04-4c4b2e886d87",
+          "percentage": 100
+        }
+      ],
+      "tailConsumers": [
+        {
+          "service": "wonderlines-monitoring"
+        }
+      ],
+      "applicationRedeployed": false,
+      "otherScriptSettingsPreserved": true
+    }
+  ]
+}

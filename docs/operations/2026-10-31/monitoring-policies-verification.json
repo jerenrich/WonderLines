@@ -1,0 +1,23 @@
+{
+  "verifiedAt": "2026-10-31T08:41:56.339Z",
+  "policies": [
+    {
+      "kind": "image",
+      "id": "acb8e235c1554bdcace17e51670a9746",
+      "name": "Wonder Lines — image generation failures",
+      "detail": "\t\t\t\t\t63 text Write a SQL query that returns a single numeric column.\n\t\t\t\t\t\t65 text entry area (settable) Description: SQL query, Value: SELECT COUNT(*) AS \"value\"\nFROM \"logs\".\"workersLogs\"\nWHERE ((\"attributes\"['$workers.scriptName'] = 'wonderlines-monitoring') AND (\"attributes\"['event'] = 'operational_alert_batch') AND (\"attributes\"['category'] = 'image'))\n\t\t\t\t\t\t78 combo box (collapsed) Description: Threshold operator, Value: >, ID: base-ui-:r3h:, Secondary Actions: Expand\n\t\t\t\t\t\t80 stepper (settable, integer) Description: Threshold value, Value: 0, ID: base-ui-:r3k:\n\t\t\t\t\t\t82 combo box (collapsed) Description: Average over, Value: 5m, ID: base-ui-:r3m:, Secondary Actions: Expand\n\t\t\t\t\t\t90 combo box (collapsed) Description: Run every, Value: 1m, ID: base-ui-:r3v:, Secondary Actions: Expand\n\t\t\t\t\t\t94 combo box (collapsed) Description: Repeat notification after, Value: 1h, ID: base-ui-:r43:, Secondary Actions: Expand"
+    },
+    {
+      "kind": "storage",
+      "id": "97b1ade3322c455180e6b39acc5ff2b4",
+      "name": "Wonder Lines — storage and persistence failures",
+      "detail": "\t\t\t\t\t63 text Write a SQL query that returns a single numeric column.\n\t\t\t\t\t\t65 text entry area (settable) Description: SQL query, Value: SELECT COUNT(*) AS \"value\"\nFROM \"logs\".\"workersLogs\"\nWHERE ((\"attributes\"['$workers.scriptName'] = 'wonderlines-monitoring') AND (\"attributes\"['event'] = 'operational_alert_batch') AND (\"attributes\"['category'] = 'storage'))\n\t\t\t\t\t\t78 combo box (collapsed) Description: Threshold operator, Value: >, ID: base-ui-:r3l:, Secondary Actions: Expand\n\t\t\t\t\t\t80 stepper (settable, integer) Description: Threshold value, Value: 0, ID: base-ui-:r3o:\n\t\t\t\t\t\t82 combo box (collapsed) Description: Average over, Value: 5m, ID: base-ui-:r3q:, Secondary Actions: Expand\n\t\t\t\t\t\t90 combo box (collapsed) Description: Run every, Value: 1m, ID: base-ui-:r43:, Secondary Actions: Expand\n\t\t\t\t\t\t94 combo box (collapsed) Description: Repeat notification after, Value: 1h, ID: base-ui-:r47:, Secondary Actions: Expand"
+    },
+    {
+      "kind": "moderation",
+      "id": "2087d30aa2b14ab7829a14ab77151ef5",
+      "name": "Wonder Lines — moderation service failures",
+      "detail": "\t\t\t\t\t63 text Write a SQL query that returns a single numeric column.\n\t\t\t\t\t\t65 text entry area (settable) Description: SQL query, Value: SELECT COUNT(*) AS \"value\"\nFROM \"logs\".\"workersLogs\"\nWHERE ((\"attributes\"['$workers.scriptName'] = 'wonderlines-monitoring') AND (\"attributes\"['event'] = 'operational_alert_batch') AND (\"attributes\"['category'] = 'moderation'))\n\t\t\t\t\t\t78 combo box (collapsed) Description: Threshold operator, Value: >, ID: base-ui-:r3h:, Secondary Actions: Expand\n\t\t\t\t\t\t80 stepper (settable, integer) Description: Threshold value, Value: 0, ID: base-ui-:r3k:\n\t\t\t\t\t\t82 combo box (collapsed) Description: Average over, Value: 5m, ID: base-ui-:r3m:, Secondary Actions: Expand\n\t\t\t\t\t\t90 combo box (collapsed) Description: Run every, Value: 1m, ID: base-ui-:r3v:, Secondary Actions: Expand\n\t\t\t\t\t\t94 combo box (collapsed) Description: Repeat notification after, Value: 1h, ID: base-ui-:r43:, Secondary Actions: Expand"
+    }
+  ]
+}
