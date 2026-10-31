@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {catalog} from '../src/catalog.mjs';
+import {catalog,liveCatalog} from '../src/catalog.mjs';
+import {readFile} from 'node:fs/promises';
 import {modelCostSummary} from '../public/cost-display.mjs';
 import {modelReferenceCost} from '../src/model-reference-cost.mjs';
 
@@ -31,3 +32,19 @@ assert.equal(modelCostSummary(remapped.find(m=>m.id==='gpt-image-2.5-flare')),'Â
 const unknown=catalog({IMAGE_MODEL_ROUTES:JSON.stringify({'z-image-turbo':{provider:'openai',model:'unknown'}})});
 assert.equal(unknown.find(m=>m.id==='z-image-turbo').referenceCost,null);
 console.log('PASS: every model reference price, billing/estimate labels, preset rounding and upstream route changes.');
+
+// The picker follows the same active routes as admission, including new models
+// and comparison-only presets, and fails closed if KV is unavailable.
+const document=JSON.parse(await readFile(new URL('../../coloring-sheets-api/model-registry.initial.json',import.meta.url)));
+document.models.find(m=>m.id==='gpt-image-2.5-flare').enabled=false;
+document.models.push({id:'test-dynamic',provider:'openai',model:'gpt-image-2.5-flare',enabled:true,visible:true,label:'Dynamic model',detail:'Test model',price:null});
+let raw=JSON.stringify(document);
+const liveEnv={MODEL_REGISTRY:{get:async()=>raw}};
+let live=await liveCatalog(liveEnv);
+assert.ok(!live.some(m=>m.id==='gpt-image-2.5-flare'));
+assert.equal(live.find(m=>m.id==='test-dynamic').label,'Dynamic model');
+assert.ok(live.some(m=>m.id==='sana-sprint'));
+document.providers.fal.enabled=false;raw=JSON.stringify(document);
+live=await liveCatalog(liveEnv);assert.ok(!live.some(m=>m.provider==='fal'));
+raw='invalid';await assert.rejects(liveCatalog(liveEnv));
+console.log('PASS: comparison picker uses KV availability, dynamic routes, provider switches and fail-closed handling.');

@@ -69,6 +69,10 @@ Comparison presets without matching audited price evidence show **Price unavaila
 
 Each model choice and comparison row shows a per-image reference cost and either **Billing confirmed** or **Estimate**. The app uses the same audited reference prices. OpenAI figures are token-based averages; Cloudflare prices are metering-backed estimates for the stated presets; Z-Image’s reference price is backed by four matched billing events. These labels describe the reference samples, not a guarantee for future requests. Current route identity must match before a historical row is given a reference price. Run `node tests/model-reference-cost.mjs` to check every model and alias remapping.
 
+The comparison picker and library use the KV-backed catalogue used for generation admission. Enabled comparison-only fal presets remain available when fal is enabled. An open comparison page refreshes its picker when it becomes visible, every 60 seconds while idle, and before starting a comparison. Stale selections are removed.
+
+Admin drafts and change notes are saved in browser session storage for the current tab. After reauthentication or reload, an unchanged base version is restored automatically. If the published catalogue has changed, the recovered draft remains visible but cannot be published; copy its changes and discard it before editing the new version. Shared-session sign-out notifies other open tabs.
+
 ## Google-protected model administration
 
 Model controls live at **`https://wonderlines-compare.jordan-erenrich.workers.dev/admin/models`**. They share Google sign-in with the comparison studio. Only the verified Google account **`jordan.erenrich@gmail.com`** has `models:read`, `models:write` and `models:rollback` permissions. Other Google accounts and unverified email claims cannot access the admin APIs.
