@@ -12,6 +12,7 @@ on:
       - 'Scripts/test_provider_diagnostics.mjs'
       - 'Scripts/test_operational_events.mjs'
       - 'Scripts/test_monitoring.mjs'
+      - 'Scripts/test_moderation_canary.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -36,6 +37,7 @@ on:
       - 'Scripts/test_provider_diagnostics.mjs'
       - 'Scripts/test_operational_events.mjs'
       - 'Scripts/test_monitoring.mjs'
+      - 'Scripts/test_moderation_canary.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -94,6 +96,7 @@ jobs:
           node Scripts/test_provider_diagnostics.mjs
           node Scripts/test_operational_events.mjs
           node Scripts/test_monitoring.mjs
+          node Scripts/test_moderation_canary.mjs
           node Scripts/test_request_security.mjs
           node Scripts/test_privacy.mjs
           node Scripts/test_reporting_concurrency.mjs

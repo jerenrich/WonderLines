@@ -26,8 +26,9 @@ export function failuresFromTail(traces, now) {
             ['result_save_failed', 'result_unavailable'].includes(event.errorCode)) {
           failures.push({category: 'storage', at});
         }
-        const blockingModeration = event.outcome === 'moderation_unavailable' || event.errorCode === 'moderation_unavailable';
-        if (blockingModeration || (['description_moderation', 'description_moderation_complete'].includes(event.event) &&
+        const blockingModeration = event.outcome === 'moderation_unavailable' || event.errorCode === 'moderation_unavailable' ||
+          (event.event === 'moderation_canary' && event.outcome === 'failed');
+        if (blockingModeration || (['description_moderation', 'description_moderation_complete', 'moderation_canary'].includes(event.event) &&
             (event.degraded === true || event.degraded === 'true' || ['partial', 'unavailable'].includes(event.availability)))) {
           failures.push({category: 'moderation', at, ...(blockingModeration ? {immediate: true} : {})});
         }

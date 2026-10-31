@@ -72,10 +72,10 @@
     "reviewSessionModerationTimeoutRegression": true
   },
   "limits": [
-    "Traffic-based: image, storage and degraded moderation require recurring failure events spanning two minutes with no quiet gap longer than two minutes. Customer-blocking moderation_unavailable qualifies on the first occurrence.",
+    "Image and storage failures still require request traffic. Moderation now also runs a fixed benign canary every minute; failures qualify immediately and partial provider availability requires recurring failures spanning two minutes.",
     "Native query scheduling and log ingestion can delay delivery beyond two minutes.",
     "The shared cooldown may defer newly affected categories until the next hourly batch. They must still be recurring then.",
-    "Cloudflare-hosted monitoring shares a dependency with the API; independent uptime checks are not active.",
+    "Cloudflare-hosted monitoring and cron share a dependency with the API; independent uptime checks are not active.",
     "No real provider or storage outage was induced; filter timing was tested offline. Native email delivery had already been verified with sample notifications."
   ],
   "sourceNotes": "Monitoring changes were committed in 33a6a5693fa0b632337884e35d606fa7f6939bef and merged to main in e5258168d9d8b8bc40f8e4fa40cd2621562a52c8 via PR 14. CI attempt 3 passed and deployed all four Workers. The original checkout was synchronized while preserving unrelated app-review files.",
@@ -112,5 +112,22 @@
   },
   "blockingModerationGracePeriodSeconds": 0,
   "blockingModerationPolicy": "A single moderation_unavailable qualifies immediately, subject to the shared hourly batch cooldown and native query/log delivery latency.",
-  "mergedDeploymentRecord": "monitoring-merged-deployment.json"
+  "mergedDeploymentRecord": "monitoring-merged-deployment.json",
+  "moderationCanary": {
+    "schedule": "every minute",
+    "cron": "* * * * *",
+    "worker": "coloring-sheets-api",
+    "probe": "fixed_benign_description_v1",
+    "event": "moderation_canary",
+    "productionFunction": "moderateSubject",
+    "timeoutSeconds": 8,
+    "healthyEmail": false,
+    "failedCheckImmediateQualification": true,
+    "sharedBatchCooldownSeconds": 3600,
+    "imageGeneration": false,
+    "customerInput": false,
+    "checksPerDay": 1440,
+    "normalParallelTextCallsPerDay": 2880,
+    "quotaAndBilling": "Uses normal provider text-moderation quotas and billing."
+  }
 }
