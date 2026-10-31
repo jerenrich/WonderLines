@@ -756,6 +756,8 @@ function bindingRejection(request) {
 export default {
   async scheduled(_event, env) {
     if (_event.cron === MODERATION_CANARY_CRON) return runModerationCanary(env);
+    // Ignore retired cron events while Cloudflare propagates schedule changes.
+    if (_event.cron !== '37 * * * *') return;
     try { console.info(JSON.stringify(await cleanLegacyUsageLogs(env.GENERATIONS))); }
     catch {
       console.error(JSON.stringify({event: 'legacy_usage_log_retention_failed'}));

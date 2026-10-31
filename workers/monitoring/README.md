@@ -39,20 +39,25 @@ Durable Object enforces the grace period and shared batch limit. Email delivery
 also depends on log ingestion and Cloudflare scheduling, so it is not an exact
 two-minute delivery SLA.
 
-The API also runs a **one-minute moderation canary** with a fixed benign
+The API also runs a **30-minute moderation canary** with a fixed benign
 description. It calls the same production `moderateSubject` function, configured
 providers and eight-second deadline. It waits for both provider observations so
-fallback cannot hide a lost moderator. An unavailable check, unexpected exception
+provider health remains visible in the diagnostic log. An unavailable check, unexpected exception
 or rejection of this fixed benign text qualifies immediately; partial availability
-uses the two-minute recurrence rule. All share the existing hourly batch limit.
+uses the two-minute recurrence rule when real traffic supplies repeated failures.
+At this 30-minute probe interval, isolated partial-provider results remain
+diagnostic and do not establish a two-minute failure streak. All share the existing
+hourly batch limit.
 
 Healthy canaries write a small `moderation_canary` event and send no email. They
 never register an account, reserve allowance, generate an image, create jobs or
 touch R2. No customer descriptions are used. The normal Gateway configuration
-keeps prompt collection disabled and caching skipped. The schedule is 1,440
-checks per day, normally 2,880 text moderation calls with the two-provider strategy;
+keeps prompt collection disabled and caching skipped. The schedule is 48
+checks per day, normally 96 text moderation calls with the two-provider strategy;
 these use the providers' normal quotas/billing. Existing hourly R2 diagnostic
-cleanup remains a separate cron invocation.
+cleanup remains a separate cron invocation. Measured inference usage projects to
+about $0.70 per 30-day month before allowances, taxes and execution/logging overages
+at the published rates checked on 31 October 2026.
 
 The canary exercises the configured production strategy. It does not simulate
 client registration, App Attest, the legacy consent routing, account coordination,
