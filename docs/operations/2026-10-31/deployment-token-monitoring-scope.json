@@ -1,0 +1,30 @@
+{
+  "updatedAt": "2026-10-31T08:55:36.489972+00:00",
+  "provider": "Cloudflare account API token",
+  "tokenName": "WonderLines GitHub deploy \u2014 no expiry",
+  "tokenId": "b1eeaa08a00cb251f2c79c29ee49dd5d",
+  "change": "Added only wonderlines-monitoring to the existing Individual Workers Editor policy.",
+  "previousWorkers": [
+    "coloring-sheets-api",
+    "wonderlines-compare",
+    "coloring-sheets-moderation-lab"
+  ],
+  "allowedWorkers": [
+    "coloring-sheets-api",
+    "wonderlines-compare",
+    "coloring-sheets-moderation-lab",
+    "wonderlines-monitoring"
+  ],
+  "otherPolicy": "Workers Metadata Read-Only across account Workers",
+  "expiry": "No expiration",
+  "credentialValueChanged": false,
+  "savedPolicyReopened": true,
+  "resourceIdentifiersVerified": true,
+  "workflowVerification": {
+    "run": "https://github.com/jerenrich/WonderLines/actions/runs/41186089728",
+    "attempt": 3,
+    "conclusion": "success",
+    "allFourWorkersDeployed": true,
+    "note": "First retry after the narrow policy update still returned an access denial; a later retry succeeded with the saved policy unchanged."
+  }
+}

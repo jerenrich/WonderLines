@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-10-31T08:57:14.981393+00:00",
+  "applicationCommit": "e5258168d9d8b8bc40f8e4fa40cd2621562a52c8",
+  "pullRequest": "https://github.com/jerenrich/WonderLines/pull/14",
+  "workflowRun": "https://github.com/jerenrich/WonderLines/actions/runs/41186089728",
+  "workers": [
+    {
+      "worker": "wonderlines-monitoring",
+      "version": "3fa743fa-daa5-4823-81d2-6da824b89128",
+      "trafficPercent": 100,
+      "message": "GitHub main e5258168d9d8b8bc40f8e4fa40cd2621562a52c8",
+      "bindingsAndObservabilityPreserved": true,
+      "tailConsumers": []
+    },
+    {
+      "worker": "coloring-sheets-api",
+      "version": "835d5e0c-b46e-4148-94c6-3ee4f944f2c5",
+      "trafficPercent": 100,
+      "message": "GitHub main e5258168d9d8b8bc40f8e4fa40cd2621562a52c8",
+      "bindingsAndObservabilityPreserved": true,
+      "tailConsumers": [
+        {
+          "service": "wonderlines-monitoring"
+        }
+      ]
+    },
+    {
+      "worker": "coloring-sheets-moderation-lab",
+      "version": "7c02f94f-1dbc-4e1d-8bdb-3adb1a5edf3c",
+      "trafficPercent": 100,
+      "message": "GitHub main e5258168d9d8b8bc40f8e4fa40cd2621562a52c8",
+      "bindingsAndObservabilityPreserved": null,
+      "tailConsumers": [],
+      "configurationVerification": "No pre-merge snapshot for this lab; CI deployed with --keep-vars and its public configuration endpoint returned HTTP 200."
+    },
+    {
+      "worker": "wonderlines-compare",
+      "version": "d9f4b3c6-0b42-41b8-9acb-30bb1de31e92",
+      "trafficPercent": 100,
+      "message": "GitHub main e5258168d9d8b8bc40f8e4fa40cd2621562a52c8",
+      "bindingsAndObservabilityPreserved": true,
+      "tailConsumers": [
+        {
+          "service": "wonderlines-monitoring"
+        }
+      ]
+    }
+  ],
+  "smokeChecks": {
+    "apiHTTP": 401,
+    "comparisonSessionHTTP": 200,
+    "moderationLabHTTP": 200,
+    "providerInferenceCalls": 0,
+    "testEmailsSent": 0
+  },
+  "policy": {
+    "blockingModerationFirstOccurrence": true,
+    "otherFailuresGraceSeconds": 120,
+    "sharedBatchCooldownSeconds": 3600,
+    "maximumEmailsPerBatch": 3,
+    "offlineChecksPassed": 26,
+    "reviewSessionRegressionPassed": true
+  },
+  "workflowConclusion": "success",
+  "workflowAttempt": 3,
+  "nativePolicyDescriptionVerified": true,
+  "deliveryVerification": "Native email delivery had been tested previously. This release used offline failure regressions and read-only endpoint/log checks; no additional test emails were sent."
+}
