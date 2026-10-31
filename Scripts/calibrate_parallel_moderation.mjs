@@ -107,7 +107,7 @@ const paired = Object.keys(profiles).length===2 ? {
 } : null;
 const ready = Object.keys(profiles).length===2 && ['clef','jev'].every(name =>
   ['calibration','validation','holdout'].every(split=>providers[name][split].unavailable===0 && providers[name][split].unsafeApproved===0));
-const report={computedAt:new Date().toISOString(),decisionRule:'first_approval',fixtureHash,rubricHash,jevModel:DIRECT_JEV_MODEL,providers,paired,readyForActivation:ready,
+const report={computedAt:new Date().toISOString(),decisionRule:'veto',fixtureHash,rubricHash,jevModel:DIRECT_JEV_MODEL,providers,paired,readyForActivation:ready,
   limitation:'Observed sample results only. Correlated prompts and small holdout size cannot prove future safety. Missing results remain unavailable, never approvals. Only calibration labels fit thresholds; validation selects baseline versus fitted; final holdout labels never participate in either selection.'};
 if(arg('report'))await writeFile(arg('report'),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({readyForActivation:ready,providers:Object.fromEntries(Object.entries(providers).map(([name,data])=>[name,{status:data.status,thresholds:data.thresholds,calibration:data.calibration,validation:data.validation,holdout:data.holdout}])),paired},null,2));
@@ -115,5 +115,5 @@ if(process.argv.includes('--write-profiles')) {
   if(!ready)throw Error('Cannot activate profiles until both services have complete calibration/holdout scores and zero observed unsafe approvals');
   const policyRevision=createHash('sha256').update(JSON.stringify({profiles,rubricHash,model:DIRECT_JEV_MODEL})).digest('hex').slice(0,12);
   const path=new URL('../workers/coloring-sheets-api/src/moderation-profiles.mjs',import.meta.url);
-  await writeFile(path,`// Fitted only on calibration examples; holdout evaluated separately.\n// Evidence: ${arg('report')??output}; fixture SHA-256 ${fixtureHash}.\nexport const DIRECT_JEV_MODEL = '${DIRECT_JEV_MODEL}';\nexport const PARALLEL_MODERATION_POLICY = 'all-ages-v10-first-approval-${policyRevision}';\nexport const parallelClefThresholds = Object.freeze(${JSON.stringify(profiles.clef)});\nexport const directJevThresholds = Object.freeze(${JSON.stringify(profiles.jev)});\n`);
+  await writeFile(path,`// Fitted only on calibration examples; holdout evaluated separately.\n// Evidence: ${arg('report')??output}; fixture SHA-256 ${fixtureHash}.\nexport const DIRECT_JEV_MODEL = '${DIRECT_JEV_MODEL}';\nexport const PARALLEL_MODERATION_POLICY = 'all-ages-v11-veto-${policyRevision}';\nexport const parallelClefThresholds = Object.freeze(${JSON.stringify(profiles.clef)});\nexport const directJevThresholds = Object.freeze(${JSON.stringify(profiles.jev)});\n`);
 }

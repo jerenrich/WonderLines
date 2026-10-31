@@ -57,25 +57,31 @@ async function scenario(plans, expected, decisionMs, completedMs, agreement) {
 }
 for (const swapped of [false, true]) {
   const plans = (a, b) => swapped ? [b, a] : [a, b];
-  await scenario(plans([200, approved], [1900, approved]), {allowed:true,reason:'first_approval'},200,1900,'agree');
-  await scenario(plans([200, rejected], [1900, approved]), {allowed:true,reason:'first_approval'},1900,1900,'disagree');
-  await scenario(plans([200, approved], [4199, rejected]), {allowed:true,reason:'first_approval'},200,4199,'disagree');
-  await scenario(plans([200, approved], [7900, rejected]), {allowed:true,reason:'first_approval'},200,7900,'disagree');
-  const hung = await scenario(plans([200, approved], [null]), {allowed:true,reason:'first_approval'},200,8000,'incomplete');
+  await scenario(plans([200, approved], [1900, approved]), {allowed:true,reason:'both_approved'},1900,1900,'agree');
+  await scenario(plans([200, approved], [3000, approved]), {allowed:true,reason:'both_approved'},3000,3000,'agree');
+  // Either service vetoes, whichever arrives first, and does not cancel the other.
+  await scenario(plans([200, rejected], [1900, approved]), {allowed:false,reason:'rejected'},200,1900,'disagree');
+  await scenario(plans([200, approved], [4199, rejected]), {allowed:false,reason:'rejected'},4199,4199,'disagree');
+  // A decision exactly at the grace cutoff is late, irrespective of callback order.
+  await scenario(plans([200, approved], [4200, rejected]), {allowed:true,reason:'single_approval'},4200,4200,'disagree');
+  await scenario(plans([200, approved], [7900, rejected]), {allowed:true,reason:'single_approval'},4200,7900,'disagree');
+  const hung = await scenario(plans([200, approved], [null]), {allowed:true,reason:'single_approval'},4200,8000,'incomplete');
   assert.equal(hung.availability,'partial'); assert.ok(hung.providers.some(row=>row.outcome==='timed_out'));
-  await scenario(plans([7000, approved], [null]), {allowed:true,reason:'first_approval'},7000,8000,'incomplete');
-  await scenario(plans([200, Error('private provider response')], [7000, approved]), {allowed:true,reason:'first_approval'},7000,7000,'incomplete');
+  assert.equal(hung.approvedBy, swapped ? 'service-1' : 'service-0');
+  // Grace never extends past the overall deadline.
+  await scenario(plans([7000, approved], [null]), {allowed:true,reason:'single_approval'},8000,8000,'incomplete');
+  await scenario(plans([200, Error('private provider response')], [7000, approved]), {allowed:true,reason:'single_approval'},7000,7000,'incomplete');
   await scenario(plans([100, Error('private')], [null]), {allowed:null,reason:'overall_timeout'},8000,8000,'incomplete');
-  await scenario(plans([200, approved], [300, Error('private')]), {allowed:true,reason:'first_approval'},200,300,'incomplete');
+  await scenario(plans([200, approved], [300, Error('private')]), {allowed:true,reason:'single_approval'},300,300,'incomplete');
   await scenario(plans([200, Error('private')], [300, rejected]), {allowed:false,reason:'rejected'},300,300,'incomplete');
-  await scenario(plans([200, rejected], [null]), {allowed:false,reason:'rejected'},8000,8000,'incomplete');
-  await scenario(plans([200, rejected], [300, rejected]), {allowed:false,reason:'rejected'},300,300,'agree');
+  await scenario(plans([200, rejected], [null]), {allowed:false,reason:'rejected'},200,8000,'incomplete');
+  await scenario(plans([200, rejected], [300, rejected]), {allowed:false,reason:'rejected'},200,300,'agree');
   // A result exactly at the cutoff is timed out, irrespective of callback order.
   await scenario(plans([8000, approved], [null]), {allowed:null,reason:'overall_timeout'},8000,8000,'incomplete');
 }
 await scenario([[null], [null]], {allowed:null,reason:'overall_timeout'},8000,8000,'incomplete');
 await scenario([[100, Error('private')], [200, Error('private')]], {allowed:null,reason:'both_unavailable'},200,200,'incomplete');
-await scenario([[100, {allowed:'true'}], [200, approved]], {allowed:true,reason:'first_approval'},200,200,'incomplete');
+await scenario([[100, {allowed:'true'}], [200, approved]], {allowed:true,reason:'single_approval'},200,200,'incomplete');
 // An uncooperative provider finishing after the cutoff cannot mutate either record.
 {
   const clock = new Clock(); let late;
@@ -111,7 +117,7 @@ try {
     const logs=[], retained=[];
     const auditEnv={MODERATION_STRATEGY:'parallel',TYPESAFE_API_KEY:'private-key',AI_GATEWAY_ID:'test',AI:{run:async()=>safe()}};
     const gate = await moderateSubject(auditEnv, 'PRIVATE_PROMPT', {waitUntil:p=>retained.push(p),onComplete:value=>logs.push(value)});
-    assert.equal(gate.decisionReason,'first_approval'); await Promise.all(retained);
+    assert.equal(gate.decisionReason,'single_approval'); await Promise.all(retained);
     const provider=logs[0].providers.find(row=>row.id===DIRECT_JEV_MODEL);
     assert.equal(provider.failureDetail,expectedDetail); assert.equal(provider.httpStatus,expectedStatus);
     assert.equal(logs[0].availability,'partial');
@@ -129,7 +135,7 @@ try {
   const retained = [], observations = [];
   const observe = {waitUntil: promise => retained.push(promise), onComplete: value => observations.push(value)};
   const accepted = await moderateSubject(env, 'flower', observe);
-  assert.equal(accepted.decisionReason, 'first_approval');
+  assert.equal(accepted.decisionReason, 'both_approved');
   await Promise.all(retained); assert.equal(observations[0].agreement, 'agree');
   for (const version of [undefined, null, '1', '3', '02', 2]) {
     const countBefore = calls;
@@ -138,14 +144,14 @@ try {
   }
   assert.equal(moderationEnvironment(env, '2'), env);
   globalThis.fetch = async () => { const value = safe(); value.answers.violence.noul = .99; return Response.json(value); };
-  const disagreement = await moderateSubject(env, 'flower', observe);
-  assert.equal(disagreement.decisionReason, 'first_approval');
+  await assert.rejects(moderateSubject(env, 'flower', observe), error =>
+    error.code === 'description_not_suitable' && error.reasonCodes[0] === 'violence', 'A Jev rejection vetoes a Clef approval.');
   await Promise.all(retained); assert.equal(observations.at(-1).agreement, 'disagree');
   const unsafeAI = {run: async () => {const value=safe(); value.answers.violence.noul=.99; return value;}};
   await assert.rejects(moderateSubject({...env,AI:unsafeAI}, 'flower', observe), error => error.code === 'description_not_suitable' && error.reasonCodes[0] === 'violence');
   globalThis.fetch = async () => Response.json({error: 'private-key'}, {status: 429});
   const degraded = await moderateSubject(env, 'flower', observe);
-  assert.equal(degraded.decisionReason, 'first_approval'); await Promise.all(retained);
+  assert.equal(degraded.decisionReason, 'single_approval'); await Promise.all(retained);
   assert.equal(observations.at(-1).availability, 'partial');
   assert.equal(observations.at(-1).providers[1].httpStatus, 429); assert.ok(!JSON.stringify(observations).includes('private-key'));
   await assert.rejects(moderateSubject({...env, AI: {run: async () => { throw Error('private-key'); }}}, 'flower'), error =>
@@ -156,4 +162,4 @@ try {
   }
   await assert.rejects(moderateSubject({...env, MODERATION_STRATEGY: 'unknown'}, 'flower'), {code: 'moderation_unavailable'});
 } finally { globalThis.fetch = fetchBefore; }
-console.log('PASS: immediate first approval in either arrival order, reject only after no approval remains possible, independent retained observations, disagreements, eight-second cutoff/cancellation, late results, partial/total outage, pinned direct Jev, bounded parsing and credential-safe diagnostics; no network.');
+console.log('PASS: either service vetoes in either arrival order, approval waits a bounded grace for the second decision, single approval only after failure or grace expiry, independent retained observations, disagreements, eight-second cutoff/cancellation, late results, partial/total outage, pinned direct Jev, bounded parsing and credential-safe diagnostics; no network.');
