@@ -1,7 +1,8 @@
 import {SignJWT, jwtVerify, createRemoteJWKSet} from 'jose';
 import {equal} from './auth.mjs';
 
-export const ADMIN_EMAIL = 'jordan.erenrich@gmail.com';
+import {ADMIN_EMAIL} from '../../shared/admin-identity.mjs';
+export {ADMIN_EMAIL};
 export const ADMIN_PATH = '/admin/models';
 export const CALLBACK_PATH = '/api/admin/auth/callback';
 const SESSION = '__Host-wonderlines_admin';
@@ -79,7 +80,7 @@ export async function verifyGoogleIdentity(token, env, nonce, keys = googleKeys)
 export async function beginAdminLogin(env, destination = 'admin') {
   const state = random(), nonce = random(), verifier = random();
   const challenge = base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(verifier))));
-  const flow = await sign(env, {purpose:'oauth', state, nonce, verifier, destination:destination === 'comparison' ? 'comparison' : 'admin'}, 'oauth-flow', '10m');
+  const flow = await sign(env, {purpose:'oauth', state, nonce, verifier, destination:['comparison','safety'].includes(destination) ? destination : 'admin'}, 'oauth-flow', '10m');
   const target = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   target.search = new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID, redirect_uri:adminOrigin(env)+CALLBACK_PATH,
     response_type:'code', scope:'openid email', state, nonce, code_challenge:challenge, code_challenge_method:'S256',
@@ -93,7 +94,7 @@ export async function finishAdminLogin(request, env) {
     const url = new URL(request.url), token = cookie(request, FLOW);
     if (!token || token.length > 4096 || url.search.length > 4096) throw new Error('Invalid callback');
     const flow = await verifyLocal(env, token, 'oauth');
-    destination = flow.destination === 'comparison' ? '/' : ADMIN_PATH;
+    destination = flow.destination === 'comparison' ? '/' : flow.destination === 'safety' ? '/admin/suspensions' : ADMIN_PATH;
     if (typeof flow.state !== 'string' || !await equal(url.searchParams.get('state') ?? '', flow.state)) throw new Error('Invalid state');
     if (url.searchParams.has('error')) return redirect(destination+'?login=cancelled', [clear]);
     const code = url.searchParams.get('code');

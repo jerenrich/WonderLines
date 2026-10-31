@@ -114,6 +114,51 @@ node Scripts/test_request_security.mjs
 
 This replaces upstream requests with synthetic responses and makes no network calls or paid generations. It covers direct OpenAI, both Gateway credential modes, Gemini, all nine Workers AI models, model remapping, validation before spending, PNG output and metrics, provider failures, recovery, idempotency, renewal, and budgets.
 
+## Account suspensions
+
+The Account Durable Object enforces automatic and operator suspensions. Twenty
+confirmed content-policy rejections in a rolling 24 hours suspend generation for
+24 hours from the twentieth rejection. A description batch counts once, including
+its three image requests and retries. Both moderation services rejecting it still
+count once. Uncertain-only judgments, service outages, malformed responses,
+validation failures and user reports never add strikes. Legacy subject requests
+use their generation ID as the submission ID. Rejected IDs remain bound to their
+opaque moderation fingerprint for 24 hours, preventing altered-content retries
+from bypassing counting after the ten-minute decision cache expires.
+
+Suspension checks run before moderation, inside the atomic account reservation,
+and before queued image/fal submissions; delegated comparison runners check too.
+Previously submitted provider requests can finish, and completed images remain
+recoverable. New attempts return HTTP 403 `account_suspended` with a safe message
+and `suspendedUntil` where available. Renewing a credential cannot reinstate an
+account. Reporting, support, token renewal and account deletion remain available.
+Reinstatement resets the strike allowance without forgetting recent retry IDs.
+
+The existing Google-restricted admin site at
+`https://wonderlines-compare.jordan-erenrich.workers.dev/admin/suspensions` lists
+active suspensions and supports account lookup, 24-hour/7-day/indefinite manual
+suspension, and reinstatement. Changes require a reason, a current version and an
+idempotency ID. The operator identity comes from the verified session, never the
+browser payload. No new public API grants administrative rights.
+
+The Account object is authoritative. A durable outbox updates an index in the
+existing Budget object; index failures never lift a suspension and retry on an
+account alarm. Index delivery is versioned against delayed writes. No Durable
+Object migration or new secret is needed; the comparison Worker needs the added
+cross-script `BUDGET` binding. Deploy the API before the comparison Worker.
+
+Strike metadata expires after 24 hours; up to 50 action records expire after 90
+days. Active indefinite suspension state remains until changed. No rejected
+prompt text is added to these records. Account deletion removes the safety state,
+action history and directory record. The directory filters expired suspensions
+immediately and cleans inactive metadata daily. Anonymous account suspension is
+not a guarantee against obtaining a new installation identity.
+
+Verification: `node Scripts/test_account_safety.mjs` and
+`node workers/generation-lab/tests/suspension-admin.mjs`, plus the Worker CI suite.
+The Swift error parser supports the new 403 message; older binaries continue to
+be blocked server-side but may display a generic service error.
+
 ## Registration and request limits
 
 New anonymous accounts are limited to five registration attempts per minute per

@@ -27,6 +27,7 @@ on:
       - 'Scripts/test_moderation_calibration.mjs'
       - 'Scripts/lib/moderation-calibration.mjs'
       - 'Scripts/test_batch_moderation.mjs'
+      - 'Scripts/test_account_safety.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   push:
@@ -55,6 +56,7 @@ on:
       - 'Scripts/test_moderation_calibration.mjs'
       - 'Scripts/lib/moderation-calibration.mjs'
       - 'Scripts/test_batch_moderation.mjs'
+      - 'Scripts/test_account_safety.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:
@@ -111,6 +113,8 @@ jobs:
           node Scripts/test_privacy.mjs
           node Scripts/test_reporting_concurrency.mjs
           node Scripts/test_batch_moderation.mjs
+          node Scripts/test_account_safety.mjs
+          node workers/generation-lab/tests/suspension-admin.mjs
           node Scripts/test_moderation.mjs
           node Scripts/test_parallel_moderation.mjs
           node Scripts/test_moderation_calibration.mjs
@@ -129,6 +133,7 @@ jobs:
           node --check workers/moderation-lab/public/app.js
           node --check workers/generation-lab/public/app.js
           node --check workers/generation-lab/public/admin/models.js
+          node --check workers/generation-lab/public/admin/suspensions.js
 
       - name: Check deployment credentials
         if: github.event_name != 'pull_request'

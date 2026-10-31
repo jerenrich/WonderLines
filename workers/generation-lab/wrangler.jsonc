@@ -8,6 +8,7 @@
   "kv_namespaces": [{"binding":"MODEL_REGISTRY","id":"7088d2edc1ea4422bb7cfc61ae6a08c0"}],
   "durable_objects": {"bindings": [
     {"name": "ACCOUNTS", "class_name": "Account", "script_name": "coloring-sheets-api"},
+    {"name": "BUDGET", "class_name": "Budget", "script_name": "coloring-sheets-api"},
     {"name": "LIBRARY", "class_name": "ComparisonLibrary"},
     {"name": "MODEL_ADMIN", "class_name": "ModelCatalogueAdmin"}
   ]},

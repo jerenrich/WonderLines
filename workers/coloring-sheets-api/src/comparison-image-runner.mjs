@@ -91,6 +91,14 @@ export class ComparisonImageRunner {
     let request;
     try{request=imageRequest(this.env,task.route,task.subject,task.size);}
     catch{return this.finish(task,{state:'failed',errorCode:'provider_unavailable',message:'The image provider is not configured for this model.'});}
+    const gate=await this.account('/generation-gate',{},task.accountId);
+    if(!gate.ok) {
+      if(gate.status!==403) {await gate.body?.cancel();throw new Error('Account safety unavailable');}
+      const blocked=await gate.json();
+      if(blocked.error?.code!=='account_suspended')throw new Error('Account safety unavailable');
+      return this.finish(task,{state:'failed',errorCode:'account_suspended',message:blocked.error.message});
+    }
+    await gate.body?.cancel();
     const started=Date.now();task.stage='submitting';task.startedAt=started;await this.state.storage.put('task',task);
     this.log(task,'provider_started');
     try{

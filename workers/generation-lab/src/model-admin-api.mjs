@@ -1,4 +1,5 @@
 import {adminConfigured, adminOrigin, adminPrincipal, beginAdminLogin, finishAdminLogin, endAdminSession, CALLBACK_PATH} from './admin-auth.mjs';
+import {handleSuspensionAdmin} from './suspension-admin-api.mjs';
 import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
 const security={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
 const json=(value,status=200)=>Response.json(value,{status,headers:security});
@@ -14,7 +15,7 @@ export async function handleModelAdmin(request,env) {
   try {
     if(path==='/api/admin/session'&&request.method==='GET') {
       const principal=await adminPrincipal(request,env);
-      return json({configured:adminConfigured(env),authenticated:!!principal,...(principal?{email:principal.email,permissions:['models:read','models:write','models:rollback']}:{})});
+      return json({configured:adminConfigured(env),authenticated:!!principal,...(principal?{email:principal.email,permissions:['models:read','models:write','models:rollback','accounts:read','accounts:suspend','accounts:reinstate']}:{})});
     }
     if(!adminConfigured(env))return fail('Google sign-in needs its OAuth client and session secret configured.',503,'auth_not_configured');
     if(url.origin!==adminOrigin(env))return fail('Use the configured admin website.',403,'invalid_origin');
@@ -23,13 +24,17 @@ export async function handleModelAdmin(request,env) {
       const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(request.headers.get('CF-Connecting-IP')??'unknown'));
       const key='model-admin:'+Array.from(new Uint8Array(bytes),byte=>byte.toString(16).padStart(2,'0')).join('');
       if(!(await env.LOGIN_LIMITER.limit({key})).success)return fail('Too many sign-in attempts. Please wait a minute.',429);
-      return path===CALLBACK_PATH?finishAdminLogin(request,env):beginAdminLogin(env,url.searchParams.get('destination')==='comparison'?'comparison':'admin');
+      return path===CALLBACK_PATH?finishAdminLogin(request,env):beginAdminLogin(env,url.searchParams.get('destination'));
     }
     if(!['GET','POST'].includes(request.method))return fail('Method not allowed.',405);
     if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return fail('Please use this website to make the change.',403,'invalid_origin');
     if(path==='/api/admin/logout'&&request.method==='POST')return endAdminSession();
     const principal=await adminPrincipal(request,env);
     if(!principal)return fail('Sign in with your authorized Google account.',401,'unauthorized');
+    if(path==='/api/admin/suspensions'||path.startsWith('/api/admin/accounts/')) {
+      const response=await handleSuspensionAdmin(request,env,principal);
+      return new Response(response.body,{status:response.status,headers:{...security,'Content-Type':'application/json'}});
+    }
     if(!env.MODEL_ADMIN||!env.MODEL_REGISTRY)return fail('Model administration storage is not configured.',503,'storage_not_configured');
     let operation,input={};
     if(path==='/api/admin/models'&&request.method==='GET')operation='/current';
