@@ -1,0 +1,47 @@
+{
+  "preparedOn": "2026-10-31",
+  "status": "prepared; not created in Better Stack; awaiting account sign-in",
+  "plan": "free",
+  "monitorSlots": 3,
+  "apiReference": "https://betterstack.com/docs/uptime/api/create-a-new-monitor/",
+  "scope": "Availability checks only. These do not exercise account storage, moderation inference, image providers, image persistence, or App Attest.",
+  "defaults": {
+    "check_frequency": 180,
+    "http_method": "GET",
+    "request_timeout": 15,
+    "confirmation_period": 60,
+    "recovery_period": 60,
+    "verify_ssl": true,
+    "follow_redirects": false,
+    "remember_cookies": false,
+    "email": true,
+    "sms": false,
+    "call": false,
+    "push": false,
+    "critical_alert": false
+  },
+  "monitors": [
+    {
+      "pronounceable_name": "Wonder Lines API availability",
+      "url": "https://coloring-sheets-api.jordan-erenrich.workers.dev/v1/models",
+      "monitor_type": "expected_status_code",
+      "expected_status_codes": [401],
+      "verification": "Unauthenticated GET returned HTTP 401 with error.code unauthorized on 31 October 2026. A successful availability check means the authentication boundary responds; it does not prove authorized requests work."
+    },
+    {
+      "pronounceable_name": "Wonder Lines comparison API availability",
+      "url": "https://wonderlines-compare.jordan-erenrich.workers.dev/api/session",
+      "monitor_type": "keyword",
+      "required_keyword": "\"authenticated\":false",
+      "verification": "Unauthenticated GET returned HTTP 200 with authenticated false on 31 October 2026."
+    },
+    {
+      "pronounceable_name": "Wonder Lines moderation lab API availability",
+      "url": "https://coloring-sheets-moderation-lab.jordan-erenrich.workers.dev/api/config",
+      "monitor_type": "keyword",
+      "required_keyword": "\"models\"",
+      "verification": "Public GET returned HTTP 200 with the model catalog on 31 October 2026. No moderation inference was called."
+    }
+  ],
+  "applyNotes": "This is a setup specification, not a single API request body. For each monitor, merge defaults with its API fields and omit verification. Inspect the existing monitors and account plan first to avoid duplicates or paid capacity. Confirm effective three-minute frequency, email routing, and a successful Better Stack check after creation. No account credentials or diagnostic payloads are included."
+}
