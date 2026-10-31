@@ -34,7 +34,11 @@ function runSummary(run) {
     previews:run.cells.filter(c=>c.status==='completed').slice(0,4).map(c=>c.id)};
 }
 function persist() {
-  if(current)history=[runSummary(current),...history.filter(r=>r.id!==current.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id)).slice(0,100);
+  if(current){
+    const ordered=[runSummary(current),...history.filter(r=>r.id!==current.id)].sort((a,b)=>b.createdAt-a.createdAt||(b.sequence??0)-(a.sequence??0)||b.id.localeCompare(a.id));
+    let count=0;history=[];
+    for(const run of ordered){if(history.length===100||count+run.count>2500)break;count+=run.count;history.push(run);}
+  }
   renderHistory();$('library-count').textContent=history.length;if(!$('library-view').hidden)renderLibrary();
 }
 function savePayload(run, imported=false) {
