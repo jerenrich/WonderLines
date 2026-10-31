@@ -129,7 +129,8 @@
     "checksPerDay": 48,
     "normalParallelTextCallsPerDay": 96,
     "quotaAndBilling": "Uses normal provider text-moderation quotas and billing.",
-    "deploymentRecord": "moderation-canary-deployment.json",
-    "estimatedInferenceUSDPer30DaysBeforeAllowances": 0.70133472
+    "deploymentRecord": "moderation-canary-30-minute-deployment.json",
+    "estimatedInferenceUSDPer30DaysBeforeAllowances": 0.70133472,
+    "productionScheduleVerified": true
   }
 }
