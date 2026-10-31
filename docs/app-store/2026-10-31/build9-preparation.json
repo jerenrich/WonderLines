@@ -10,7 +10,7 @@
   "backendVersion": "514278ef-aef1-4c08-a954-87df93525154",
   "policy": "all-ages-v10-first-approval-0d745969007c",
   "productionSourceSHA256": "878529ca07ba1a850aab5101cf012007dcb277ac150e4517cb9a2178b304a312",
-  "sourceState": "Local working tree based on 9889a5e03554081eccd9c46afe6bc0737213d40b; application/backend implementation changes remain uncommitted. Public privacy source alone was published in commit 373a57bc86fa955bc6bca41e3f0625237a0dcf8c. Preserve this source and deployment bundle before future CI deployments.",
+  "sourceState": "Preparation used the working tree based on 9889a5e. The implementation was subsequently committed and pushed to main in abf67e8af9bc5a8b4fdfd276019c30a77abfba75, preserving the previously published privacy-policy commit. CI passed and its first-approval deployment was verified.",
   "consent": {
     "version": 2,
     "namesTypeSafe": true,
@@ -84,5 +84,11 @@
   "appleSubmissionPerformed": false,
   "remaining": [
     "Upload build 1.0 (9), wait for Apple processing, select it for the rejected app version, and resubmit with the prepared review notes."
-  ]
+  ],
+  "sourcePublication": {
+    "verifiedAtUTC": "2026-10-31T08:28:05.249151+00:00",
+    "implementationCommit": "abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+    "workerVersion": "b044c641-6096-41d3-9364-b364e876c54c",
+    "verification": "build9-main-verification.json"
+  }
 }

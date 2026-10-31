@@ -1,0 +1,204 @@
+{
+  "verifiedAtUTC": "2026-10-31T08:28:05.249151+00:00",
+  "status": "Implementation committed and pushed to main; CI passed; deployed first-approval rule verified",
+  "implementationCommit": "abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+  "implementationCommitURL": "https://github.com/jerenrich/WonderLines/commit/abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+  "remotePrivacyCommitPreserved": "373a57bc86fa955bc6bca41e3f0625237a0dcf8c",
+  "ci": {
+    "backend": {
+      "runURL": "https://github.com/jerenrich/WonderLines/actions/runs/41184466109",
+      "headSha": "abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Record tested commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run offline Worker and image cost tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check deployment credentials",
+          "conclusion": "success"
+        },
+        {
+          "name": "Deploy Worker",
+          "conclusion": "success"
+        },
+        {
+          "name": "Deploy moderation lab with the same policy revision",
+          "conclusion": "success"
+        },
+        {
+          "name": "Deploy WonderLines comparison studio",
+          "conclusion": "success"
+        },
+        {
+          "name": "Deploy isolated Gateway log retention",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Summarize deployment",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "pages": {
+      "runURL": "https://github.com/jerenrich/WonderLines/actions/runs/41184465381",
+      "headSha": "abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+      "conclusion": "success"
+    }
+  },
+  "deployment": {
+    "checkedAtUTC": "2026-10-31T08:27:07.405237+00:00",
+    "implementationCommit": "abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+    "service": "coloring-sheets-api",
+    "workerVersion": "b044c641-6096-41d3-9364-b364e876c54c",
+    "trafficPercent": 100,
+    "createdOnUTC": "2026-10-31T08:24:34.682197Z",
+    "annotation": "GitHub main abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+    "moderationStrategy": "parallel",
+    "typeSafeSecretPresent": true,
+    "compatibilityDate": "2026-09-20",
+    "firstApprovalCodePresent": true,
+    "policy": "all-ages-v10-first-approval-0d745969007c",
+    "noGraceTimerInDeployedCode": true,
+    "deployedBundleSHA256": "94415bb202d472f97562b290b13a8066201e203fbe41f8a714fef2882533a21e"
+  },
+  "liveVerification": {
+    "passed": true,
+    "generationID": "120396c4-7c73-4bbb-a543-4b9b776f139d",
+    "postStatus": 202,
+    "finalStatus": 200,
+    "generationElapsedMs": 16163,
+    "temporaryAccountCleanupStatus": 200,
+    "approvedBy": "jev-1.14.0",
+    "decisionElapsedMs": 323,
+    "bothServicesCompletedMs": 950,
+    "observationContinuedAfterApproval": true,
+    "observations": [
+      {
+        "timestampUTC": "2026-10-31T08:26:45.671000+00:00",
+        "workerVersion": "b044c641-6096-41d3-9364-b364e876c54c",
+        "level": "info",
+        "event": "description_moderation",
+        "batchID": "8562bba6-dae6-4cf6-93e1-a53911244216",
+        "model": "clef+typesafe/jev-1.14.0",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "outcome": "approved",
+        "strategy": "parallel",
+        "gateway": "coloring-sheets",
+        "decisionReason": "first_approval",
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "pending",
+            "elapsedMs": 323
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.03,
+              "hate": 0.02,
+              "adult": 0.02,
+              "frightening": 0.02,
+              "bypass": 0.01
+            },
+            "elapsedMs": 323
+          }
+        ],
+        "elapsedMs": 323
+      },
+      {
+        "timestampUTC": "2026-10-31T08:26:46.298000+00:00",
+        "workerVersion": "b044c641-6096-41d3-9364-b364e876c54c",
+        "level": "info",
+        "event": "description_moderation_complete",
+        "batchID": "8562bba6-dae6-4cf6-93e1-a53911244216",
+        "model": "clef+typesafe/jev-1.14.0",
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "outcome": "approved",
+        "decisionReason": "first_approval",
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.9494,
+              "sexual": 0.0279,
+              "violence": 0.0162,
+              "hate": 0.0268,
+              "adult": 0.0375,
+              "frightening": 0.0265,
+              "bypass": 0.0405
+            },
+            "elapsedMs": 950
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.03,
+              "hate": 0.02,
+              "adult": 0.02,
+              "frightening": 0.02,
+              "bypass": 0.01
+            },
+            "elapsedMs": 323
+          }
+        ],
+        "completionReason": "all_completed",
+        "agreement": "agree",
+        "availability": "both_available",
+        "elapsedMs": 950,
+        "decisionElapsedMs": 323
+      }
+    ],
+    "descriptionsExcluded": true,
+    "rawProviderPayloadsExcluded": true
+  },
+  "build": {
+    "version": "1.0",
+    "number": "9",
+    "ipaSHA256": "910cf9cf507c24c54e4d731edc89cde13a8f8166507f86c1b0ec826b9e989766",
+    "appSourceUnchangedByPublication": true,
+    "appleUploaded": false,
+    "appleSubmitted": false
+  },
+  "publicationScope": "Backend, consent/build version, tests, calibration evidence and 31 October release records. Unrelated local monitoring files and 29 October review drafts remain untouched.",
+  "recordCommitScope": "This follow-up updates documentation only; the backend implementation was tested and deployed from implementationCommit."
+}

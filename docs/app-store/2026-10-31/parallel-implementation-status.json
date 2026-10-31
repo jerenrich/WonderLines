@@ -1,5 +1,5 @@
 {
-  "updatedAtUTC": "2026-10-31T07:27:02.733667+00:00",
+  "updatedAtUTC": "2026-10-31T08:28:05.249151+00:00",
   "implementation": "Deployed calibrated Clef plus direct pinned Jev. The first approval permits generation immediately; both checks continue for up to eight seconds with retained completion logging. Supersedes the earlier four-second grace/veto behavior.",
   "rules": {
     "approve": "First valid approval immediately, even if the other service rejects.",
@@ -83,6 +83,9 @@
     "evidence": "../../moderation/2026-10-31/first-approval-live-verification.json",
     "productionEvidence": "build9-first-approval-production-logs-sanitized.json"
   },
-  "workerVersion": "514278ef-aef1-4c08-a954-87df93525154",
-  "paidImageRequestsScope": "This deployment/preparation turn: one initial API sheet, three physical-device sheets, one final-policy API sheet."
+  "workerVersion": "b044c641-6096-41d3-9364-b364e876c54c",
+  "paidImageRequestsScope": "This deployment/preparation turn: one initial API sheet, three physical-device sheets, one final-policy API sheet.",
+  "previousWorkerVersion": "514278ef-aef1-4c08-a954-87df93525154",
+  "sourceCommit": "abf67e8af9bc5a8b4fdfd276019c30a77abfba75",
+  "mainVerification": "build9-main-verification.json"
 }
