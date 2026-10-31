@@ -1,0 +1,93 @@
+{
+  "verifiedAt": "2026-10-31T12:32:15.491821+00:00",
+  "observedScheduledRun": {
+    "event": "moderation_canary",
+    "probe": "fixed_benign_description_v1",
+    "strategy": "parallel",
+    "outcome": "passed",
+    "elapsedMs": 1494,
+    "failure": null,
+    "availability": "both_available",
+    "timestamp": 1793449820799,
+    "triggerCron": "*/30 * * * *",
+    "scriptVersion": {
+      "id": "ff0997c7-1b45-4f09-a8b1-f70317343e10"
+    },
+    "timestampUTC": "2026-10-31T12:30:20.799000+00:00"
+  },
+  "deployedCommit": "aaeb94dd959a3e8027a647fab5146c9a28d0a45e",
+  "workers": [
+    {
+      "worker": "coloring-sheets-api",
+      "version": "ff0997c7-1b45-4f09-a8b1-f70317343e10",
+      "trafficPercent": 100,
+      "message": "GitHub main aaeb94dd959a3e8027a647fab5146c9a28d0a45e"
+    },
+    {
+      "worker": "wonderlines-monitoring",
+      "version": "75719423-5746-426d-bccd-571849635601",
+      "trafficPercent": 100,
+      "message": "GitHub main aaeb94dd959a3e8027a647fab5146c9a28d0a45e"
+    },
+    {
+      "worker": "wonderlines-compare",
+      "version": "20cf3839-8cab-45ab-a6ae-4b4764217c9c",
+      "trafficPercent": 100,
+      "message": "GitHub main aaeb94dd959a3e8027a647fab5146c9a28d0a45e"
+    },
+    {
+      "worker": "coloring-sheets-moderation-lab",
+      "version": "ef97bb57-9e46-4a59-b3eb-5a6e94a029f1",
+      "trafficPercent": 100,
+      "message": "GitHub main aaeb94dd959a3e8027a647fab5146c9a28d0a45e"
+    }
+  ],
+  "workflowRun": "https://github.com/jerenrich/WonderLines/actions/runs/41201223096",
+  "workflowConclusion": "success",
+  "moderationFailurePath": {
+    "verifiedAt": "2026-10-31T12:20:17.592Z",
+    "mode": "offline execution of actual Tail Worker and Durable Object classes with isolated mock storage",
+    "productionStateModified": false,
+    "results": [
+      {
+        "scenario": "customer moderation timeout",
+        "initialBatches": 1,
+        "replayCreatedAdditionalBatches": false,
+        "output": {
+          "event": "operational_alert_batch",
+          "category": "moderation",
+          "failureSpanSeconds": 0,
+          "observations": 1
+        }
+      },
+      {
+        "scenario": "failed periodic probe",
+        "initialBatches": 1,
+        "replayCreatedAdditionalBatches": false,
+        "output": {
+          "event": "operational_alert_batch",
+          "category": "moderation",
+          "failureSpanSeconds": 0,
+          "observations": 1
+        }
+      },
+      {
+        "scenario": "normal content rejection",
+        "initialBatches": 0,
+        "replayCreatedAdditionalBatches": false,
+        "output": null
+      }
+    ]
+  },
+  "liveAlertVerificationRecord": "moderation-alert-live-verification.json",
+  "retiredMinuteTrigger": {
+    "lastObservedProbeUTC": "2026-10-31T12:09:12.723Z",
+    "newHalfHourProbeUTC": "2026-10-31T12:30:20.799000+00:00",
+    "noExtraMinuteProbesObservedAfterCutover": true
+  },
+  "limits": [
+    "A new SMTP delivery test was not performed. The existing policy recipient and query were verified, and earlier successful sample email delivery was confirmed in Gmail.",
+    "The temporary TEST monitor creation was rejected by automatic approval review to avoid test-alert clutter; no temporary policy or additional test email was created.",
+    "Blocking moderation errors and failed probes qualify immediately but share the hourly batch cooldown; log ingestion and native query scheduling add delivery latency."
+  ]
+}

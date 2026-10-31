@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-10-31T08:57:14.981393+00:00",
+  "verifiedAt": "2026-10-31T12:32:15.491821+00:00",
   "account": "994f60c144bd9dd9bc2333bd3abba832",
   "dashboard": "https://dash.cloudflare.com/994f60c144bd9dd9bc2333bd3abba832/notifications/custom",
   "enabled": true,
@@ -69,7 +69,8 @@
     "nativePoliciesReopenedAfterFilterDeployment": true,
     "noAdditionalDeliveryTestEmails": true,
     "monitoringInvocationObserved": "ok",
-    "reviewSessionModerationTimeoutRegression": true
+    "reviewSessionModerationTimeoutRegression": true,
+    "moderationAlertRuntimeAndRecipientVerified": true
   },
   "limits": [
     "Image and storage failures require request traffic. Moderation also runs a fixed benign canary every 30 minutes; failed probes qualify immediately. Partial provider results from these spaced probes are diagnostic; the two-minute degraded-service rule requires recurring failures from real traffic.",
@@ -131,6 +132,9 @@
     "quotaAndBilling": "Uses normal provider text-moderation quotas and billing.",
     "deploymentRecord": "moderation-canary-30-minute-deployment.json",
     "estimatedInferenceUSDPer30DaysBeforeAllowances": 0.70133472,
-    "productionScheduleVerified": true
+    "productionScheduleVerified": true,
+    "runtimeVerificationRecord": "moderation-canary-30-minute-live-verification.json",
+    "observedHalfHourRunUTC": "2026-10-31T12:30:20.799000+00:00",
+    "lastVerifiedAvailability": "both_available"
   }
 }
