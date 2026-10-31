@@ -79,8 +79,9 @@ function renderEditor(){
     const switches=element('div','model-switches');
     const enabled=checkbox('Enabled',model.enabled,value=>{model.enabled=value;renderDefault();});enabled.querySelector('input').className='enabled-control';
     switches.append(enabled,checkbox('Show in picker',model.visible,value=>{model.visible=value;renderDefault();}),element('span','model-provider',providers[model.provider]??model.provider));
-    card.append(switches,field('Description',model.detail,value=>model.detail=value,{kind:'textarea',max:600,required:true}));
-    const details=element('details'),summary=element('summary',null,'Routing and reference price');details.append(summary);
+    card.append(switches);
+    const details=element('details'),summary=element('summary',null,'Edit description, routing and price');details.append(summary);
+    const description=field('Description',model.detail,value=>model.detail=value,{kind:'textarea',max:600,required:true});description.className='model-description';details.append(description);
     const fields=element('div','model-fields');
     fields.append(field('Public model ID',model.id,value=>{if(state.draft.defaultModel===model.id)state.draft.defaultModel=value;model.id=value;renderDefault();},{max:128,required:true}));
     const providerField=element('label');providerField.append(element('span','field-label','Provider'));
