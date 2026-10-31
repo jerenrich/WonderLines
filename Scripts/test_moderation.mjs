@@ -107,8 +107,7 @@ const uncertainOverall = safeModerationResult(); uncertainOverall.answers.all_ag
 assert.deepEqual(moderationAssessment(uncertainOverall), {allowed: false, reasonCodes: ['uncertain']});
 await assert.rejects(moderateSubject({...env, AI: {run: async () => multiHazard}}, 'private input'), error => {
   assert.deepEqual(error.reasonCodes, ['sexual', 'violence']);
-  assert.match(error.message, /possible sexual content or nudity, violence or weapons/);
-  assert.match(error.message, /No sheet allowance was used/);
+  assert.equal(error.message, 'This description was rejected because it was flagged by content moderation.');
   assert.equal(error.diagnostics.gateway, 'existing-gateway');
   assert.ok(error.diagnostics.elapsedMs >= 0);
   assert.ok(!JSON.stringify(error).includes('private input'));
@@ -129,8 +128,7 @@ overlapping.answers.sexual.noul = 0.68; overlapping.answers.violence.noul = 0.7;
 assert.deepEqual(moderationAssessment(overlapping).reasonCodes, ['adult', 'violence', 'sexual']);
 await assert.rejects(moderateSubject({...env, AI: {run: async () => overlapping}}, 'private input'), error => {
   assert.deepEqual(error.reasonCodes, ['adult', 'violence', 'sexual']);
-  assert.match(error.message, /possible adult themes, violence or weapons/);
-  assert.ok(!error.message.includes('sexual content'), 'User copy leads with two strongest flags; diagnostics retain all categories.');
+  assert.equal(error.message, 'This description was rejected because it was flagged by content moderation.');
   return true;
 });
 console.log('Moderation protocol tests passed (synthetic responses; no model calls).');

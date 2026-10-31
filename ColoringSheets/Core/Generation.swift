@@ -952,7 +952,11 @@ final class WorkerClient: GenerationServing {
         case "result_unavailable": expectedStatus = 410
         default: return nil
         }
-        guard response.statusCode == expectedStatus,
+        guard response.statusCode == expectedStatus else { return nil }
+        if code == "description_not_suitable" {
+            return "This description was rejected because it was flagged by content moderation."
+        }
+        guard
               let body = try? JSONDecoder().decode(WorkerErrorBody.self, from: data),
               let message = body.error.message?.trimmingCharacters(in: .whitespacesAndNewlines),
               !message.isEmpty, message.count <= 800,

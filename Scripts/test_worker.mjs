@@ -90,7 +90,7 @@ try {
   const rejectedBody = await response.json();
   assert.equal(rejectedBody.error.code, 'description_not_suitable');
   assert.deepEqual(rejectedBody.error.reasonCodes, ['sexual']);
-  assert.match(rejectedBody.error.message, /possible sexual content or nudity/);
+  assert.equal(rejectedBody.error.message, 'This description was rejected because it was flagged by content moderation.');
   const rejectedAudit = auditLogs.find(log => log.generationID === rejectedID && log.outcome === 'description_not_suitable');
   assert.equal(rejectedAudit.gateway, 'synthetic-gateway');
   assert.deepEqual(rejectedAudit.reasonCodes, ['sexual']);

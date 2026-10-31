@@ -111,15 +111,8 @@ export function moderationAssessment(value, model = MODERATION_MODEL) {
 
 export function moderationDecision(value, model = MODERATION_MODEL) { return moderationAssessment(value, model).allowed; }
 
-const reasonLabels = {
-  sexual: 'sexual content or nudity', violence: 'violence or weapons', hate: 'hate or harassment',
-  adult: 'adult themes', frightening: 'frightening content', bypass: 'instructions to bypass safety checks',
-};
-function rejectionMessage(reasonCodes) {
-  const labels = reasonCodes.slice(0, 2).map(code => reasonLabels[code]).filter(Boolean);
-  return (labels.length ? 'The safety check flagged possible ' + labels.join(', ') + '.'
-    : 'The safety check could not confirm that this description is suitable for all ages.') +
-    ' Please rewrite it as a gentle, family-friendly scene and try again. No sheet allowance was used.';
+function rejectionMessage() {
+  return 'This description was rejected because it was flagged by content moderation.';
 }
 
 export class ModerationError extends Error {
@@ -184,7 +177,7 @@ export async function moderateSingleSubject(env, subject, {signal, bounded = tru
       ? /^(\d{3,5}):/.exec(error.message) : null;
     throw unavailable(failure, match ? {upstreamCode: Number(match[1])} : {});
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
-  if (!assessment.allowed) throw new ModerationError('description_not_suitable', rejectionMessage(assessment.reasonCodes),
+  if (!assessment.allowed) throw new ModerationError('description_not_suitable', rejectionMessage(),
     400, diagnostics(null, {scores}), assessment.reasonCodes);
   return diagnostics(null, {scores});
 }
@@ -263,6 +256,6 @@ export async function moderateParallelSubject(env, subject, {waitUntil, onComple
   if (allowed === null) throw new ModerationError('moderation_unavailable',
     'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503,
     {...audit, failure: 'no_valid_decision'});
-  if (!allowed) throw new ModerationError('description_not_suitable', rejectionMessage(reasonCodes), 400, audit, reasonCodes);
+  if (!allowed) throw new ModerationError('description_not_suitable', rejectionMessage(), 400, audit, reasonCodes);
   return audit;
 }
