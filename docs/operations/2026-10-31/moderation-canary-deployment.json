@@ -1,0 +1,70 @@
+{
+  "verifiedAt": "2026-10-31T09:36:01.499519+00:00",
+  "applicationCommit": "e0a6fe67562dd0ae6624508623bad60457bb50fa",
+  "pullRequest": "https://github.com/jerenrich/WonderLines/pull/15",
+  "workflowRun": "https://github.com/jerenrich/WonderLines/actions/runs/41188653508",
+  "workers": [
+    {
+      "worker": "coloring-sheets-api",
+      "version": "1e969dd6-5026-451e-97dc-7528608cf1d3",
+      "trafficPercent": 100,
+      "message": "GitHub main e0a6fe67562dd0ae6624508623bad60457bb50fa",
+      "bindingsAndObservabilityPreserved": true
+    },
+    {
+      "worker": "wonderlines-monitoring",
+      "version": "a1d34c0f-8e1a-4edb-8374-6d59cac8d83d",
+      "trafficPercent": 100,
+      "message": "GitHub main e0a6fe67562dd0ae6624508623bad60457bb50fa",
+      "bindingsAndObservabilityPreserved": true
+    }
+  ],
+  "schedules": {
+    "schedules": [
+      {
+        "cron": "* * * * *",
+        "created_on": "2026-10-31T09:26:16.375818Z",
+        "modified_on": "2026-10-31T09:26:16.375818Z"
+      },
+      {
+        "cron": "37 * * * *",
+        "created_on": "2026-10-17T12:24:22.280022Z",
+        "modified_on": "2026-10-17T12:24:22.280022Z"
+      }
+    ]
+  },
+  "liveCanary": {
+    "queriedAt": "2026-10-31T09:35:47.738515+00:00",
+    "events": [
+      {
+        "timestamp": 1793439312274,
+        "worker": "coloring-sheets-api",
+        "event": "moderation_canary",
+        "probe": "fixed_benign_description_v1",
+        "strategy": "parallel",
+        "outcome": "passed",
+        "elapsedMs": 1398,
+        "failure": null,
+        "availability": "both_available"
+      },
+      {
+        "timestamp": 1793439252343,
+        "worker": "coloring-sheets-api",
+        "event": "moderation_canary",
+        "probe": "fixed_benign_description_v1",
+        "strategy": "parallel",
+        "outcome": "passed",
+        "elapsedMs": 1490,
+        "failure": null,
+        "availability": "both_available"
+      }
+    ]
+  },
+  "verification": {
+    "offlineWorkflowChecksPassed": 27,
+    "observedScheduledHealthyChecks": 2,
+    "imageGenerationsFromCanary": 0,
+    "testEmailsSent": 0,
+    "sharedHourlyBatchCapPreserved": true
+  }
+}
