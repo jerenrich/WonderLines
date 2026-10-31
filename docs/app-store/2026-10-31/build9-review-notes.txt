@@ -4,7 +4,7 @@ Please review Wonder Lines 1.0 (build 9).
 
 We investigated the latest generation failure and identified a moderation-service availability issue. The Cloudflare-hosted content safety check did not return within our eight-second timeout, preventing image generation from starting. This was separate from the earlier disabled Generate button issue, which had already been fixed.
 
-We have deployed redundant moderation using two independent services, Cloudflare Clef and TypeSafe Jev, in parallel. Generation now starts as soon as either service approves the description, so a slow or unavailable service does not block a description approved by the other. If neither service approves, generation remains blocked. We also added diagnostics to investigate service availability and disagreements without recording user descriptions.
+We have deployed redundant moderation using two independent services, Cloudflare Clef and TypeSafe Jev, in parallel. A rejection from either service blocks generation. If one service is slow or unavailable, generation proceeds on the other service's approval after a short wait, so a single service outage no longer blocks image generation. We also added diagnostics to investigate service availability and disagreements without recording user descriptions.
 
 Build 9 explicitly names TypeSafe AI in the sharing notice and requires renewed consent before generation. The public privacy policy has also been updated.
 

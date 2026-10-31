@@ -7,17 +7,26 @@ Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause cat
 ## Parallel moderation (31 October 2026)
 
 `MODERATION_STRATEGY=parallel` runs Cloudflare Clef and direct TypeSafe Jev
-(`jev-1.14.0`) together. The first valid approval immediately permits image
-reservation and generation, even if the other service rejects. A rejection waits
-for the other service because a later approval can still allow the batch. With
-no approval, a valid rejection rejects the batch once both services finish or the
-deadline expires; if neither returns a valid decision, the API returns HTTP 503.
+(`jev-1.14.0`) together, and either service can veto (policy `all-ages-v11-veto`).
+A valid rejection immediately rejects the batch. A valid approval waits up to four
+seconds (`SECOND_DECISION_GRACE_MS`), never past the overall deadline, for the
+other service: a second approval permits generation (`both_approved`) and a
+rejection blocks it. A single approval stands (`single_approval`, with
+`approvedBy`) only if the other service fails or has not decided when the grace
+ends. If neither returns a valid decision, the API returns HTTP 503.
+
+Jev usually decides in under 0.3 seconds and Clef in about one second, so the
+normal delay is Clef's latency; the four-second grace exceeds every recorded
+non-outage Clef response (maximum 3.77 seconds). A Clef outage therefore adds
+about four seconds rather than blocking generation. The earlier first-approval
+rule (v10) let one service's approval override the other's rejection; a live
+red-team prompt that Clef approved and Jev rejected was generated under v10.
 
 Both checks continue independently until they finish or eight seconds from their
-shared start. There is no post-approval grace wait. `waitUntil` retains the
-observation after the response; approval does not cancel the second request. The
-deadline cancels unfinished requests. Late responses cannot revise either the
-approval or the completed observation. `description_moderation` logs the gate;
+shared start. `waitUntil` retains the observation after the response; a decision
+does not cancel the second request. The deadline cancels unfinished requests.
+Late responses, including decisions arriving on or after the grace cutoff, cannot
+revise the decision or the completed observation. `description_moderation` logs the gate;
 `description_moderation_complete` logs both final outcomes, `agreement`
 (`agree`, `disagree`, `incomplete`), `availability`, provider durations, decision
 latency and completion latency, correlated by the same batch or generation ID.
@@ -62,8 +71,9 @@ already collected, use `--provider=jev`. `--retry-unavailable` explicitly rescor
 failed observations; ordinary resumes do not silently retry them. Offline fitting
 omits `--live`. It uses calibration labels to fit seven thresholds under a zero
 observed unsafe-approval constraint, separate validation labels to select the
-baseline or fitted profile, and a final held-out test set. The first-approval policy
-and each provider acting alone are evaluated separately. Sample performance does
+baseline or fitted profile, and a final held-out test set. The veto policy (both
+must approve) and each provider acting alone are evaluated separately; see
+`docs/moderation/2026-10-31/veto-calibration-report.json`. Sample performance does
 not establish a general error rate.
 
 `--write-profiles` writes the selected profiles only after both providers have

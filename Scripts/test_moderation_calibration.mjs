@@ -13,10 +13,10 @@ assert.equal(summarize([{name:'bad', expected:true, scores:{all_ages:NaN}}], bas
 const pair = evaluatePair([{name:'both',expected:true,clef:{scores:scores(.99,.1)},jev:{scores:scores(.99,.1)}},
   {name:'veto',expected:false,clef:{scores:scores(.99,.1)},jev:{scores:scores(.99,.9)}},
   {name:'missing',expected:false,clef:{scores:scores(.99,.1)}}], {clef:baseline,jev:baseline});
-assert.equal(pair.pairedValid,2); assert.equal(pair.unsafeApproved,1);
+assert.equal(pair.pairedValid,2); assert.equal(pair.unsafeApproved,0,'Either service vetoes a paired decision.');
 assert.equal(pair.singleServiceFallback.clef.unsafeApproved,2,'A combined pass must not conceal unsafe single-provider fallback.');
 assert.equal(pair.singleServiceFallback.jev.unavailable,1);
-console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, malformed/missing evidence, first-approval union and independent fallback evaluation; no network.');
+console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, malformed/missing evidence, veto pairing and independent fallback evaluation; no network.');
 
 // Replay both live models through the production decision/coordinator functions.
 // This verifies that the selected source profiles match the published evidence.
@@ -26,7 +26,7 @@ console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, 
   const {parallelClefThresholds, directJevThresholds} = await import('../workers/coloring-sheets-api/src/moderation-profiles.mjs');
   const {runParallelModeration} = await import('../workers/coloring-sheets-api/src/parallel-moderation.mjs');
   const recorded = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-31/parallel-live-scores.json', import.meta.url), 'utf8'));
-  const evidence = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-31/first-approval-calibration-report.json', import.meta.url), 'utf8'));
+  const evidence = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-31/veto-calibration-report.json', import.meta.url), 'utf8'));
   assert.deepEqual(parallelClefThresholds, evidence.providers.clef.thresholds);
   assert.deepEqual(directJevThresholds, evidence.providers.jev.thresholds);
   const counts = {};
@@ -36,7 +36,7 @@ console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, 
     const pending = runParallelModeration([{id:'clef',run:async()=>({...a,scores:row.clef.scores})},
       {id:'jev',run:async()=>({...b,scores:row.jev.scores})}]);
     const result = await pending.decision; await pending.completion;
-    assert.equal(result.allowed, a.allowed || b.allowed);
+    assert.equal(result.allowed, a.allowed && b.allowed);
     const count = counts[row.split] ??= {harmlessApproved:0,unsafeApproved:0};
     if(result.allowed)count[row.expected?'harmlessApproved':'unsafeApproved']++;
   }
@@ -44,5 +44,5 @@ console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, 
     assert.equal(count.harmlessApproved, evidence.paired[split].harmlessApproved);
     assert.equal(count.unsafeApproved, 0);
   }
-  console.log('PASS: 610 recorded live score sets replay through calibrated production profiles and first-approval union coordinator; zero unsafe approvals in recorded calibration/validation/final-test examples.');
+  console.log('PASS: 610 recorded live score sets replay through calibrated production profiles and veto coordinator; zero unsafe approvals in recorded calibration/validation/final-test examples.');
 }

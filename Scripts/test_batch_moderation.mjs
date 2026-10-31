@@ -181,8 +181,8 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
   console.log('PASS: app/web task parity, server-only prompt construction, legacy fingerprint recovery before configuration checks, and rejection before reservation; no network.');
 }
 
-// A concurrent app batch shares one pair. First approval releases every image;
-// both rejections block spending and the slower service completes in waitUntil.
+// A concurrent app batch shares one pair. Images wait for the second decision;
+// either rejection blocks spending and the completed pair is logged in waitUntil.
 {
   const env = {MODERATION_STRATEGY: 'parallel', TYPESAFE_API_KEY: 'private-typesafe-key',
     MODERATION_GATEWAY_ID: 'test', FREE_DAILY_ALLOWANCE: '100', GLOBAL_DAILY_GENERATION_LIMIT: '100',
@@ -216,18 +216,22 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
     assert.deepEqual((await batch(crypto.randomUUID())).map(r => r.status), [200, 200, 200]);
     assert.deepEqual([clefCalls, jevCalls, imageCalls], [1, 1, 3]);
     verdict = 'disagree';
-    assert.deepEqual((await batch(crypto.randomUUID())).map(r=>r.status),[200,200,200]);
-    assert.equal(imageCalls,6,'All images start while slower Jev is still running.');
+    const disputed = batch(crypto.randomUUID());
+    while (!releaseJev) await new Promise(resolve => setTimeout(resolve, 1));
+    assert.equal(imageCalls,3,'Clef approval alone does not start images while Jev is still deciding.');
+    releaseJev();
+    assert.deepEqual((await disputed).map(r=>r.status),[400,400,400],'A slower Jev rejection vetoes the Clef approval.');
+    assert.equal(imageCalls,3);
     assert.equal(env.ACCOUNTS.pending.length,2,'Each batch observation is retained by DurableObjectState.waitUntil.');
-    assert.ok(releaseJev); releaseJev(); await Promise.all(env.ACCOUNTS.pending);
+    await Promise.all(env.ACCOUNTS.pending);
     assert.ok(captured.some(row=>row.event==='description_moderation_complete' && row.agreement==='disagree'));
     const beforeUsage = structuredClone(await object.state.storage.get('usage'));
     verdict = 'veto';
     assert.deepEqual((await batch(crypto.randomUUID())).map(r => r.status), [400, 400, 400]);
-    assert.equal(imageCalls, 6); assert.deepEqual(await object.state.storage.get('usage'), beforeUsage);
+    assert.equal(imageCalls, 3); assert.deepEqual(await object.state.storage.get('usage'), beforeUsage);
     verdict = 'outage'; const retryBatch = crypto.randomUUID();
     assert.deepEqual((await batch(retryBatch)).map(r => r.status), [503, 503, 503]);
-    assert.deepEqual([clefCalls, jevCalls, imageCalls], [4, 4, 6]);
+    assert.deepEqual([clefCalls, jevCalls, imageCalls], [4, 4, 3]);
     assert.deepEqual(await object.state.storage.get('usage'), beforeUsage);
     const transient = await object.state.storage.get('moderation:' + retryBatch);
     assert.ok(transient.expires <= Date.now() + 1000);
@@ -235,10 +239,10 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
     transient.expires = Date.now() - 1; await object.state.storage.put('moderation:' + retryBatch, transient);
     verdict = 'allow';
     assert.deepEqual((await batch(retryBatch)).map(r => r.status), [200, 200, 200]);
-    assert.deepEqual([clefCalls, jevCalls, imageCalls], [5, 5, 9]);
+    assert.deepEqual([clefCalls, jevCalls, imageCalls], [5, 5, 6]);
     await Promise.all(env.ACCOUNTS.pending);
     const audits = captured.filter(row => row.event === 'description_moderation');
-    assert.ok(audits.some(row => row.strategy === 'parallel' && row.decisionReason === 'first_approval'));
+    assert.ok(audits.some(row => row.strategy === 'parallel' && row.decisionReason === 'both_approved'));
     assert.ok(!JSON.stringify(captured).includes('private-typesafe-key'));
     assert.ok(!JSON.stringify(captured).includes('A friendly flower'));
     assert.ok(!JSON.stringify([...object.state.storage.values]).includes('scores'));
@@ -249,5 +253,5 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
     assert.deepEqual((await batch(boundBatch)).map(r => r.status), [409, 409, 409]);
     assert.equal(imageCalls, before);
   } finally { globalThis.fetch = previousFetch; console.info = previousInfo; }
-  console.log('PASS: three-image parallel-policy deduplication, first approval before second result, retained disagreement logging, both-reject before spend, short outage cooldown/recovery, privacy and cached-policy isolation; no network.');
+  console.log('PASS: three-image parallel-policy deduplication, second decision before images, slower veto and retained disagreement logging, rejection before spend, short outage cooldown/recovery, privacy and cached-policy isolation; no network.');
 }

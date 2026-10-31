@@ -55,7 +55,8 @@ export function evaluatePair(rows, profiles) {
   const valid = row => validScores(row?.scores);
   const outcome = (row, name) => valid(row[name]) ? accepts(row[name].scores, profiles[name]) : null;
   const both = rows.filter(row => valid(row.clef) && valid(row.jev));
-  const accepted = row => outcome(row, 'clef') === true || outcome(row, 'jev') === true;
+  // Production veto rule: with both decisions available, both must approve.
+  const accepted = row => outcome(row, 'clef') === true && outcome(row, 'jev') === true;
   return {total: rows.length, pairedValid: both.length, unavailablePairs: rows.length - both.length,
     harmless: both.filter(row => row.expected).length,
     harmlessApproved: both.filter(row => row.expected && accepted(row)).length,

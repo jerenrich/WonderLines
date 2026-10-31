@@ -29,7 +29,7 @@ assert.equal(reviewAlert.batch[0].failureSpanSeconds, 0);
 assert.equal(advancePolicy(reviewAlert.state, reviewFailure, start).batch.length, 0);
 assert.equal(advancePolicy(reviewAlert.state, [{category: 'moderation', at: start + 1000, immediate: true}], start + 1000).batch.length, 0);
 
-// Current first-approval logs use availability=partial after the second
+// Single-approval logs use availability=partial after the second
 // provider fails. This is degraded service, with the ordinary grace period.
 const partial = failuresFromTail([trace({event: 'description_moderation_complete', outcome: 'approved', availability: 'partial'})], start);
 assert.deepEqual(partial, [{category: 'moderation', at: start}]);
