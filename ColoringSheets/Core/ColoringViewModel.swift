@@ -528,7 +528,7 @@ final class ColoringViewModel: ObservableObject {
         Task { await refreshUnfinishedSheets() }
         revealTask?.cancel(); revealTask = nil
         revealPendingResults()
-        let message = "Stopped waiting. Any sheets already received are still available. Unfinished sheets may still complete. You have not been charged."
+        let message = "Stopped waiting. Any sheets already received are still available. Unfinished sheets may still complete."
         if receivedFirstResult {
             batchMessage = message; phase = .result
         } else {

@@ -362,7 +362,7 @@ final class GenerationTests: XCTestCase {
         }
         XCTAssertThrowsError(try WorkerClient.parse(Data("OpenAI reports insufficient credit or quota.".utf8), response: response(502, type: "text/plain"), requestedModel: .flare)) {
             XCTAssertNotEqual($0 as? GenerationError, .configuration)
-            XCTAssertTrue($0.localizedDescription.contains("quota"))
+            XCTAssertTrue($0.localizedDescription.contains("temporarily unavailable"))
         }
         for status in [302, 400, 413, 500, 502, 504] {
             XCTAssertThrowsError(try WorkerClient.parse(Data("<html>private diagnostics</html>".utf8), response: response(status, type: "text/html"), requestedModel: .flare)) {
