@@ -513,7 +513,7 @@ export class Account {
         await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics: job.metrics}});
         await this.state.storage.delete('image:' + id);
       } else {
-        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. You have not been charged. Check unfinished sheets before generating again.');
+        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. Check unfinished sheets before generating again.');
       }
       return;
     }
@@ -544,7 +544,7 @@ export class Account {
         throw error;
       }
       await finishFailure(error instanceof ImageProviderError ? error.code : 'result_save_failed',
-        error instanceof ImageProviderError ? error.message : 'The generated image could not be saved. You have not been charged.');
+        error instanceof ImageProviderError ? error.message : 'The generated image could not be saved. Please try again.');
     }
   }
   async advanceFal(id) {
@@ -555,11 +555,11 @@ export class Account {
       await this.state.storage.delete('fal:' + id);
     };
     if (Date.now() - job.createdAt > 30 * 60 * 1000) {
-      await finishFailure('provider_timeout', 'The fal job could not be recovered within 30 minutes. You have not been charged. Check unfinished sheets before generating again.');
+      await finishFailure('provider_timeout', 'The fal job could not be recovered within 30 minutes. Check unfinished sheets before generating again.');
       return;
     }
     if (job.fal.stage === 'submitting') {
-      await finishFailure('provider_connection_failed', 'The fal submission was interrupted before its job ID could be saved. You have not been charged. Check unfinished sheets before generating again.');
+      await finishFailure('provider_connection_failed', 'The fal submission was interrupted before its job ID could be saved. Check unfinished sheets before generating again.');
       return;
     }
     if (job.fal.stage === 'queued') {
@@ -569,7 +569,7 @@ export class Account {
       try { requestID = await submitFalRequest(this.env, job.fal.request); }
       catch (error) {
         await finishFailure(error instanceof ImageProviderError ? error.code : 'provider_connection_failed',
-          error instanceof ImageProviderError ? error.message : 'The fal submission could not be confirmed. You have not been charged.');
+          error instanceof ImageProviderError ? error.message : 'The fal submission could not be confirmed. Please try again.');
         return;
       }
       job.fal.requestID = requestID;
@@ -606,7 +606,7 @@ export class Account {
     if (job?.state === 'processing' && !job.fal && !job.imageTask && Date.now() - job.createdAt > 600000) {
       // Old synchronous requests cannot finish indefinitely after disconnection.
       await this.complete({generationId, result: {state: 'failed', errorCode: 'provider_timeout',
-        message: 'This earlier request was interrupted before its image was saved. You have not been charged. Check unfinished sheets before generating again.'}});
+        message: 'This earlier request was interrupted before its image was saved. Check unfinished sheets before generating again.'}});
       job = await this.state.storage.get('job:' + generationId);
     }
     if (job?.state === 'completed') job.metrics = refreshImageCostMetrics(job.metrics);
