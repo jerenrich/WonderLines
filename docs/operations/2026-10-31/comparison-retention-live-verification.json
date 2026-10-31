@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-31T12:53:24.480099+00:00",
+  "bucket": "coloring-sheets-generations",
+  "before": {
+    "rules": [
+      {
+        "id": "recovery-images",
+        "enabled": true,
+        "conditions": {},
+        "deleteObjectsTransition": {
+          "condition": {
+            "type": "Age",
+            "maxAge": 86400
+          }
+        },
+        "abortMultipartUploadsTransition": {
+          "condition": {
+            "type": "Age",
+            "maxAge": 86400
+          }
+        }
+      }
+    ]
+  },
+  "after": {
+    "rules": [
+      {
+        "id": "recovery-images",
+        "enabled": true,
+        "conditions": {},
+        "abortMultipartUploadsTransition": {
+          "condition": {
+            "type": "Age",
+            "maxAge": 86400
+          }
+        }
+      }
+    ]
+  },
+  "comparisonImageLimit": 2500,
+  "gridLimit": 100,
+  "pullRequest": "https://github.com/jerenrich/WonderLines/pull/20",
+  "sourceCommit": "3001c12faee8dfefdb2875757fdb10dc9131c693",
+  "checks": "All 32 offline checks and PR CI passed; both Worker deployment dry runs passed.",
+  "policy": "Comparison files retained with grids; ordinary app PNG expiry handled by hourly sweep; multipart abort and unrelated rules preserved.",
+  "httpChecks": {
+    "/": {
+      "status": 200,
+      "retentionCopyPresent": true
+    },
+    "/app.js": {
+      "status": 200,
+      "imageCapPresent": true,
+      "gridCapPresent": true
+    },
+    "/api/session": {
+      "status": 200,
+      "configured": true
+    }
+  },
+  "deploymentWorkflow": "https://github.com/jerenrich/WonderLines/actions/runs/41202990455",
+  "deploymentConclusion": "success"
+}
