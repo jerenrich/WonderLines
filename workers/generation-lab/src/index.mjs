@@ -1,4 +1,4 @@
-import {adminConfigured, comparisonPrincipal, endComparisonSession} from './admin-auth.mjs';
+import {adminConfigured, comparisonPrincipal, endAdminSession} from './admin-auth.mjs';
 import {catalog,unavailableModels} from './catalog.mjs';
 import {ComparisonLibrary} from './library.mjs';
 export {ComparisonLibrary};
@@ -43,7 +43,7 @@ async function handle(request, env) {
       const identity = await comparisonPrincipal(request, env);
       return json({configured:adminConfigured(env), authenticated:!!identity, ...(identity?{email:identity.email}:{})});
     }
-    if (request.method === 'DELETE') return json({authenticated:false}, 200, {'Set-Cookie':endComparisonSession()});
+    if (request.method === 'DELETE') return endAdminSession();
     return fail('Method not allowed.',405);
   }
   const identity = await comparisonPrincipal(request, env);

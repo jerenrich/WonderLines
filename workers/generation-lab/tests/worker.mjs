@@ -30,8 +30,8 @@ for(const path of ['/api/config','/api/generations/'+crypto.randomUUID(),'/api/i
 assert.equal(calls.length,0);
 assert.equal((await worker.fetch(request('/api/session','POST',{key:env.LAB_ACCESS_KEY}),env)).status,405);
 assert.equal((await worker.fetch(request('/api/session','DELETE',undefined,null,{Origin:'https://evil.example'}),env)).status,403);
-const signed=await new SignJWT({purpose:'comparison-session',email:ADMIN_EMAIL}).setProtectedHeader({alg:'HS256'}).setIssuer('wonderlines-model-admin').setAudience(env.GOOGLE_CLIENT_ID).setSubject('google-user').setIssuedAt().setExpirationTime('8h').sign(new TextEncoder().encode(env.MODEL_ADMIN_SESSION_SECRET));
-const cookie='__Host-wonderlines_compare_google='+signed;
+const signed=await new SignJWT({purpose:'session',email:ADMIN_EMAIL}).setProtectedHeader({alg:'HS256'}).setIssuer('wonderlines-model-admin').setAudience(env.GOOGLE_CLIENT_ID).setSubject('google-user').setIssuedAt().setExpirationTime('8h').sign(new TextEncoder().encode(env.MODEL_ADMIN_SESSION_SECRET));
+const cookie='__Host-wonderlines_admin='+signed;
 assert.equal((await (await worker.fetch(request('/api/session','GET',undefined,cookie),env)).json()).authenticated,true);
 assert.equal(await comparisonPrincipal(request('/api/config','GET',undefined,cookie),{...env,MODEL_ADMIN_SESSION_SECRET:'rotated-secret-at-least-32-characters'}),null);
 assert.equal(await comparisonPrincipal(request('/api/config','GET',undefined,cookie+'x'),env),null);
@@ -78,7 +78,7 @@ const limitedLibrary=new ComparisonLibrary({storage:new MemoryStorage()},limited
 limited.LIBRARY={idFromName:id=>id,get:()=>({fetch:(url,options)=>limitedLibrary.fetch(new Request(url,options))})};
 assert.equal((await worker.fetch(request('/api/generations','POST',{...input,id:crypto.randomUUID()},cookie),limited)).status,429);
 const huge=new Request(origin+'/api/generations',{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({...input,description:'x'.repeat(5000)})});assert.equal((await worker.fetch(huge,env)).status,413);
-const logout=await worker.fetch(request('/api/session','DELETE',undefined,cookie),env);assert.match(logout.headers.get('Set-Cookie'),/Max-Age=0/);
+const logout=await worker.fetch(request('/api/session','DELETE',undefined,cookie),env);assert.equal(logout.headers.getSetCookie().filter(value=>value.includes('Max-Age=0')).length,2);
 assert.equal((await worker.fetch(request('/api/config'),{...env,LAB_ACCOUNT_ID:''})).status,503);
 console.log('PASS: secure sessions, key rotation, CSRF, login throttling, protected images, account isolation, model allowlist, age guidance, moderation before spend, rate limits, bounded requests, queued generation, idempotency and recovery');
 

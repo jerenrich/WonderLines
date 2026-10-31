@@ -58,9 +58,13 @@ async function sessionPrincipal(request, env, cookieName, purpose) {
     return {id:payload.sub, email:ADMIN_EMAIL, role:'model-admin'};
   } catch { return null; }
 }
-export const adminPrincipal = (request, env) => sessionPrincipal(request, env, SESSION, 'session');
-export const comparisonPrincipal = (request, env) => sessionPrincipal(request, env, COMPARE_SESSION, 'comparison-session');
-export const endComparisonSession = () => adminCookie(COMPARE_SESSION);
+// Accept the previous comparison cookie until it expires, so existing signed-in
+// users can move between both sections without another Google round-trip.
+export async function adminPrincipal(request, env) {
+  return await sessionPrincipal(request, env, SESSION, 'session') ||
+    await sessionPrincipal(request, env, COMPARE_SESSION, 'comparison-session');
+}
+export const comparisonPrincipal = adminPrincipal;
 export async function verifyGoogleIdentity(token, env, nonce, keys = googleKeys) {
   const {payload} = await jwtVerify(token, keys, {algorithms:['RS256'],
     issuer:['https://accounts.google.com','accounts.google.com'], audience:env.GOOGLE_CLIENT_ID,
@@ -104,9 +108,8 @@ export async function finishAdminLogin(request, env) {
     const data = JSON.parse(raw);
     if (typeof data.id_token !== 'string' || data.id_token.length > 16384) throw new Error('Missing Google identity');
     const principal = await verifyGoogleIdentity(data.id_token, env, flow.nonce);
-    const comparison = destination === '/';
-    const session = await sign(env, {purpose:comparison ? 'comparison-session' : 'session', email:principal.email}, principal.id, '8h');
-    return redirect(destination, [clear, adminCookie(comparison ? COMPARE_SESSION : SESSION, session, 28800)]);
+    const session = await sign(env, {purpose:'session', email:principal.email}, principal.id, '8h');
+    return redirect(destination, [clear, adminCookie(COMPARE_SESSION), adminCookie(SESSION, session, 28800)]);
   } catch {
     // OAuth codes, tokens and upstream error bodies must never appear in logs,
     // redirects or user-visible messages.
@@ -114,5 +117,8 @@ export async function finishAdminLogin(request, env) {
   }
 }
 export function endAdminSession() {
-  return Response.json({authenticated:false}, {headers:{...security, 'Set-Cookie':adminCookie(SESSION)}});
+  const headers = new Headers(security);
+  headers.append('Set-Cookie', adminCookie(SESSION));
+  headers.append('Set-Cookie', adminCookie(COMPARE_SESSION));
+  return Response.json({authenticated:false}, {headers});
 }

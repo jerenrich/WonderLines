@@ -185,7 +185,7 @@ function renderGrid() {
       if (cell.status === 'completed') {
         const preview = el('button','sheet-preview'); preview.type = 'button'; preview.setAttribute('aria-label',`Enlarge ${model.label}, age ${age}`);
         const image = el('img'); image.src = `/api/images/${cell.id}`; image.alt = `${current.prompt} — ${model.label}, age ${age}`; image.loading = 'lazy';
-        image.addEventListener('error', () => { image.hidden = true; const error = el('span','sheet-placeholder','Image unavailable. Unlock the workspace again or check the service.'); preview.append(error); }, {once:true});
+        image.addEventListener('error', () => { image.hidden = true; const error = el('span','sheet-placeholder','Image unavailable. Sign in again or check the service.'); preview.append(error); }, {once:true});
         preview.append(image); preview.addEventListener('click', () => openImage(cell,model)); card.append(preview);
       } else {
         const preview = el('div','sheet-preview'), placeholder = el('div','sheet-placeholder');
@@ -329,7 +329,7 @@ $('compare-form').addEventListener('submit',async event=>{
   try {const saved=await api('/api/library',{method:'POST',body:JSON.stringify(savePayload(current))});current=saved.grid;persist();renderGrid();message('library-status','Saved to library');if(innerWidth<761)$('comparison-grid').scrollIntoView({behavior:'smooth',block:'start'});await runCells();}
   catch(error){setBusy(false);message('library-status','Could not save the comparison. '+error.message);message('form-error',error.message);}
 });
-$('export').addEventListener('click',()=>{if(!current)return; const blob=new Blob([JSON.stringify({...exportComparison(current),note:'Prices are in US cents. Image URLs require an authenticated session; API keys are never included.'},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=el('a'); a.href=url;a.download=`wonderlines-comparison-${current.id}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export').addEventListener('click',()=>{if(!current)return; const blob=new Blob([JSON.stringify({...exportComparison(current),note:'Prices are in US cents. Image URLs require an authenticated session.'},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=el('a'); a.href=url;a.download=`wonderlines-comparison-${current.id}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('close-dialog').addEventListener('click',()=>$('image-dialog').close());
 $('image-dialog').addEventListener('click',event=>{if(event.target===$('image-dialog'))$('image-dialog').close();});
 $('image-dialog').addEventListener('close',()=>{activeCard?.focus();});

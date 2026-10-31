@@ -78,7 +78,7 @@ try {
   response=await worker.fetch(request('/api/admin/session','GET',undefined,cookie),env);
   const authenticated=await response.json();assert.equal(authenticated.email,ADMIN_EMAIL);assert.ok(authenticated.permissions.includes('models:rollback'));
   response=await worker.fetch(request('/api/admin/logout','POST',{},cookie,{Origin:'https://evil.example'}),env);assert.equal(response.status,403);
-  response=await worker.fetch(request('/api/admin/logout','POST',{},cookie),env);assert.equal(response.status,200);assert.match(response.headers.get('Set-Cookie'),/Max-Age=0/);
+  response=await worker.fetch(request('/api/admin/logout','POST',{},cookie),env);assert.equal(response.status,200);assert.equal(response.headers.getSetCookie().filter(value=>value.includes('Max-Age=0')).length,2);
   // Expired or fabricated owner sessions are never accepted, even with the
   // allowed email and the comparison key.
   const expired=await new SignJWT({purpose:'session',email:ADMIN_EMAIL}).setProtectedHeader({alg:'HS256'}).setIssuer('wonderlines-model-admin').setAudience(env.GOOGLE_CLIENT_ID).setSubject('owner').setIssuedAt(1).setExpirationTime(2).sign(new TextEncoder().encode(env.MODEL_ADMIN_SESSION_SECRET));
@@ -91,10 +91,10 @@ try {
   const compareFlow=response.headers.get('Set-Cookie').split(';')[0];
   response=await worker.fetch(request('/api/admin/auth/callback?state='+compareLocation.searchParams.get('state')+'&code=code','GET',undefined,compareFlow),env);
   assert.equal(response.headers.get('Location'),'/');
-  const compareCookie=response.headers.getSetCookie().find(value=>value.startsWith('__Host-wonderlines_compare_google=')).split(';')[0];
+  const compareCookie=response.headers.getSetCookie().find(value=>value.startsWith('__Host-wonderlines_admin=')).split(';')[0];
   assert.equal((await comparisonPrincipal(request('/','GET',undefined,compareCookie),env)).email,ADMIN_EMAIL);
-  assert.equal(await adminPrincipal(request('/','GET',undefined,compareCookie),env),null);
-  assert.equal(await comparisonPrincipal(request('/','GET',undefined,cookie),env),null);
+  assert.equal((await adminPrincipal(request('/','GET',undefined,compareCookie),env)).email,ADMIN_EMAIL);
+  assert.equal((await comparisonPrincipal(request('/','GET',undefined,cookie),env)).email,ADMIN_EMAIL);
   assert.equal(exchanges,2);assert.equal(keyReads,1);
 } finally {globalThis.fetch=originalFetch;}
-console.log('PASS: Google code/PKCE flow, signed state and nonce, RS256 identity validation, owner allowlist, separate sessions, CSRF, expiry, rotation and no token persistence; no network.');
+console.log('PASS: Google code/PKCE flow, signed state and nonce, RS256 identity validation, owner allowlist, shared sessions, CSRF, expiry, rotation and no token persistence; no network.');
