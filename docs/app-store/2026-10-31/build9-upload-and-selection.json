@@ -12,10 +12,10 @@
   "buildSelectedForVersion": false,
   "selectionBlocker": "App Store Connect browser sign-in required",
   "reviewNotesDraft": "build9-review-notes.txt",
-  "reviewNotesSHA256": "8c05209def2600d918a46190f57ef2ca2263cb5c4cee6aa40607d5c029d246b0",
+  "reviewNotesSHA256": "d79d65e64f8ccf935f6b5a5857ff2edbfdf7c5a8ff484dd3ec9c9e56a4ff8148",
   "reviewTextSent": false,
   "submittedForReview": false,
   "userApprovalRequired": "User requested review of the exact text before submission.",
-  "reviewNotesApprovalStatus": "Awaiting user approval of revised moderation-availability explanation",
-  "draftUpdatedAtUTC": "2026-10-31T09:34:17.118577+00:00"
+  "reviewNotesApprovalStatus": "Awaiting user approval of the revised draft (veto moderation rule and Report sheet line); PR #21 must be merged and deployed before the veto wording is accurate",
+  "draftUpdatedAtUTC": "2026-10-31T22:08:48.101108+00:00"
 }
