@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef"><meta name="robots" content="noindex,nofollow">
+  <title>Model controls · WonderLines</title>
+  <link rel="icon" href="/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/admin/models.css">
+  <script src="/admin/models.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><img src="/mark.svg" alt="" width="34" height="34"><span>WonderLines<span class="brand-divider">/</span><span class="brand-section">Model controls</span></span></a>
+    <div class="top-actions"><a class="text-button" href="/">Comparison studio ↗</a><button id="sign-out" class="text-button" hidden>Sign out</button></div>
+  </header>
+  <main id="admin-login" class="admin-login">
+    <span class="eyebrow">WONDERLINES ADMINISTRATION</span>
+    <h1>A little control.<br>A lot of possibility.</h1>
+    <p>Manage the models available in WonderLines.<br>Every published change has a history you can return to.</p>
+    <section class="signin-card" aria-labelledby="signin-heading">
+      <h2 id="signin-heading">Sign in to manage models</h2>
+      <p>Use your authorized Google account.</p>
+      <a id="google-signin" class="google-signin" href="/api/admin/auth/start" hidden><span aria-hidden="true" class="google-letter">G</span> Sign in with Google</a>
+      <p id="login-status" class="field-hint" role="status">Checking sign-in…</p>
+    </section>
+  </main>
+  <main id="admin-workspace" hidden>
+    <section class="admin-heading"><div><div class="eyebrow">MODEL CATALOGUE</div><h1>Choose what’s possible.</h1><p>Control availability, presentation and the default model, all in one place.</p></div><div class="live-summary"><strong id="visible-count">—</strong><span>models available in the app</span></div></section>
+    <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
+    <div class="catalogue-meta"><span id="current-version"></span><span id="signed-in-as"></span></div>
+    <div class="draft-toolbar"><span id="draft-state">Published catalogue</span><button id="review-draft" class="secondary" type="button" disabled>Review &amp; publish ↓</button></div>
+    <div class="admin-layout">
+      <div class="editor-column">
+        <form id="catalogue-form">
+          <fieldset id="editor-fields">
+            <section class="admin-card"><div class="card-heading"><div><h2>Providers</h2><p>Disable a provider to stop all of its new generations.</p></div></div><div id="provider-controls" class="provider-controls"></div></section>
+            <section class="admin-card"><label class="field-label" for="default-model">Preferred default</label><select id="default-model"></select><p class="field-hint">Users with a disabled selection switch silently to an available model. If this default is unavailable, the first available model is used.</p></section>
+            <section class="models-section"><div class="card-heading"><div><h2>Image models</h2><p>The order below is the order shown in the app.</p></div><button id="add-model" type="button" class="secondary">＋ Add model</button></div><div id="model-controls" class="model-controls"></div></section>
+            <section class="admin-card publish-card"><label class="field-label" for="change-note">What changed?</label><input id="change-note" type="text" maxlength="200" placeholder="For example: pause Flare while its provider recovers"><p class="field-hint">This note is saved with your Google identity in the change history.</p>
+              <div id="validation-result" role="status" aria-live="polite" hidden></div>
+              <div class="publish-actions"><button id="validate" type="button" class="secondary">Validate changes</button><button id="publish" type="submit" class="primary" disabled>Publish catalogue <span aria-hidden="true">↗</span></button></div>
+              <button id="discard" type="button" class="text-button" disabled>Discard draft and reload current</button>
+            </section>
+          </fieldset>
+        </form>
+        <p class="propagation-note">Changes can take 60 seconds or more to reach devices. Submitted images keep their original model. Publishing does not generate any images.</p>
+      </div>
+      <aside class="admin-card history-panel" aria-labelledby="history-heading"><div class="card-heading"><div><h2 id="history-heading">Change history</h2><p>Restore a previous version with one click.</p></div><button id="refresh-history" class="text-button" type="button">Refresh</button></div><p id="history-hint" class="field-hint">A restore creates a new version and keeps the full history. Publish or discard a draft before restoring.</p><ol id="history-list" class="admin-history"></ol><button id="more-history" class="secondary" type="button" hidden>Load older changes</button></aside>
+    </div>
+  </main>
+  <dialog id="version-dialog" aria-labelledby="version-title"><div class="dialog-toolbar"><strong id="version-title">Catalogue version</strong><button id="close-version" type="button" aria-label="Close version details">×</button></div><div class="version-content"><p id="version-note"></p><pre id="version-json"></pre></div></dialog>
+</body>
+</html>

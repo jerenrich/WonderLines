@@ -2,6 +2,8 @@ import {getPrincipal, createSession, sessionCookie, equal} from './auth.mjs';
 import {catalog,unavailableModels} from './catalog.mjs';
 import {ComparisonLibrary} from './library.mjs';
 export {ComparisonLibrary};
+export {ModelCatalogueAdmin} from './model-admin-store.mjs';
+import {handleModelAdmin} from './model-admin-api.mjs';
 import {isUUID} from '../../coloring-sheets-api/src/composition.mjs';
 import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
 import {observeStorage, storageFailure} from '../../shared/operational-events.mjs';
@@ -32,6 +34,7 @@ async function ensureAccount(stub, principal) {
 }
 async function handle(request, env) {
   const url = new URL(request.url), path = url.pathname;
+  if (path.startsWith('/api/admin/')) return handleModelAdmin(request, env);
   if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
   if (!env.LAB_ACCESS_KEY || !isUUID(env.LAB_ACCOUNT_ID)) return fail('The comparison service needs configuration.', 503);
   if (!['GET', 'POST', 'DELETE'].includes(request.method)) return fail('Method not allowed.', 405);

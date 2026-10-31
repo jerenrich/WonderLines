@@ -5,17 +5,25 @@
   "compatibility_date": "2026-10-21",
   "workers_dev": true,
   "assets": {"directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"]},
+  "kv_namespaces": [{"binding":"MODEL_REGISTRY","id":"7088d2edc1ea4422bb7cfc61ae6a08c0"}],
   "durable_objects": {"bindings": [
     {"name": "ACCOUNTS", "class_name": "Account", "script_name": "coloring-sheets-api"},
-    {"name": "LIBRARY", "class_name": "ComparisonLibrary"}
+    {"name": "LIBRARY", "class_name": "ComparisonLibrary"},
+    {"name": "MODEL_ADMIN", "class_name": "ModelCatalogueAdmin"}
   ]},
-  "migrations": [{"tag":"v1-comparison-library", "new_sqlite_classes":["ComparisonLibrary"]}],
+  "migrations": [
+    {"tag":"v1-comparison-library", "new_sqlite_classes":["ComparisonLibrary"]},
+    {"tag":"v2-model-catalogue-admin", "new_sqlite_classes":["ModelCatalogueAdmin"]}
+  ],
   "r2_buckets": [{"binding": "GENERATIONS", "bucket_name": "coloring-sheets-generations"}],
   "ratelimits": [
     {"name": "LOGIN_LIMITER", "namespace_id": "1006", "simple": {"limit": 10, "period": 60}},
     {"name": "GENERATION_LIMITER", "namespace_id": "1007", "simple": {"limit": 80, "period": 60}}
   ],
-  "vars": {"LAB_ACCOUNT_ID": "f66c3047-7ae6-4a1d-9144-7514e7a44961"},
+  "vars": {
+    "LAB_ACCOUNT_ID": "f66c3047-7ae6-4a1d-9144-7514e7a44961",
+    "MODEL_ADMIN_ORIGIN": "https://wonderlines-compare.jordan-erenrich.workers.dev"
+  },
   "secrets": {"required": ["LAB_ACCESS_KEY"]},
   "observability": {"enabled": true, "head_sampling_rate": 1},
   "tail_consumers": [{"service": "wonderlines-monitoring"}]
