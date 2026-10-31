@@ -16,7 +16,7 @@ export function failuresFromTail(traces, now) {
         try { event = typeof message === 'string' ? JSON.parse(message) : message; } catch { continue; }
         if (!event || typeof event !== 'object') continue;
         const at = Math.min(now, log.timestamp);
-        if (event.errorCode !== 'account_suspended' && ((['comparison_image', 'generation_result'].includes(event.event) && event.outcome === 'failed') ||
+        if (!['account_suspended', 'account_deleted'].includes(event.errorCode) && ((['comparison_image', 'generation_result'].includes(event.event) && event.outcome === 'failed') ||
             (event.event === 'fal_usage' && event.state === 'failed') ||
             (event.event === 'comparison_start_failed' && event.status >= 500 && event.errorCode !== 'moderation_unavailable'))) {
           failures.push({category: 'image', at});

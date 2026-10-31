@@ -7,6 +7,7 @@ const trace = (event, at = start, scriptName = 'coloring-sheets-api') => ({scrip
   logs: [{timestamp: at, message: [JSON.stringify({...event, prompt: 'PRIVATE', generationID: 'PRIVATE'})]}]});
 assert.deepEqual(failuresFromTail([
   trace({event: 'generation_result', outcome: 'failed', errorCode: 'account_suspended'}),
+  trace({event: 'generation_result', outcome: 'failed', errorCode: 'account_deleted'}),
   trace({event: 'comparison_image', outcome: 'failed', errorCode: 'account_suspended'}),
   trace({event: 'fal_usage', state: 'failed', errorCode: 'account_suspended'}),
 ], start), [], 'Suspension enforcement is not a provider outage.');
