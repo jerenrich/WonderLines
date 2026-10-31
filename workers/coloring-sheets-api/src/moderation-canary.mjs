@@ -1,6 +1,6 @@
 import {moderateSubject, ModerationError} from './moderation.mjs';
 
-export const MODERATION_CANARY_CRON = '* * * * *';
+export const MODERATION_CANARY_CRON = '*/30 * * * *';
 export const MODERATION_CANARY_SUBJECT = 'A cheerful kitten sitting beside a flower in a sunny garden.';
 
 // Exercise the configured production moderators, including the normal deadline

@@ -58,13 +58,15 @@ try {
   assert.ok(!JSON.stringify(events).includes('PRIVATE'));
 
   // Exercise the actual scheduled dispatcher. It must not run the hourly R2
-  // cleanup or touch account/image state on each one-minute invocation.
+  // cleanup or touch account/image state on each periodic invocation.
   const info = console.info; const recorded = [];
   try {
     console.info = value => recorded.push(JSON.parse(value));
     await api.scheduled({cron: MODERATION_CANARY_CRON}, env);
     assert.equal(recorded.length, 1); assert.equal(recorded[0].event, 'moderation_canary');
     assert.equal(recorded[0].outcome, 'passed');
+    await api.scheduled({cron: '* * * * *'}, env);
+    assert.equal(recorded.length, 1, 'retired minute triggers must not call providers or run R2 cleanup');
   } finally { console.info = info; }
 } finally { globalThis.fetch = previousFetch; }
 console.log('PASS: periodic production moderation, retained fallback results, failures and safe rejections, shared hourly cap, privacy and no account/image/storage use; offline only.');

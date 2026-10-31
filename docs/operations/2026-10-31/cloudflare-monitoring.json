@@ -72,7 +72,7 @@
     "reviewSessionModerationTimeoutRegression": true
   },
   "limits": [
-    "Image and storage failures still require request traffic. Moderation now also runs a fixed benign canary every minute; failures qualify immediately and partial provider availability requires recurring failures spanning two minutes.",
+    "Image and storage failures require request traffic. Moderation also runs a fixed benign canary every 30 minutes; failed probes qualify immediately. Partial provider results from these spaced probes are diagnostic; the two-minute degraded-service rule requires recurring failures from real traffic.",
     "Native query scheduling and log ingestion can delay delivery beyond two minutes.",
     "The shared cooldown may defer newly affected categories until the next hourly batch. They must still be recurring then.",
     "Cloudflare-hosted monitoring and cron share a dependency with the API; independent uptime checks are not active.",
@@ -114,8 +114,8 @@
   "blockingModerationPolicy": "A single moderation_unavailable qualifies immediately, subject to the shared hourly batch cooldown and native query/log delivery latency.",
   "mergedDeploymentRecord": "monitoring-merged-deployment.json",
   "moderationCanary": {
-    "schedule": "every minute",
-    "cron": "* * * * *",
+    "schedule": "every 30 minutes",
+    "cron": "*/30 * * * *",
     "worker": "coloring-sheets-api",
     "probe": "fixed_benign_description_v1",
     "event": "moderation_canary",
@@ -126,11 +126,10 @@
     "sharedBatchCooldownSeconds": 3600,
     "imageGeneration": false,
     "customerInput": false,
-    "checksPerDay": 1440,
-    "normalParallelTextCallsPerDay": 2880,
+    "checksPerDay": 48,
+    "normalParallelTextCallsPerDay": 96,
     "quotaAndBilling": "Uses normal provider text-moderation quotas and billing.",
     "deploymentRecord": "moderation-canary-deployment.json",
-    "scheduledProductionChecksVerified": 2,
-    "lastVerifiedAvailability": "both_available"
+    "estimatedInferenceUSDPer30DaysBeforeAllowances": 0.70133472
   }
 }
