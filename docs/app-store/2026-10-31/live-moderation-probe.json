@@ -1,0 +1,96 @@
+{
+  "checkedAt": "2026-10-31T06:04:14.315Z",
+  "imageGenerationRequests": 0,
+  "moderation": {
+    "httpStatus": 200,
+    "elapsedMs": 3325,
+    "data": {
+      "prompt": "A friendly dinosaur riding a bicycle on the moon",
+      "policy": "all-ages-v8",
+      "comparedAt": "2026-10-31T06:04:17.620Z",
+      "results": [
+        {
+          "name": "jev",
+          "id": "typesafe/jev",
+          "thresholds": {
+            "all_ages": 0.95,
+            "sexual": 0.3,
+            "violence": 0.3,
+            "hate": 0.3,
+            "adult": 0.3,
+            "frightening": 0.3,
+            "bypass": 0.3
+          },
+          "outcome": "approved",
+          "allowed": true,
+          "reasonCodes": [],
+          "gateway": "coloring-sheets",
+          "elapsedMs": 2999,
+          "scores": {
+            "all_ages": 0.98,
+            "sexual": 0.01,
+            "violence": 0.03,
+            "hate": 0.01,
+            "adult": 0.02,
+            "frightening": 0.02,
+            "bypass": 0.02
+          }
+        },
+        {
+          "name": "clef",
+          "id": "@cf/cloudflare/clef",
+          "thresholds": {
+            "all_ages": 0.4,
+            "sexual": 0.65,
+            "violence": 0.45,
+            "hate": 0.5,
+            "adult": 0.6,
+            "frightening": 0.5,
+            "bypass": 0.6
+          },
+          "outcome": "approved",
+          "allowed": true,
+          "reasonCodes": [],
+          "gateway": "coloring-sheets",
+          "elapsedMs": 1415,
+          "scores": {
+            "all_ages": 0.9494,
+            "sexual": 0.0279,
+            "violence": 0.0162,
+            "hate": 0.0268,
+            "adult": 0.0375,
+            "frightening": 0.0265,
+            "bypass": 0.0405
+          }
+        },
+        {
+          "name": "clef-flash",
+          "id": "@cf/cloudflare/clef-flash",
+          "thresholds": {
+            "all_ages": 0.75,
+            "sexual": 0.3,
+            "violence": 0.3,
+            "hate": 0.3,
+            "adult": 0.3,
+            "frightening": 0.3,
+            "bypass": 0.3
+          },
+          "outcome": "approved",
+          "allowed": true,
+          "reasonCodes": [],
+          "gateway": "coloring-sheets",
+          "elapsedMs": 1634,
+          "scores": {
+            "all_ages": 0.806,
+            "sexual": 0.0517,
+            "violence": 0.0152,
+            "hate": 0.0415,
+            "adult": 0.0511,
+            "frightening": 0.0257,
+            "bypass": 0.0754
+          }
+        }
+      ]
+    }
+  }
+}

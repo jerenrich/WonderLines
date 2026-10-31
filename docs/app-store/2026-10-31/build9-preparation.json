@@ -1,0 +1,88 @@
+{
+  "preparedAtUTC": "2026-10-31T07:27:02.733667+00:00",
+  "status": "Ready locally for App Store Connect upload; not uploaded or submitted",
+  "version": "1.0",
+  "build": "9",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "archive": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build9/WonderLines-1.0-9.xcarchive",
+  "ipa": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build9/Export/ColoringSheets.ipa",
+  "ipaSHA256": "910cf9cf507c24c54e4d731edc89cde13a8f8166507f86c1b0ec826b9e989766",
+  "backendVersion": "514278ef-aef1-4c08-a954-87df93525154",
+  "policy": "all-ages-v10-first-approval-0d745969007c",
+  "productionSourceSHA256": "878529ca07ba1a850aab5101cf012007dcb277ac150e4517cb9a2178b304a312",
+  "sourceState": "Local working tree based on 9889a5e03554081eccd9c46afe6bc0737213d40b; application/backend implementation changes remain uncommitted. Public privacy source alone was published in commit 373a57bc86fa955bc6bca41e3f0625237a0dcf8c. Preserve this source and deployment bundle before future CI deployments.",
+  "consent": {
+    "version": 2,
+    "namesTypeSafe": true,
+    "requiresRenewedAcceptance": true,
+    "legacyBuild8RemainsCloudflareOnly": true,
+    "publicPolicyVerified": "build9-privacy-publication.json"
+  },
+  "tests": {
+    "backend": {
+      "commands": 26,
+      "failures": 0,
+      "report": "build9-backend-tests.json"
+    },
+    "iPad": {
+      "model": "iPad Air 11-inch M3 simulator",
+      "os": "27.0",
+      "unitExecuted": 94,
+      "unitPassed": 88,
+      "unitSkipped": 6,
+      "privacyUITests": 3,
+      "failures": 0,
+      "xcodebuildExit": 0,
+      "resultBundle": ".build/build9/ipad-tests.xcresult"
+    },
+    "iPhone": {
+      "model": "iPhone 17e simulator",
+      "os": "27.0",
+      "unitExecuted": 94,
+      "unitPassed": 86,
+      "unitSkipped": 8,
+      "privacyUITests": 3,
+      "finalFailures": 0,
+      "unitXcodebuildExit": 0,
+      "unitResultBundle": ".build/build9/iphone-unit-recheck.xcresult",
+      "privacyResultBundle": ".build/build9/iphone-tests.xcresult",
+      "earlierRun": "The initial combined iPhone run had a recovery expectation timeout while three Xcode builds competed. The isolated recovery recheck and complete fresh iPhone unit run passed. All privacy UI tests passed in the initial run. The test was not weakened."
+    },
+    "physical": {
+      "model": "iPhone 17 Pro",
+      "os": "27.2",
+      "tests": 1,
+      "failures": 0,
+      "sheetsGenerated": 3,
+      "productionAppAttestExercised": true,
+      "oldConsentBlockedBeforeNewConsent": true,
+      "anonymousAccountDeleted": true,
+      "configuration": "Release with ENABLE_TESTABILITY=YES for XCTest injection; the final App Store archive has normal distribution settings and debugging disabled.",
+      "backendAtTest": "a3f80983-ba5b-4468-b916-948071bfb940; before the first-approval refinement",
+      "evidence": "build9-evidence/physical-generation-receipt.json"
+    },
+    "finalPolicyLive": {
+      "providerChecks": 4,
+      "passed": true,
+      "hangingClefDecisionMs": 152,
+      "hangingClefObservationMs": 8001,
+      "productionImageSmokePassed": true,
+      "productionImageElapsedMs": 15749,
+      "logs": "build9-first-approval-production-logs-sanitized.json"
+    }
+  },
+  "reviewNotes": "build9-review-notes.txt",
+  "loggingAudit": "build9-logging-audit.json",
+  "artifactVerification": "build9-artifact-verification.json",
+  "screenshotsVisuallyChecked": [
+    "build9-evidence/iphone-typesafe-consent.png",
+    "build9-evidence/ipad-typesafe-consent.png",
+    "build9-evidence/physical-sheet-1.png"
+  ],
+  "submissionBaselineAudit": ".build/build9/submission-audit.txt",
+  "appleUploadPerformed": false,
+  "appleSubmissionPerformed": false,
+  "remaining": [
+    "Upload build 1.0 (9), wait for Apple processing, select it for the rejected app version, and resubmit with the prepared review notes."
+  ]
+}

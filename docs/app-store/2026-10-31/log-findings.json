@@ -1,0 +1,107 @@
+{
+  "investigatedAtUTC": "2026-10-31T06:20:32.886081+00:00",
+  "finding": "Clef description moderation hit the server eight-second deadline. The shared failure blocked all three generation requests with HTTP 503 before allowance reservation or image-provider submission.",
+  "confidence": {
+    "failureMechanism": "Confirmed directly by correlated moderation and HTTP invocation logs.",
+    "appleAttribution": "High confidence: fresh build-8 session advertising Darwin/27.2.0, matching Apple review software, failed at 00:58:01 UTC, 235 seconds before the 01:01:57 UTC rejection email. Logs do not explicitly identify the operator as Apple or establish device hardware."
+  },
+  "matchingSession": {
+    "date": "2026-10-31",
+    "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0",
+    "registrationStatus": 201,
+    "attestationEnrollmentStatus": 200,
+    "verifiedAssertions": 3,
+    "assertionStatuses": [
+      200,
+      200,
+      200
+    ],
+    "batchID": "85a0607e-25d9-4904-a61a-3005e44aa14a",
+    "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+    "moderation": {
+      "loggedAtUTC": "2026-10-31T00:58:01.934Z",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "gateway": "coloring-sheets",
+      "failure": "timeout",
+      "elapsedMs": 8000,
+      "outcome": "moderation_unavailable"
+    },
+    "failedGenerations": [
+      {
+        "generationID": "3ecc85a1-d3fe-4c62-8cdf-e356a1f01013",
+        "httpStatus": 503,
+        "errorCode": "moderation_unavailable",
+        "responseTimeUTC": "2026-10-31T00:58:01.977Z",
+        "elapsedMs": 8150,
+        "requestID": "8e2f59ef6f3911022066f0171f2c0a37",
+        "traceID": "99944c2a6db202634f35b24d31a4de9d"
+      },
+      {
+        "generationID": "4429056b-0917-4515-a8de-ada4bf609793",
+        "httpStatus": 503,
+        "errorCode": "moderation_unavailable",
+        "responseTimeUTC": "2026-10-31T00:58:01.979Z",
+        "elapsedMs": 8102,
+        "requestID": "3316b3bcab21c792ddf0efcda66c7003",
+        "traceID": "938713d0c3a3dd9878230c555f805bd2"
+      },
+      {
+        "generationID": "4686a996-27f4-4b2e-bb0d-2ff258c3bdc1",
+        "httpStatus": 503,
+        "errorCode": "moderation_unavailable",
+        "responseTimeUTC": "2026-10-31T00:58:01.980Z",
+        "elapsedMs": 8111,
+        "requestID": "dce55048957fa1bc54ddc588cb194ac5",
+        "traceID": "74fa365c6fb5131a7e285e187bab5825"
+      }
+    ],
+    "reserveCallsInCompleteSession": 0
+  },
+  "causalChain": [
+    "The anonymous installation registered successfully.",
+    "Production App Attest enrollment and three signed request assertions passed.",
+    "The three generation requests shared one batch safety assessment.",
+    "The Clef assessment did not return a usable result within the fixed 8000ms deadline.",
+    "Account cached that moderation_unavailable outcome for the batch; all three callers received HTTP 503.",
+    "The request path exits before /reserve, so no image-provider submission or sheet allowance debit occurred for this batch."
+  ],
+  "expectedServerMessageFromDeployedSource": "The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.",
+  "uiMessageLimitation": "The server response body and actual device screenshot were not captured in these logs; the message above is derived from the deployed source path.",
+  "nearbyModerationSummary": {
+    "windowUTC": {
+      "from": "2026-10-29T00:00:00Z",
+      "to": "2026-10-31T06:15:00Z"
+    },
+    "queryLimit": 1000,
+    "returnedEvents": 26,
+    "moderationChecks": 23,
+    "approved": 22,
+    "unavailable": 1,
+    "approvedLatencyMs": {
+      "min": 226,
+      "max": 1846,
+      "median": 755.5
+    }
+  },
+  "compatibilityAssessment": {
+    "conclusion": "The matching session successfully used registration and App Attest on iOS 27.2. Its failure was an intermittent moderation availability failure, with no evidence of an app/backend protocol mismatch.",
+    "moderationSourceChangedSinceSubmission": false,
+    "earlierSameFailure": "The local investigation from 22 October recorded Clef eight-second timeouts before the most recent backend deployment.",
+    "currentSuccess": "The earlier 31 October build-8-protocol Sunburst test passed; its production moderation check logged 360ms."
+  },
+  "deeperProviderCause": "Unknown. The timeout proves the local eight-second deadline expired; retained evidence does not distinguish provider queueing, model inference latency, transport delay or Gateway delay. Gateway collection was disabled for moderation by collectLog:false.",
+  "recommendedRemediation": [
+    "Make the moderation path tolerate transient slowness with a bounded total deadline and a carefully bounded retry of the text-only safety check before returning a batch-wide failure. Retain safety assessment and existing thresholds.",
+    "Avoid treating transient moderation availability errors as long-lived batch decisions when implementing recovery; ensure all three concurrent callers share one recovery attempt.",
+    "Add a regression that simulates a slow/transient Clef response and verifies eventual moderation approval, one image reservation per generation, and no duplicate image submissions.",
+    "Verify on the submitted build-8 protocol and a physical TestFlight device before resubmitting. The diagnosed mechanism is in the backend, so a backend-only fix may work with build 8."
+  ],
+  "evidenceFiles": [
+    "review-session-sanitized.json",
+    "moderation-history-sanitized.json"
+  ],
+  "rawEvidenceLocation": ".build/rejection-logs-20261031/*.private.json (local, Git-ignored, mode 0600)",
+  "validation": "33 complete session events below the 1000-event query limit; assertions verified one eight-second timeout, three shared batch failures, three successful assertions, successful enrollment, and zero reservation calls.",
+  "changesMade": "Read-only Cloudflare log queries and local evidence updates. No app code, backend settings, deployments, provider calls, credentials or App Review messages changed."
+}

@@ -2,6 +2,29 @@ import XCTest
 
 final class PrivacyUITests: XCTestCase {
     @MainActor
+    func testTypeSafeNoticeRequiresRenewedConsent() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "--require-consent", "-aiSharingConsentVersion", "1",
+                               "-descriptionDraft", "A friendly dinosaur riding a bicycle on the moon", "-imageCount", "1"]
+        app.launch()
+        app.buttons["generate"].tap()
+        XCTAssertTrue(app.buttons["cancelAIConsent"].waitForExistence(timeout: 5))
+        let disclosure = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Cloudflare and TypeSafe AI")).firstMatch
+        XCTAssertTrue(disclosure.exists, "Updated disclosure must name both safety providers.")
+        capture("Build 9 TypeSafe sharing notice")
+        reveal(app.buttons["cancelAIConsent"], in: app)
+        app.buttons["cancelAIConsent"].tap()
+        XCTAssertTrue(app.buttons["generate"].isEnabled)
+        app.buttons["generate"].tap()
+        XCTAssertTrue(disclosure.waitForExistence(timeout: 5), "Cancel must not accept the revised notice.")
+        reveal(app.buttons["agreeToAI"], in: app)
+        app.buttons["agreeToAI"].tap()
+        XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["agreeToAI"].exists)
+        capture("Build 9 sheet after updated consent")
+    }
+    @MainActor
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<7 {
             if element.exists && element.isHittable { return }

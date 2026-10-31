@@ -1,0 +1,145 @@
+{
+  "compatibility_date": "2026-09-20",
+  "compatibility_flags": [],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": false,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "bindings": [
+    {
+      "class_name": "Account",
+      "name": "ACCOUNTS",
+      "namespace_id": "db9fa7c98000401c920ac11bb50619b9",
+      "type": "durable_object_namespace"
+    },
+    {
+      "name": "ACCOUNT_TOKEN_SECRET",
+      "type": "secret_text"
+    },
+    {
+      "name": "AI",
+      "project": "<catalog>",
+      "type": "ai"
+    },
+    {
+      "name": "AI_GATEWAY_ACCOUNT_ID",
+      "type": "plain_text"
+    },
+    {
+      "name": "AI_GATEWAY_ID",
+      "text": "coloring-sheets",
+      "type": "plain_text"
+    },
+    {
+      "name": "AI_GATEWAY_KEY_SOURCE",
+      "text": "worker",
+      "type": "plain_text"
+    },
+    {
+      "name": "AI_GATEWAY_TOKEN",
+      "type": "secret_text"
+    },
+    {
+      "name": "APP_ATTEST_APP_ID",
+      "text": "9PG633BF3R.com.jordan.family.ColoringSheets",
+      "type": "plain_text"
+    },
+    {
+      "name": "APP_ATTEST_ENFORCE",
+      "text": "false",
+      "type": "plain_text"
+    },
+    {
+      "name": "APP_ATTEST_ENVIRONMENT",
+      "text": "production",
+      "type": "plain_text"
+    },
+    {
+      "name": "APP_PASSWORD",
+      "type": "secret_text"
+    },
+    {
+      "class_name": "Budget",
+      "name": "BUDGET",
+      "namespace_id": "51475bc459044eb7b3ac069848fe3b4c",
+      "type": "durable_object_namespace"
+    },
+    {
+      "name": "COMPARISON_ACCOUNT_ID",
+      "type": "plain_text"
+    },
+    {
+      "class_name": "ComparisonImageRunner",
+      "name": "COMPARISON_RUNNERS",
+      "namespace_id": "718a89cf15974bb98980f7268d047d5b",
+      "type": "durable_object_namespace"
+    },
+    {
+      "name": "FAL_DAILY_GENERATION_LIMIT",
+      "text": "1000",
+      "type": "plain_text"
+    },
+    {
+      "name": "FAL_KEY",
+      "type": "secret_text"
+    },
+    {
+      "name": "FREE_DAILY_ALLOWANCE",
+      "text": "100",
+      "type": "plain_text"
+    },
+    {
+      "bucket_name": "coloring-sheets-generations",
+      "name": "GENERATIONS",
+      "type": "r2_bucket"
+    },
+    {
+      "name": "GLOBAL_DAILY_GENERATION_LIMIT",
+      "text": "10000",
+      "type": "plain_text"
+    },
+    {
+      "name": "IMAGES",
+      "type": "images"
+    },
+    {
+      "name": "MODERATION_GATEWAY_ID",
+      "text": "coloring-sheets",
+      "type": "plain_text"
+    },
+    {
+      "name": "MODERATION_MODEL",
+      "text": "clef",
+      "type": "plain_text"
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "type": "secret_text"
+    },
+    {
+      "name": "REGISTRATION_LIMITER",
+      "namespace_id": "1005",
+      "simple": {
+        "limit": 5,
+        "period": 60
+      },
+      "type": "ratelimit"
+    },
+    {
+      "name": "WORKERS_AI_API_TOKEN",
+      "type": "secret_text"
+    }
+  ]
+}

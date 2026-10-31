@@ -12,11 +12,11 @@ class Storage {
   async transaction(callback) { return callback(this); }
 }
 class Namespace {
-  objects = new Map();
+  objects = new Map(); pending = [];
   constructor(type, env) { this.type = type; this.env = env; }
   idFromName(id) { return id; }
   get(id) {
-    if (!this.objects.has(id)) this.objects.set(id, new this.type({storage: new Storage()}, this.env));
+    if (!this.objects.has(id)) this.objects.set(id, new this.type({storage: new Storage(), waitUntil: promise => this.pending.push(promise)}, this.env));
     return {fetch: (url, init) => this.objects.get(id).fetch(new Request(url, init))};
   }
 }
@@ -179,4 +179,75 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
   const oversizedLegacy=await prepareGeneration({subject:'x'.repeat(501)},generationId);
   assert.equal(oversizedLegacy.status,400,'Legacy clients do not receive extra room for untrusted subject text.');
   console.log('PASS: app/web task parity, server-only prompt construction, legacy fingerprint recovery before configuration checks, and rejection before reservation; no network.');
+}
+
+// A concurrent app batch shares one pair. First approval releases every image;
+// both rejections block spending and the slower service completes in waitUntil.
+{
+  const env = {MODERATION_STRATEGY: 'parallel', TYPESAFE_API_KEY: 'private-typesafe-key',
+    MODERATION_GATEWAY_ID: 'test', FREE_DAILY_ALLOWANCE: '100', GLOBAL_DAILY_GENERATION_LIMIT: '100',
+    OPENAI_API_KEY: 'synthetic', ACCOUNT_TOKEN_SECRET: 'synthetic-secret', REGISTRATION_LIMITER: {limit: async () => ({success: true})}};
+  let clefCalls = 0, jevCalls = 0, imageCalls = 0, verdict = 'allow', releaseJev;
+  env.AI = {run: async () => { clefCalls++; if (verdict === 'outage') throw Error('private upstream'); const value=safeModerationResult(); if(verdict==='veto')value.answers.violence.noul=.99; return value; }};
+  env.ACCOUNTS = new Namespace(Account, env); env.BUDGET = new Namespace(Budget, env);
+  env.GENERATIONS = {put: async () => {}};
+  const previousFetch = globalThis.fetch, previousInfo = console.info, captured = [];
+  console.info = value => captured.push(JSON.parse(value));
+  globalThis.fetch = async (url, init) => {
+    if (url === 'https://api.typesafe.ai/v1/systemone') {
+      jevCalls++;
+      if (verdict === 'outage') return Response.json({error: 'private upstream'}, {status: 503});
+      const data = safeModerationResult(); data.model = 'jev-1.14.0';
+      if (['veto','disagree'].includes(verdict)) data.answers.violence.noul = .99;
+      if (verdict === 'disagree') await new Promise(resolve => {releaseJev=resolve;});
+      return Response.json(data);
+    }
+    imageCalls++;
+    return Response.json({data: [{b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg=='}]});
+  };
+  try {
+    const registration = await worker.fetch(new Request('https://test/v1/installations', {method: 'POST', headers: {'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.2'}, body: '{}'}), env);
+    const identity = await registration.json();
+    const object = env.ACCOUNTS.objects.get(identity.accountId);
+    const batch = batchID => Promise.all(['side', 'front', 'wide'].map(composition => worker.fetch(new Request('https://test/v1/generations', {
+      method: 'POST', headers: {Authorization: 'Bearer ' + identity.accessToken, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID(), 'X-AI-Sharing-Version': '2'},
+      body: JSON.stringify({description: 'A friendly flower', age: 6, composition, batchID, model: 'gpt-image-2.5-sunburst', width: 1456, height: 1024}),
+    }), env)));
+    assert.deepEqual((await batch(crypto.randomUUID())).map(r => r.status), [200, 200, 200]);
+    assert.deepEqual([clefCalls, jevCalls, imageCalls], [1, 1, 3]);
+    verdict = 'disagree';
+    assert.deepEqual((await batch(crypto.randomUUID())).map(r=>r.status),[200,200,200]);
+    assert.equal(imageCalls,6,'All images start while slower Jev is still running.');
+    assert.equal(env.ACCOUNTS.pending.length,2,'Each batch observation is retained by DurableObjectState.waitUntil.');
+    assert.ok(releaseJev); releaseJev(); await Promise.all(env.ACCOUNTS.pending);
+    assert.ok(captured.some(row=>row.event==='description_moderation_complete' && row.agreement==='disagree'));
+    const beforeUsage = structuredClone(await object.state.storage.get('usage'));
+    verdict = 'veto';
+    assert.deepEqual((await batch(crypto.randomUUID())).map(r => r.status), [400, 400, 400]);
+    assert.equal(imageCalls, 6); assert.deepEqual(await object.state.storage.get('usage'), beforeUsage);
+    verdict = 'outage'; const retryBatch = crypto.randomUUID();
+    assert.deepEqual((await batch(retryBatch)).map(r => r.status), [503, 503, 503]);
+    assert.deepEqual([clefCalls, jevCalls, imageCalls], [4, 4, 6]);
+    assert.deepEqual(await object.state.storage.get('usage'), beforeUsage);
+    const transient = await object.state.storage.get('moderation:' + retryBatch);
+    assert.ok(transient.expires <= Date.now() + 1000);
+    // Simulate expiration of the short outage cooldown without a real sleep.
+    transient.expires = Date.now() - 1; await object.state.storage.put('moderation:' + retryBatch, transient);
+    verdict = 'allow';
+    assert.deepEqual((await batch(retryBatch)).map(r => r.status), [200, 200, 200]);
+    assert.deepEqual([clefCalls, jevCalls, imageCalls], [5, 5, 9]);
+    await Promise.all(env.ACCOUNTS.pending);
+    const audits = captured.filter(row => row.event === 'description_moderation');
+    assert.ok(audits.some(row => row.strategy === 'parallel' && row.decisionReason === 'first_approval'));
+    assert.ok(!JSON.stringify(captured).includes('private-typesafe-key'));
+    assert.ok(!JSON.stringify(captured).includes('A friendly flower'));
+    assert.ok(!JSON.stringify([...object.state.storage.values]).includes('scores'));
+    // A cached single-provider approval cannot bypass the parallel policy.
+    const boundBatch = crypto.randomUUID();
+    env.MODERATION_STRATEGY = 'single'; await batch(boundBatch);
+    const before = imageCalls; env.MODERATION_STRATEGY = 'parallel';
+    assert.deepEqual((await batch(boundBatch)).map(r => r.status), [409, 409, 409]);
+    assert.equal(imageCalls, before);
+  } finally { globalThis.fetch = previousFetch; console.info = previousInfo; }
+  console.log('PASS: three-image parallel-policy deduplication, first approval before second result, retained disagreement logging, both-reject before spend, short outage cooldown/recovery, privacy and cached-policy isolation; no network.');
 }

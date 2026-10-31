@@ -1,0 +1,53 @@
+{
+  "computedAtUTC": "2026-10-31T06:25:55.961310+00:00",
+  "queryWindowUTC": {
+    "from": 1792828800000,
+    "to": 1793427300000
+  },
+  "returnedEvents": 56,
+  "queryLimit": 1000,
+  "moderationChecks": 53,
+  "model": "@cf/cloudflare/clef",
+  "approvedChecks": 52,
+  "unavailableChecks": 1,
+  "latencyMs": {
+    "median": 958.0,
+    "p90NearestRank": 1823,
+    "p95NearestRank": 1872,
+    "p99NearestRank": 3746,
+    "max": 3746
+  },
+  "approvedOver3000ms": 1,
+  "approvedOver4000ms": 0,
+  "observedTimeoutsMs": [
+    8000
+  ],
+  "provisionalRecommendation": {
+    "secondDecisionGraceMs": 4000,
+    "startGraceTimer": "First valid approval; a rejection ends the decision immediately. A transport/error response is not a valid moderation decision.",
+    "overallDeadlineMs": 8000,
+    "onDeadline": "Use the available valid full-policy decision if only one service decided. If no valid decision exists, return unavailable.",
+    "providers": [
+      "Cloudflare Clef",
+      "TypeSafe Jev through the direct TypeSafe API, subject to access and calibration"
+    ],
+    "reason": "Retains the already-calibrated full app policy and adds a provider/route capable of evaluating the same custom questions. Avoid using the existing Jev-through-Cloudflare route as the independent service."
+  },
+  "limitations": [
+    "52 approved observations are insufficient to establish a stable population p99; nearest-rank p99 equals the observed maximum.",
+    "Production data here is only Clef; there is no measured production latency distribution for direct TypeSafe Jev.",
+    "The eight-second current timeout censors slower responses: successful response times do not describe the entire latency distribution.",
+    "The correct future grace metric is the distribution of max(tA,tB)-min(tA,tB) on valid paired responses, including both approvals and content rejections, measured from request start using the same clock.",
+    "Different providers reduce common failure paths but do not guarantee independent classification errors or uptime."
+  ],
+  "recommendedCalibration": "Tune provider-specific rules/thresholds against labeled harmless and unsafe examples, minimize false rejects subject to predeclared safety recall requirements, and evaluate each provider alone plus the combined veto policy on a fresh held-out set. Do not reuse Clef thresholds for Jev.",
+  "historicalCalibration": {
+    "date": "2026-10-06",
+    "harmlessEvaluations": 139,
+    "harmlessApproved": 137,
+    "unsafeEvaluations": 125,
+    "unsafeApproved": 0,
+    "limitation": "Contains repeated prompts and examples inspected during calibration; not an independent validation study."
+  },
+  "changesMade": "Read-only historical log query and local analysis; no model calls, deployment, calibration runs or configuration changes."
+}

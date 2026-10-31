@@ -1,0 +1,59 @@
+{
+  "deployedAtUTC": "2026-10-31T07:23:51.140490+00:00",
+  "service": "coloring-sheets-api",
+  "sourceSHA256": "878529ca07ba1a850aab5101cf012007dcb277ac150e4517cb9a2178b304a312",
+  "strategy": "parallel",
+  "secretBinding": "TYPESAFE_API_KEY",
+  "secretValueRecorded": false,
+  "previousDeployment": {
+    "id": "7b7af81b-1302-4a06-83cf-09e737e6103b",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "jordan.erenrich@gmail.com",
+    "annotations": {
+      "workers/message": "Add operational failure monitoring; preserve current application and moderation settings",
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "5f6de1b3-8fca-408a-a6bb-81053ca10d90",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-31T07:17:38.276401Z"
+  },
+  "activeDeployment": {
+    "id": "a66efdb2-f3ed-4e17-8696-2916870b8f43",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "jordan.erenrich@gmail.com",
+    "annotations": {
+      "workers/message": "First approval with independent moderation observations; build9 source 878529ca07ba",
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "514278ef-aef1-4c08-a954-87df93525154",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-31T07:23:44.056695Z"
+  },
+  "compatibilityDate": "2026-09-20",
+  "preservedOtherSettings": true,
+  "liveVerification": {
+    "passed": true,
+    "productionSmoke": "build9-service-probe.json",
+    "productionLogs": "build9-first-approval-production-logs-sanitized.json",
+    "liveProviders": "../../moderation/2026-10-31/first-approval-live-verification.json",
+    "decisionElapsedMs": 125,
+    "observationElapsedMs": 295,
+    "bothProvidersApproved": true,
+    "oldClients": "Cloudflare-only until updated notice accepted",
+    "physicalTest": "Build 9 passed on iOS 27.2 before final policy refinement; same app and protocol."
+  },
+  "decisionRule": "First valid approval immediately permits generation, irrespective of the other verdict. With no approval, reject if any valid rejection remains when both finish or the eight-second deadline expires; otherwise return 503.",
+  "policy": "all-ages-v10-first-approval-0d745969007c",
+  "observationTimeoutMs": 8000,
+  "postApprovalWaitMs": 0
+}

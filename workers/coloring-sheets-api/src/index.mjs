@@ -6,9 +6,11 @@ import {cleanLegacyUsageLogs} from './diagnostic-retention.mjs';
 import {falCostData} from './fal-cost.mjs';
 import {isUUID} from './composition.mjs';
 import {prepareGeneration, startGeneration} from './generation-start.mjs';
-import {moderateSubject, ModerationError, moderationModel, MODERATION_POLICY} from './moderation.mjs';
+import {moderateSubject, ModerationError, moderationModel, moderationPolicy, moderationEnvironment} from './moderation.mjs';
+import {DIRECT_JEV_MODEL} from './moderation-profiles.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
 import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
+import {observeStorage, storageFailure, generationResult} from '../../shared/operational-events.mjs';
 const TOKEN_SECONDS = 2592000, encoder = new TextEncoder();
 const DAILY_IMAGE_LIMIT = 100;
 const COMPARISON_DAILY_IMAGE_LIMIT = DAILY_IMAGE_LIMIT * 10;
@@ -290,12 +292,15 @@ export class Account {
     if (!job || job.state !== 'processing') return fail('not_found', 'Generation not found.', 404);
     const account = await this.state.storage.get('account');
     const objectKey = account.id + '/' + generationId + '.png';
-    await this.env.GENERATIONS.put(objectKey, unb64(image), {httpMetadata: {contentType: 'image/png'}});
+    await observeStorage('image_write', generationId, () => this.env.GENERATIONS.put(objectKey, unb64(image), {httpMetadata: {contentType: 'image/png'}}));
     return this.complete({generationId, result: {state: 'completed', objectKey, metrics}});
   }
-  async moderateBatch({batchID, description}) {
+  async moderateBatch({batchID, description, sharingVersion}) {
     if (!isUUID(batchID) || typeof description !== 'string' || !description.trim() || description.length > 500) return fail('invalid_request', 'Invalid batch.', 400);
-    const fingerprint = await digest(JSON.stringify({batchID, description, policy: MODERATION_POLICY, model: this.env.MODERATION_MODEL ?? 'clef'}));
+    const moderationEnv = moderationEnvironment(this.env, sharingVersion);
+    const fingerprint = await digest(JSON.stringify({batchID, description, policy: moderationPolicy(moderationEnv),
+      ...(moderationEnv.MODERATION_STRATEGY === 'parallel' ? {strategy: 'parallel'} : {}),
+      model: moderationEnv.MODERATION_MODEL ?? 'clef'}));
     const name = 'moderation:' + batchID;
     const previous = await this.state.storage.get(name);
     if (previous && previous.expires > Date.now()) {
@@ -308,20 +313,25 @@ export class Account {
     const current = [...entries].filter(([, value]) => value.expires > Date.now());
     for (const [key, value] of entries) if (value.expires <= Date.now()) await this.state.storage.delete(key);
     if (current.length >= 64) {
-      console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(this.env),
-        policy: MODERATION_POLICY, outcome: 'moderation_unavailable', failure: 'batch_limit'}));
+      console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(moderationEnv),
+        policy: moderationPolicy(moderationEnv), outcome: 'moderation_unavailable', failure: 'batch_limit'}));
       return fail('moderation_unavailable', 'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503);
     }
     let error, diagnostics;
-    try { diagnostics = await moderateSubject(this.env, description); }
+    try { diagnostics = await moderateSubject(moderationEnv, description, {
+      waitUntil: promise => this.state.waitUntil?.(promise),
+      onComplete: observation => console.info(JSON.stringify({event: 'description_moderation_complete', batchID,
+        model: moderationModelForLog(moderationEnv), ...observation})),
+    }); }
     catch (caught) {
       if (!(caught instanceof ModerationError)) throw caught;
       diagnostics = caught.diagnostics;
       error = {code: caught.code, message: caught.message, status: caught.status, reasonCodes: caught.reasonCodes};
     }
-    await this.state.storage.put(name, {fingerprint, expires: Date.now() + 600000, ...(error ? {error} : {})});
-    console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(this.env),
-      policy: MODERATION_POLICY, outcome: error?.code ?? 'approved', ...diagnostics, reasonCodes: error?.reasonCodes ?? []}));
+    const transient = moderationEnv.MODERATION_STRATEGY === 'parallel' && error?.code === 'moderation_unavailable';
+    await this.state.storage.put(name, {fingerprint, expires: Date.now() + (transient ? 1000 : 600000), ...(error ? {error} : {})});
+    console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(moderationEnv),
+      policy: moderationPolicy(moderationEnv), outcome: error?.code ?? 'approved', ...diagnostics, reasonCodes: error?.reasonCodes ?? []}));
     return error ? fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes}) : reply({approved: true});
   }
   async registerAttestation(input) {
@@ -428,7 +438,10 @@ export class Account {
       ...[...pending.values()].map(id => this.advanceFal(id)),
       ...[...images.values()].map(id => this.advanceImage(id))
     ]);
-    if (outcomes.some(result => result.status === 'rejected')) throw new Error('Queued generation persistence failed');
+    if (outcomes.some(result => result.status === 'rejected')) {
+      storageFailure('queue_persistence');
+      throw new Error('Queued generation persistence failed');
+    }
     if ((await this.state.storage.list({prefix: 'fal:', limit: 1})).size ||
         (await this.state.storage.list({prefix: 'image:', limit: 1})).size) {
       await this.state.storage.setAlarm(Date.now() + 5000);
@@ -479,7 +492,7 @@ export class Account {
     if (job.imageTask.stage !== 'queued') {
       // An alarm can run again after eviction/crash. Recover an already saved PNG,
       // but never repeat an ambiguous paid request.
-      if (job.imageTask.stage === 'saving' && await this.env.GENERATIONS.get(objectKey)) {
+      if (job.imageTask.stage === 'saving' && await observeStorage('image_read', id, () => this.env.GENERATIONS.get(objectKey))) {
         await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics: job.metrics}});
         await this.state.storage.delete('image:' + id);
       } else {
@@ -505,7 +518,7 @@ export class Account {
       job.imageTask.stage = 'saving';
       job.metrics = metrics;
       await this.state.storage.put('job:' + id, job);
-      await this.env.GENERATIONS.put(objectKey, result.image, {httpMetadata: {contentType: 'image/png'}});
+      await observeStorage('image_write', id, () => this.env.GENERATIONS.put(objectKey, result.image, {httpMetadata: {contentType: 'image/png'}}));
       await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics}});
       await this.state.storage.delete('image:' + id);
     } catch (error) {
@@ -560,7 +573,7 @@ export class Account {
         viaGateway: true, requestedSize: job.fal.requestedSize, size: result.size,
         inputTokens: null, outputTokens: null, totalTokens: null,
         elapsedMs: Date.now() - job.createdAt, ...imageCost(job.fal.request, result)};
-      await this.env.GENERATIONS.put(objectKey, result.image, {httpMetadata: {contentType: 'image/png'}});
+      await observeStorage('image_write', id, () => this.env.GENERATIONS.put(objectKey, result.image, {httpMetadata: {contentType: 'image/png'}}));
       await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics}});
       await this.state.storage.delete('fal:' + id);
     } catch (error) {
@@ -651,7 +664,8 @@ export class Account {
       delete ready.fal.request.payload;
     }
     if (ready.imageTask) delete ready.imageTask;
-    await this.state.storage.put(k, ready);
+    await observeStorage('job_write', generationId, () => this.state.storage.put(k, ready));
+    generationResult(generationId, ready.state);
     if (comparisonImage) {
       await this.state.storage.delete('image:' + generationId);
       await this.state.storage.setAlarm(Date.now() + 1);
@@ -667,19 +681,26 @@ async function authenticate(request, env, allowExpired = false) { const c = awai
 async function saved(env, job, access) {
   if (job.state === 'completed') job.metrics = refreshImageCostMetrics(job.metrics);
   if (job.reported) return fail('sheet_reported', 'This sheet was reported and is no longer available for recovery.', 410);
-  if (job.state === 'completed') { const image = await env.GENERATIONS.get(job.objectKey); if (!image) return fail('result_unavailable', 'Saved image is unavailable.', 410); return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}}); }
+  if (job.state === 'completed') {
+    const image = await observeStorage('image_read', job.id, () => env.GENERATIONS.get(job.objectKey));
+    if (!image) { storageFailure('image_missing', job.id); return fail('result_unavailable', 'Saved image is unavailable.', 410); }
+    return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}});
+  }
   if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
   return reply({generationId: job.id, status: 'processing'}, 202, {'Retry-After': '5', 'X-Access-Snapshot': accessHeader(access)});
 }
-async function generate(request, env, account, raw) {
+async function generate(request, env, account, raw, ctx) {
   const input = await body(request, 4096, raw), generationId = request.headers.get('Idempotency-Key');
   const prepared = await prepareGeneration(input,generationId,env);
   const reservation = await startGeneration(prepared,{
     env,call:(path,value)=>call(env,account.id,path,value),
+    sharingVersion:request.headers.get('X-AI-Sharing-Version'),
+    waitUntil: promise => ctx?.waitUntil(promise),
     queueImages:request.headers.get('X-Coloring-API-Version')==='2',
     onModeration:event=>{
       if(event.structured)console.info(JSON.stringify({event:'moderation_gate',generationID:event.generationId,batchID:event.batchID,outcome:event.outcome,status:event.status}));
-      else console.info(JSON.stringify({event:'description_moderation',generationID:event.generationId,model:moderationModelForLog(env),policy:MODERATION_POLICY,outcome:event.outcome,...event.diagnostics,reasonCodes:event.reasonCodes}));
+      else { const policyEnv=moderationEnvironment(env,request.headers.get('X-AI-Sharing-Version'));
+        console.info(JSON.stringify({event:event.stage === 'complete' ? 'description_moderation_complete' : 'description_moderation',generationID:event.generationId,model:moderationModelForLog(policyEnv),policy:moderationPolicy(policyEnv),outcome:event.outcome,...event.diagnostics,reasonCodes:event.reasonCodes})); }
     }
   });
   if(reservation.value?.error)return reply(reservation.value,reservation.status);
@@ -724,15 +745,15 @@ export default {
       throw new Error('legacy_usage_log_retention_failed');
     }
   },
-  async fetch(request, env) {
-    try { return await fetchRequest(request, env); }
+  async fetch(request, env, ctx) {
+    try { return await fetchRequest(request, env, ctx); }
     catch (error) {
       if (error instanceof RequestBodyTooLarge) return fail('request_too_large', 'The request body is too large.', 413);
       throw error;
     }
   }
 };
-async function fetchRequest(request, env) {
+async function fetchRequest(request, env, ctx) {
   const url = new URL(request.url);
   if (!env.ACCOUNT_TOKEN_SECRET) return fail('service_unavailable', 'Service configuration is incomplete.', 503);
   if (url.pathname === '/v1/installations') return register(request, env);
@@ -800,7 +821,7 @@ async function fetchRequest(request, env) {
       const checked = await call(env, account.id, '/assertion', {assertion: signed, clientData: encoded, generationID: request.headers.get('Idempotency-Key')});
       if (checked.status !== 200) return reply(checked.value, checked.status);
     }
-    return generate(request, env, account, raw);
+    return generate(request, env, account, raw, ctx);
   }
   const reportMatch = /^\/v1\/generations\/([0-9a-f-]{36})\/report$/.exec(url.pathname);
   if (reportMatch && request.method === 'POST') {
@@ -818,5 +839,6 @@ async function fetchRequest(request, env) {
 }
 
 function moderationModelForLog(env) {
+  if (env.MODERATION_STRATEGY === 'parallel') return 'clef+typesafe/' + DIRECT_JEV_MODEL;
   try { return moderationModel(env); } catch { return 'invalid'; }
 }

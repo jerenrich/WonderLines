@@ -1,0 +1,56 @@
+{
+  "auditedAtUTC": "2026-10-31T07:27:02.733667+00:00",
+  "passed": true,
+  "policy": "all-ages-v10-first-approval-0d745969007c",
+  "eventNames": [
+    "description_moderation",
+    "description_moderation_complete"
+  ],
+  "correlation": "Opaque batch ID for structured app requests; generation ID for legacy subject route; Cloudflare event timestamp and script version",
+  "fields": [
+    "provider ID and pinned model",
+    "per-provider outcome: approved/rejected/unavailable/timed_out",
+    "per-provider elapsedMs",
+    "numeric moderation scores and fixed reason codes when valid",
+    "decisionReason and approvedBy",
+    "decisionElapsedMs and total completion elapsedMs",
+    "completionReason",
+    "agreement: agree/disagree/incomplete",
+    "availability: both_available/partial/unavailable",
+    "fixed failure classification and HTTP status where available"
+  ],
+  "typeSafeFailureDetails": [
+    "network_error",
+    "http_error",
+    "content_type",
+    "response_too_large",
+    "invalid_json",
+    "model_mismatch",
+    "invalid_scores"
+  ],
+  "timeout": {
+    "overallMs": 8000,
+    "failure": "timeout",
+    "outcome": "timed_out",
+    "pendingFetchAborted": true
+  },
+  "excluded": [
+    "user description and composed subject",
+    "request/response bodies",
+    "raw provider errors or exception messages",
+    "API keys and credentials",
+    "generated image bytes",
+    "arbitrary upstream diagnostic fields"
+  ],
+  "lifetime": "Worker ctx.waitUntil for the direct subject route; DurableObjectState.waitUntil for shared batches. The first approval does not cancel the other service. Completion logs cannot revise a settled gate.",
+  "gatewayPayloadCollection": false,
+  "diagnosticLogRetention": "Existing Cloudflare Worker seven-day retention; no new long-term log sink configured.",
+  "providerRetention": "This audit covers Wonder Lines diagnostics. Direct TypeSafe processing and any independent provider retention remain governed by that service and its terms; no claim of provider-side zero retention.",
+  "tests": [
+    "Scripts/test_parallel_moderation.mjs: credential/prompt sentinels across HTTP, malformed JSON, content-type, response-size, version and score failures; network error classification; independent bounded observation",
+    "Scripts/test_batch_moderation.mjs: three images start before Jev finishes, waitUntil retained, final disagreement logged, descriptions/credentials absent from logs",
+    "Scripts/test_moderation_calibration.mjs: 610 recorded scores replay through real coordinator",
+    "Scripts/test_privacy.mjs and Scripts/test_operational_events.mjs: existing privacy regressions"
+  ],
+  "productionEvidence": "build9-first-approval-production-logs-sanitized.json"
+}

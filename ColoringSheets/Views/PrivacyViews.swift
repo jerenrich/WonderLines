@@ -7,7 +7,7 @@ struct AIConsentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Before your first sheet").font(.title2.bold())
-                    Text("To create your sheet, Wonder Lines sends your description, drawing difficulty and model choice to Cloudflare for safety checks and processing, and to the selected image provider: OpenAI, Cloudflare Workers AI or fal.ai.")
+                    Text("To create your sheet, Wonder Lines sends your description to Cloudflare and TypeSafe AI for safety checks. Your description, drawing difficulty and model choice are also sent to Cloudflare for processing and to the selected image provider: OpenAI, Cloudflare Workers AI or fal.ai.")
                     Text("These services may retain request logs. Wonder Lines stores generated sheets and an anonymous service account so you can recover unfinished work. Please leave names and other personal information out of descriptions.")
                     Link("Read the privacy policy", destination: PrivacyConsent.policyURL)
                     Text("Your choice is remembered. You can withdraw consent or delete your account and data in Settings.")

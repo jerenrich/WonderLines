@@ -1,0 +1,152 @@
+{
+  "investigatedAt": "2026-10-31T06:07:01.588111+00:00",
+  "question": "Did backend compatibility change after the 17 October 2026 08:50 PDT submission and cause the App Store generation failure?",
+  "conclusion": "Clef description moderation hit the server eight-second deadline. The shared failure blocked all three generation requests with HTTP 503 before allowance reservation or image-provider submission.",
+  "submission": {
+    "version": "1.0",
+    "build": 8,
+    "submittedAtUTC": "2026-10-17T15:50:00Z",
+    "submittedAtLondon": "2026-10-17T16:50:00+01:00",
+    "sourceCommit": "a5e7e84",
+    "submissionID": "5f204859-39b1-47fe-87ce-01e4d224d02a",
+    "archivedServiceConfiguration": {
+      "mock": false,
+      "serviceURL": "https://coloring-sheets-api.jordan-erenrich.workers.dev"
+    }
+  },
+  "review": {
+    "date": "2026-10-31",
+    "notificationReceivedUTC": "2026-10-31T01:01:57Z",
+    "exactAttemptTime": "not supplied",
+    "device": "iPhone 17 Pro Max",
+    "os": "iOS 27.2",
+    "guideline": "2.1(a)",
+    "exactAppError": "not supplied; user confirmed none provided",
+    "emailURL": "https://mail.google.com/mail/u/?authuser=jordan.erenrich%40gmail.com#all/1a18f7a4874e282d"
+  },
+  "currentBackend": {
+    "deploymentCreatedUTC": "2026-10-27T21:17:13.707248Z",
+    "sourceCommit": "9889a5e03554081eccd9c46afe6bc0737213d40b",
+    "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+    "trafficPercent": 100,
+    "compatibilityDate": "2026-09-20",
+    "compatibilityFlags": [],
+    "appAttestEnvironment": "production",
+    "appAttestEnforce": "false",
+    "freeDailyAllowance": 100,
+    "globalDailyGenerationLimit": 10000,
+    "originalSelectableModelsStillPresent": [
+      "gpt-image-2.5-flare",
+      "gpt-image-2.5-sunburst",
+      "flux-2-klein-4b",
+      "flux-2-klein-9b",
+      "phoenix-1.0"
+    ]
+  },
+  "changesAfterSubmission": [
+    {
+      "date": "2026-10-19",
+      "change": "Expired OpenAI project credential replaced; Flare generation and saved-image recovery verified restored",
+      "relevance": "Confirmed historical availability failure. Since review was 31 October and current Sunburst generation works, this is not evidence of the current rejection cause.",
+      "evidence": "../../operations/2026-10-19/credential-diagnosis.json"
+    },
+    {
+      "date": "2026-10-19",
+      "change": "GitHub deployment credential replaced and old credential revoked",
+      "relevance": "Deployment credential is separate from runtime provider credentials; later successful deployments confirm recovery.",
+      "evidence": "../../operations/2026-10-19/deployment-token-hardening.json"
+    },
+    {
+      "date": "2026-10-21 to 2026-10-27",
+      "change": "Added comparison studio and runners, additional model support, provider diagnostics, price enrichment; shared generation validation/moderation/reservation refactored",
+      "relevance": "Ordinary app accounts retain three-image queue; build 8 request fields and API version 2 remain accepted. Original selectable model routes remain available. Offline compatibility tests and one live default-model request passed."
+    },
+    {
+      "change": "Description validation now separates 500-unit user text from up to 1024 units of composed guidance",
+      "relevance": "Relaxes an older restriction, retaining existing request fields; does not establish a new incompatibility."
+    },
+    {
+      "change": "No source changes to moderation policy, App Attest verifier, or App Attest client between submitted source and current HEAD",
+      "relevance": "Unchanged code can still have device-specific defects or suffer provider outages; source stability is not proof of reliability."
+    }
+  ],
+  "liveChecks": {
+    "serviceTest": "build8-service-probe.json",
+    "moderationTest": "live-moderation-probe.json",
+    "defaultModel": "gpt-image-2.5-sunburst",
+    "prompt": "A friendly dinosaur riding a bicycle on the moon",
+    "age": 6,
+    "composition": "side",
+    "size": "1456x1024",
+    "postStatus": 202,
+    "finalStatus": 200,
+    "elapsedMs": 16127,
+    "imageBytes": 1345464,
+    "generationPosts": 1,
+    "temporaryAccountCleanupStatus": 200,
+    "appAttestExercised": false,
+    "threeImageBatchExercised": false,
+    "clefResult": "approved in 1415ms",
+    "otherModelImageGenerationsTested": false
+  },
+  "historicalFailureLeads": [
+    {
+      "category": "Moderation availability",
+      "evidence": "../../../.build/safety-diagnosis-20261022/diagnosis.json",
+      "observation": "On 22 October, Clef exceeded the eight-second deadline in production and a text-only reproduction. Six image requests were blocked before image submission. Current Clef probe succeeded.",
+      "reviewAttribution": "not established"
+    },
+    {
+      "category": "Image provider failures",
+      "evidence": "../../operations/2026-10-23/image-generation-diagnosis.json",
+      "observation": "Intermittent Workers AI HTTP 400/500 failures were observed in the comparison service for models also selectable in the app. The reviewer model is unknown. Current Sunburst success does not establish health of all models at review time.",
+      "reviewAttribution": "not established"
+    },
+    {
+      "category": "App Attest / physical device path",
+      "observation": "Build 8 attempts device verification before generation; a failure throws deviceVerification even while APP_ATTEST_ENFORCE=false. Production environment and app ID currently match the archive. The service probe only checked challenge issuance and did not attest a device or sign assertions.",
+      "testGap": "Build 8 release records show mock simulator checks on OS 27.0; no fresh physical build 8 run. Physical generation was previously checked on build 7. Review used iOS 27.2.",
+      "reviewAttribution": "not established"
+    }
+  ],
+  "offlineChecks": {
+    "passed": [
+      "node Scripts/test_worker.mjs",
+      "node Scripts/test_request_security.mjs",
+      "node Scripts/test_batch_moderation.mjs",
+      "python3 Scripts/test_configuration.py"
+    ],
+    "network": "none"
+  },
+  "limitations": [
+    "The initial Cloudflare Observability permission problem was resolved using the locally supplied token; complete review-session logs were subsequently retrieved.",
+    "Reviewer supplied neither the displayed error text nor exact generation attempt time; no failure category can be attributed to Apple with confidence.",
+    "One successful API request is evidence of current default-model protocol compatibility, not an end-to-end test of the submitted binary, App Attest, iOS 27.2, all regions, all models, or three parallel requests.",
+    "Worker compatibility date pins runtime behavior, not uptime or external provider API behavior.",
+    "A preliminary Python urllib request was rejected with Cloudflare 1010; subsequent Node requests registered and generated successfully. This transport-specific rejection is not evidence that Apple was blocked."
+  ],
+  "nextChecks": [
+    "Make the moderation path tolerate transient slowness with a bounded total deadline and a carefully bounded retry of the text-only safety check before returning a batch-wide failure. Retain safety assessment and existing thresholds.",
+    "Avoid treating transient moderation availability errors as long-lived batch decisions when implementing recovery; ensure all three concurrent callers share one recovery attempt.",
+    "Add a regression that simulates a slow/transient Clef response and verifies eventual moderation approval, one image reservation per generation, and no duplicate image submissions.",
+    "Verify on the submitted build-8 protocol and a physical TestFlight device before resubmitting. The diagnosed mechanism is in the backend, so a backend-only fix may work with build 8."
+  ],
+  "sourceLinks": {
+    "cloudflareCompatibility": "https://developers.cloudflare.com/workers/configuration/compatibility-dates/",
+    "appleProductionAttest": "https://developer.apple.com/documentation/devicecheck/preparing-to-use-the-app-attest-service",
+    "appleAttestationValidation": "https://developer.apple.com/documentation/devicecheck/attestation-object-validation-guide"
+  },
+  "changesMade": "Local diagnostic evidence only; no app code, backend deployments, credentials, review messages or App Store submission changes.",
+  "initialConclusionBeforeLogAccess": "No persistent incompatibility was found in the inspected changes, live configuration, or one successful build-8-protocol Sunburst generation. The exact reviewer failure remains unconfirmed without the error text or review-time logs. Historical service failures and physical-device App Attest remain investigation leads.",
+  "followUpLogInvestigation": {
+    "atUTC": "2026-10-31T06:20:32.886081+00:00",
+    "evidence": "log-findings.json",
+    "appleAttribution": "High confidence: fresh build-8 session advertising Darwin/27.2.0, matching Apple review software, failed at 00:58:01 UTC, 235 seconds before the 01:01:57 UTC rejection email. Logs do not explicitly identify the operator as Apple or establish device hardware.",
+    "initialAppAttestConcern": "Resolved for the matching session: enrollment and all three assertions succeeded."
+  },
+  "initialNextChecksBeforeLogAccess": [
+    "Use the Cloudflare dashboard with authorized log access to inspect roughly 2026-10-30T00:00Z through 2026-10-31T01:02Z, then narrow around any review-related requests. Look at registration and attestation responses, app_attest_rejected, description_moderation_batch, moderation_gate, image-generation failure events, and HTTP outcomes; do not rely only on Worker exception counts.",
+    "Test build 8 via TestFlight on a physical iPhone with iOS 27.2, including first launch/enrollment and default three-sheet batch. Capture Settings > Diagnostics on failure before changing app state.",
+    "Use the actual failure code to choose the fix: device verification, moderation timeout, provider credentials/availability, registration throttling, budget limits, or request validation. Avoid an unsupported backend rollback or disabling safety based solely on this generic rejection."
+  ]
+}

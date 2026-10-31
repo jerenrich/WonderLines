@@ -4,6 +4,7 @@ import {ComparisonLibrary} from './library.mjs';
 export {ComparisonLibrary};
 import {isUUID} from '../../coloring-sheets-api/src/composition.mjs';
 import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
+import {observeStorage, storageFailure} from '../../shared/operational-events.mjs';
 
 const security = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY'};
 const json = (value, status = 200, headers = {}) => Response.json(value, {status, headers: {...security, ...headers}});
@@ -77,8 +78,8 @@ async function handle(request, env) {
     // Never accept client object keys or expose provider payloads from the job.
     const expected = principal.accountId + '/' + job.id + '.png';
     if (job.objectKey !== expected) return fail('This image could not be found.', 404);
-    const image = await env.GENERATIONS.get(expected);
-    if (!image) return fail('The saved image is unavailable.', 410);
+    const image = await observeStorage('image_read', job.id, () => env.GENERATIONS.get(expected));
+    if (!image) { storageFailure('image_missing', job.id); return fail('The saved image is unavailable.', 410); }
     return new Response(image.body, {headers: {...security, 'Content-Type': 'image/png', 'Content-Disposition': `inline; filename="wonderlines-${job.id}.png"`}});
   }
   return fail('Not found.', 404);

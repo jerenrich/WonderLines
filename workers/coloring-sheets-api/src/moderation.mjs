@@ -1,3 +1,7 @@
+import {runParallelModeration} from './parallel-moderation.mjs';
+import {DIRECT_JEV_MODEL, PARALLEL_MODERATION_POLICY, parallelClefThresholds, directJevThresholds} from './moderation-profiles.mjs';
+import {readBoundedBody, RequestBodyTooLarge} from '../../shared/request-body.mjs';
+
 // Server-owned all-ages policy. The complete subject (including app guidance) is
 // untrusted data; no client field or selected age can relax these rules.
 export const MODERATION_MODELS = Object.freeze({
@@ -90,13 +94,19 @@ export function moderationScores(value) {
   return scores;
 }
 
-export function moderationAssessment(value, model = MODERATION_MODEL) {
-  const limits = moderationThresholds(model);
-  const scores = moderationScores(value);
+export function assessModerationScores(scores, limits) {
+  for (const name of ['all_ages', ...Object.keys(hazards)]) {
+    if (!Number.isFinite(scores?.[name]) || scores[name] < 0 || scores[name] > 1 ||
+        !Number.isFinite(limits?.[name]) || limits[name] < 0 || limits[name] > 1) throw Error('Invalid moderation scores or profile');
+  }
   const reasonCodes = Object.keys(hazards).filter(name => scores[name] > limits[name])
     .sort((a, b) => scores[b] - scores[a]);
   if (!reasonCodes.length && scores.all_ages < limits.all_ages) reasonCodes.push('uncertain');
   return {allowed: scores.all_ages >= limits.all_ages && reasonCodes.length === 0, reasonCodes};
+}
+
+export function moderationAssessment(value, model = MODERATION_MODEL) {
+  return assessModerationScores(moderationScores(value), moderationThresholds(model));
 }
 
 export function moderationDecision(value, model = MODERATION_MODEL) { return moderationAssessment(value, model).allowed; }
@@ -118,7 +128,26 @@ export class ModerationError extends Error {
   }
 }
 
-export async function moderateSubject(env, subject) {
+export function moderationPolicy(env = {}) {
+  return env.MODERATION_STRATEGY === 'parallel' ? PARALLEL_MODERATION_POLICY : MODERATION_POLICY;
+}
+
+export function moderationEnvironment(env, sharingVersion) {
+  // Build 8 disclosed Cloudflare-hosted moderation. Only newer clients that
+  // present the revised notice may send descriptions directly to TypeSafe.
+  return env.MODERATION_STRATEGY === 'parallel' && sharingVersion !== '2'
+    ? {...env, MODERATION_STRATEGY: 'single'} : env;
+}
+
+export async function moderateSubject(env, subject, observation = {}) {
+  if (env.MODERATION_STRATEGY === 'parallel') return moderateParallelSubject(env, subject, observation);
+  if (env.MODERATION_STRATEGY && env.MODERATION_STRATEGY !== 'single') {
+    throw new ModerationError('moderation_unavailable', 'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503, {failure: 'configuration'});
+  }
+  return moderateSingleSubject(env, subject);
+}
+
+export async function moderateSingleSubject(env, subject, {signal, bounded = true, thresholds} = {}) {
   // Share the image gateway; tolerate the legacy moderation-only setting when
   // no shared gateway is configured. A stale override must not split traffic.
   const gatewayID = env.AI_GATEWAY_ID ?? env.MODERATION_GATEWAY_ID;
@@ -132,27 +161,108 @@ export async function moderateSubject(env, subject) {
   let model;
   try { model = moderationModel(env); } catch { throw unavailable('configuration'); }
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  signal?.addEventListener('abort', cancel, {once: true});
   let timer, assessment, scores, failure = 'upstream';
   try {
-    const result = await Promise.race([
-      env.AI.run(model, moderationInput(subject, model), {
-        gateway: {id: gatewayID, skipCache: true, collectLog: false},
-        signal: controller.signal,
-      }),
+    const pending = env.AI.run(model, moderationInput(subject, model), {
+      gateway: {id: gatewayID, skipCache: true, collectLog: false}, signal: controller.signal,
+    });
+    const result = bounded ? await Promise.race([
+      pending,
       new Promise((_, reject) => { timer = setTimeout(() => {
         failure = 'timeout'; controller.abort(); reject(new Error('Moderation timeout'));
       }, TIMEOUT_MS); }),
-    ]);
+    ]) : await pending;
     failure = 'invalid_response';
     scores = moderationScores(result);
-    assessment = moderationAssessment(result, model);
+    assessment = assessModerationScores(scores, thresholds ?? moderationThresholds(model));
   } catch (error) {
     // Retain only a numeric provider code, never upstream messages or payloads.
     const match = failure === 'upstream' && typeof error?.message === 'string'
       ? /^(\d{3,5}):/.exec(error.message) : null;
     throw unavailable(failure, match ? {upstreamCode: Number(match[1])} : {});
-  } finally { clearTimeout(timer); }
+  } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
   if (!assessment.allowed) throw new ModerationError('description_not_suitable', rejectionMessage(assessment.reasonCodes),
     400, diagnostics(null, {scores}), assessment.reasonCodes);
   return diagnostics(null, {scores});
+}
+
+export async function directTypeSafeScores(env, subject, signal) {
+  if (typeof env.TYPESAFE_API_KEY !== 'string' || !/^[\x21-\x7e]+$/.test(env.TYPESAFE_API_KEY)) {
+    throw new ModerationError('moderation_unavailable', 'Safety check configuration is incomplete.', 503, {failure: 'configuration'});
+  }
+  const input = moderationInput(subject, MODERATION_MODELS.jev);
+  let response;
+  try {
+    response = await fetch('https://api.typesafe.ai/v1/systemone', {
+      method: 'POST', redirect: 'manual', signal,
+      headers: {'Authorization': 'Bearer ' + env.TYPESAFE_API_KEY, 'Content-Type': 'application/json'},
+      body: JSON.stringify({...input, model: DIRECT_JEV_MODEL}),
+    });
+  } catch { throw new ModerationError('moderation_unavailable', 'Safety check could not be reached.', 503,
+    {failure: 'upstream', failureDetail: 'network_error'}); }
+  if (!response.ok) {
+    void response.body?.cancel().catch(() => {});
+    throw new ModerationError('moderation_unavailable', 'Safety check unavailable.', 503,
+      {failure: 'upstream', failureDetail: 'http_error', httpStatus: response.status});
+  }
+  let failureDetail = 'content_type';
+  try {
+    if (response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') throw Error('Invalid content type');
+    failureDetail = 'invalid_json';
+    const data = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(await readBoundedBody(response, 65536)));
+    failureDetail = 'model_mismatch';
+    if (data.model !== DIRECT_JEV_MODEL) throw Error('Unexpected model version');
+    failureDetail = 'invalid_scores';
+    return moderationScores(data);
+  } catch (error) {
+    void response.body?.cancel().catch(() => {});
+    throw new ModerationError('moderation_unavailable', 'Safety check returned an invalid response.', 503,
+      {failure: 'invalid_response', failureDetail: error instanceof RequestBodyTooLarge ? 'response_too_large' : failureDetail,
+        httpStatus: response.status});
+  }
+}
+
+export async function moderateParallelSubject(env, subject, {waitUntil, onComplete} = {}) {
+  const gateway = env.AI_GATEWAY_ID ?? env.MODERATION_GATEWAY_ID;
+  // Do not silently activate a second service with a missing deployment secret.
+  if (typeof env.AI?.run !== 'function' || typeof gateway !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(gateway) ||
+      typeof env.TYPESAFE_API_KEY !== 'string' || !/^[\x21-\x7e]+$/.test(env.TYPESAFE_API_KEY)) {
+    throw new ModerationError('moderation_unavailable', 'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503,
+      {strategy: 'parallel', failure: 'configuration'});
+  }
+  const pending = runParallelModeration([
+    {id: 'clef', run: async signal => {
+      try {
+        const diagnostics = await moderateSingleSubject({...env, MODERATION_MODEL: 'clef'}, subject,
+          {signal, bounded: false, thresholds: parallelClefThresholds});
+        return {allowed: true, scores: diagnostics.scores, reasonCodes: []};
+      } catch (error) {
+        if (error instanceof ModerationError && error.code === 'description_not_suitable') {
+          return {allowed: false, scores: error.diagnostics.scores, reasonCodes: error.reasonCodes};
+        }
+        throw error;
+      }
+    }},
+    {id: DIRECT_JEV_MODEL, run: async signal => {
+      const scores = await directTypeSafeScores(env, subject, signal);
+      return {...assessModerationScores(scores, directJevThresholds), scores};
+    }},
+  ]);
+  const observation = pending.completion.then(({allowed, reasonCodes, ...diagnostics}) => {
+    onComplete?.({strategy: 'parallel', policy: PARALLEL_MODERATION_POLICY, gateway,
+      outcome: allowed === true ? 'approved' : allowed === false ? 'description_not_suitable' : 'moderation_unavailable',
+      reasonCodes, ...diagnostics});
+  });
+  if (waitUntil) waitUntil(observation);
+  else void observation.catch(() => {});
+  const {allowed, reasonCodes, ...diagnostics} = await pending.decision;
+  const audit = {strategy: 'parallel', policy: PARALLEL_MODERATION_POLICY, gateway, ...diagnostics};
+  if (allowed === null) throw new ModerationError('moderation_unavailable',
+    'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503,
+    {...audit, failure: 'no_valid_decision'});
+  if (!allowed) throw new ModerationError('description_not_suitable', rejectionMessage(reasonCodes), 400, audit, reasonCodes);
+  return audit;
 }

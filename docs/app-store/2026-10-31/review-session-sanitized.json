@@ -1,0 +1,331 @@
+{
+  "queryWindowUTC": {
+    "from": "2026-10-31T00:45:00Z",
+    "to": "2026-10-31T01:05:00Z"
+  },
+  "returnedEvents": 33,
+  "events": [
+    {
+      "timestampUTC": "2026-10-31T00:57:48.703Z",
+      "trigger": "POST /register",
+      "requestID": "7359755b014e407259fea504d55667d0",
+      "traceID": "b27a7287f4c4737f58aa551016a2d764",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 201,
+      "wallTimeMs": 55
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:49.309Z",
+      "trigger": "POST /initialize",
+      "requestID": "a5cf62c96a633e64cbea0acd87137ff4",
+      "traceID": "b27a7287f4c4737f58aa551016a2d764",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 201,
+      "wallTimeMs": 162
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:49.314Z",
+      "trigger": "POST /v1/installations",
+      "requestID": "f6f084f440142a9ad1bce8db447f7f4b",
+      "traceID": "b27a7287f4c4737f58aa551016a2d764",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 201,
+      "wallTimeMs": 934,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:49.574Z",
+      "trigger": "POST /authorize",
+      "requestID": "a8e59be76c1a98be6007f3a1f6458200",
+      "traceID": "c94a4e1df07216b52023b262211c75dc",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:49.583Z",
+      "trigger": "POST /v1/app-attest/challenge",
+      "requestID": "816b2547aac622025d7fdcba5bd4e1f0",
+      "traceID": "c94a4e1df07216b52023b262211c75dc",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 21,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.317Z",
+      "trigger": "POST /authorize",
+      "requestID": "2ec163c2fee416e71f492a67fa0d00b5",
+      "traceID": "b740040af514361a366352a5968d33f4",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.381Z",
+      "trigger": "POST /attest",
+      "requestID": "54211a360427262dd962c577c51540e8",
+      "traceID": "b740040af514361a366352a5968d33f4",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 37
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.383Z",
+      "trigger": "POST /v1/app-attest/attest",
+      "requestID": "ba8d08b5e3ac47cc11aed42df37d6dc9",
+      "traceID": "b740040af514361a366352a5968d33f4",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 86,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.608Z",
+      "trigger": "POST /authorize",
+      "requestID": "824fcafc1dded008ffb465084396b815",
+      "traceID": "6fe246e63a9904b3a97a363dbad4b613",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.610Z",
+      "trigger": "POST /authorize",
+      "requestID": "75fcc81a3e4a49c4f51382b38b63ada3",
+      "traceID": "57b833794eb04218d60363a03db01050",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 1
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.611Z",
+      "trigger": "POST /authorize",
+      "requestID": "701edd3a0f144499fea58dfb5812522d",
+      "traceID": "9a57f385499582d0407921342fdf2034",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.618Z",
+      "trigger": "POST /v1/app-attest/challenge",
+      "requestID": "694b0d937b08017c479fd0d01605df46",
+      "traceID": "6fe246e63a9904b3a97a363dbad4b613",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 20,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.622Z",
+      "trigger": "POST /v1/app-attest/challenge",
+      "requestID": "1a842152f7ff743a19ccc3a795a3e4ba",
+      "traceID": "57b833794eb04218d60363a03db01050",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 26,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.623Z",
+      "trigger": "POST /v1/app-attest/challenge",
+      "requestID": "1025256d0de2320a052d2ad597127c4a",
+      "traceID": "9a57f385499582d0407921342fdf2034",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 23,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.837Z",
+      "trigger": "POST /authorize",
+      "requestID": "6866770921c5baccdbd443daf543ff32",
+      "traceID": "99944c2a6db202634f35b24d31a4de9d",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.892Z",
+      "trigger": "POST /authorize",
+      "requestID": "fb9c09743e4ed6580d8a22626e9da43e",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 17
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.892Z",
+      "trigger": "POST /authorize",
+      "requestID": "881ced78b2a9c3fb5f94ab2836a33063",
+      "traceID": "938713d0c3a3dd9878230c555f805bd2",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 10
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.892Z",
+      "trigger": "POST /assertion",
+      "requestID": "2779982b01d1e591e1f4c718b10e6e52",
+      "traceID": "99944c2a6db202634f35b24d31a4de9d",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 39
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.914Z",
+      "trigger": "POST /job",
+      "requestID": "4a41d615366fcd7137aa67fff4c2d879",
+      "traceID": "99944c2a6db202634f35b24d31a4de9d",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 404,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.950Z",
+      "trigger": "POST /assertion",
+      "requestID": "1f63e5198024fca9a8e9cfe81ae67e21",
+      "traceID": "938713d0c3a3dd9878230c555f805bd2",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 37
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.952Z",
+      "trigger": "POST /assertion",
+      "requestID": "153521e304e0e9ea482a8f1ddccdb38b",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 200,
+      "wallTimeMs": 37
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:53.995Z",
+      "trigger": "POST /job",
+      "requestID": "576ffa925a0469e62f848eb08c8c0796",
+      "traceID": "938713d0c3a3dd9878230c555f805bd2",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 404,
+      "wallTimeMs": 0
+    },
+    {
+      "timestampUTC": "2026-10-31T00:57:54.040Z",
+      "trigger": "POST /job",
+      "requestID": "9517c0ac0c0a92615b0a725f08dae445",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 404,
+      "wallTimeMs": 49
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.934Z",
+      "trigger": "POST /moderate-batch",
+      "requestID": "545abd79cc2d2466e3796d2b19c2de03",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "event": "description_moderation",
+      "batchID": "85a0607e-25d9-4904-a61a-3005e44aa14a",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "moderation_unavailable",
+      "gateway": "coloring-sheets",
+      "failure": "timeout",
+      "elapsedMs": 8000
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.970Z",
+      "trigger": "POST /moderate-batch",
+      "requestID": "29dca2bf8b130c9ba4b792a56943fe06",
+      "traceID": "99944c2a6db202634f35b24d31a4de9d",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 503,
+      "wallTimeMs": 8028
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.970Z",
+      "trigger": "POST /moderate-batch",
+      "requestID": "545abd79cc2d2466e3796d2b19c2de03",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 503,
+      "wallTimeMs": 7911
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.970Z",
+      "trigger": "POST /moderate-batch",
+      "requestID": "241b7d43335a8fdbb9d29ff631b3b992",
+      "traceID": "938713d0c3a3dd9878230c555f805bd2",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 503,
+      "wallTimeMs": 7912
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.977Z",
+      "trigger": "POST /v1/generations",
+      "requestID": "8e2f59ef6f3911022066f0171f2c0a37",
+      "traceID": "99944c2a6db202634f35b24d31a4de9d",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 503,
+      "wallTimeMs": 8150,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.977Z",
+      "trigger": "POST /v1/generations",
+      "requestID": "8e2f59ef6f3911022066f0171f2c0a37",
+      "traceID": "99944c2a6db202634f35b24d31a4de9d",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "event": "moderation_gate",
+      "generationID": "3ecc85a1-d3fe-4c62-8cdf-e356a1f01013",
+      "batchID": "85a0607e-25d9-4904-a61a-3005e44aa14a",
+      "outcome": "moderation_unavailable",
+      "status": 503
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.979Z",
+      "trigger": "POST /v1/generations",
+      "requestID": "3316b3bcab21c792ddf0efcda66c7003",
+      "traceID": "938713d0c3a3dd9878230c555f805bd2",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 503,
+      "wallTimeMs": 8102,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.979Z",
+      "trigger": "POST /v1/generations",
+      "requestID": "3316b3bcab21c792ddf0efcda66c7003",
+      "traceID": "938713d0c3a3dd9878230c555f805bd2",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "event": "moderation_gate",
+      "generationID": "4429056b-0917-4515-a8de-ada4bf609793",
+      "batchID": "85a0607e-25d9-4904-a61a-3005e44aa14a",
+      "outcome": "moderation_unavailable",
+      "status": 503
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.980Z",
+      "trigger": "POST /v1/generations",
+      "requestID": "dce55048957fa1bc54ddc588cb194ac5",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "httpStatus": 503,
+      "wallTimeMs": 8111,
+      "userAgent": "ColoringSheets/8 CFNetwork/3896.200.61 Darwin/27.2.0"
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.980Z",
+      "trigger": "POST /v1/generations",
+      "requestID": "dce55048957fa1bc54ddc588cb194ac5",
+      "traceID": "74fa365c6fb5131a7e285e187bab5825",
+      "workerVersion": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+      "event": "moderation_gate",
+      "generationID": "4686a996-27f4-4b2e-bb0d-2ff258c3bdc1",
+      "batchID": "85a0607e-25d9-4904-a61a-3005e44aa14a",
+      "outcome": "moderation_unavailable",
+      "status": 503
+    }
+  ],
+  "redaction": "Only allowlisted protocol fields, timing, opaque correlation IDs and build/OS user-agent retained; request credentials, IP addresses, App Attest evidence, descriptions and raw payloads omitted."
+}

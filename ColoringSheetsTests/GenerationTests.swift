@@ -784,6 +784,7 @@ final class NetworkingTests: XCTestCase {
             }
             XCTAssertEqual(request.url!.path, "/v1/generations")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer synthetic-token")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-AI-Sharing-Version"), String(PrivacyConsent.currentVersion))
             let id = try XCTUnwrap(request.value(forHTTPHeaderField: "Idempotency-Key"))
             XCTAssertNotNil(UUID(uuidString: id))
             XCTAssertEqual(id, id.lowercased(), "Worker UUID validation requires lowercase")

@@ -1,0 +1,95 @@
+{
+  "queryWindowUTC": [
+    "2026-10-31T07:23:00Z",
+    "2026-10-31T07:25:00Z"
+  ],
+  "events": [
+    {
+      "timestampUTC": "2026-10-31T07:24:08.411000+00:00",
+      "workerVersion": "514278ef-aef1-4c08-a954-87df93525154",
+      "level": "info",
+      "event": "description_moderation",
+      "batchID": "f6934cb0-5c13-4da8-82a2-04583dd8b99c",
+      "model": "clef+typesafe/jev-1.14.0",
+      "policy": "all-ages-v10-first-approval-0d745969007c",
+      "outcome": "approved",
+      "strategy": "parallel",
+      "gateway": "coloring-sheets",
+      "decisionReason": "first_approval",
+      "approvedBy": "jev-1.14.0",
+      "providers": [
+        {
+          "id": "clef",
+          "outcome": "pending",
+          "elapsedMs": 125
+        },
+        {
+          "id": "jev-1.14.0",
+          "outcome": "approved",
+          "scores": {
+            "all_ages": 0.99,
+            "sexual": 0.01,
+            "violence": 0.04,
+            "hate": 0.02,
+            "adult": 0.02,
+            "frightening": 0.02,
+            "bypass": 0.01
+          },
+          "elapsedMs": 125
+        }
+      ],
+      "elapsedMs": 125
+    },
+    {
+      "timestampUTC": "2026-10-31T07:24:08.581000+00:00",
+      "workerVersion": "514278ef-aef1-4c08-a954-87df93525154",
+      "level": "info",
+      "event": "description_moderation_complete",
+      "batchID": "f6934cb0-5c13-4da8-82a2-04583dd8b99c",
+      "model": "clef+typesafe/jev-1.14.0",
+      "strategy": "parallel",
+      "policy": "all-ages-v10-first-approval-0d745969007c",
+      "gateway": "coloring-sheets",
+      "outcome": "approved",
+      "decisionReason": "first_approval",
+      "approvedBy": "jev-1.14.0",
+      "providers": [
+        {
+          "id": "clef",
+          "outcome": "approved",
+          "scores": {
+            "all_ages": 0.9494,
+            "sexual": 0.0279,
+            "violence": 0.0162,
+            "hate": 0.0268,
+            "adult": 0.0375,
+            "frightening": 0.0265,
+            "bypass": 0.0405
+          },
+          "elapsedMs": 295
+        },
+        {
+          "id": "jev-1.14.0",
+          "outcome": "approved",
+          "scores": {
+            "all_ages": 0.99,
+            "sexual": 0.01,
+            "violence": 0.04,
+            "hate": 0.02,
+            "adult": 0.02,
+            "frightening": 0.02,
+            "bypass": 0.01
+          },
+          "elapsedMs": 125
+        }
+      ],
+      "completionReason": "all_completed",
+      "agreement": "agree",
+      "availability": "both_available",
+      "elapsedMs": 295,
+      "decisionElapsedMs": 125
+    }
+  ],
+  "requestBodiesCaptured": false,
+  "note": "Only fixed structured moderation records copied. No request headers, account identifiers, descriptions, request bodies, raw provider payloads or credentials."
+}

@@ -3,7 +3,7 @@ import Foundation
 // Increment only when the disclosed data sharing materially changes, never for
 // ordinary releases. Consent stays local and is not a tracking permission.
 enum PrivacyConsent {
-    static let currentVersion = 1
+    static let currentVersion = 2
     static let key = "aiSharingConsentVersion"
     static let deletionKey = "accountDeletionPending"
     static let policyURL = URL(string: "https://jerenrich.github.io/WonderLines/privacy.html")!

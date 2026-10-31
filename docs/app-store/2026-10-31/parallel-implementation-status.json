@@ -1,0 +1,88 @@
+{
+  "updatedAtUTC": "2026-10-31T07:27:02.733667+00:00",
+  "implementation": "Deployed calibrated Clef plus direct pinned Jev. The first approval permits generation immediately; both checks continue for up to eight seconds with retained completion logging. Supersedes the earlier four-second grace/veto behavior.",
+  "rules": {
+    "approve": "First valid approval immediately, even if the other service rejects.",
+    "reject": "With no approval, reject if at least one valid rejection exists after both complete or the overall deadline expires.",
+    "unavailable": "No approval or valid rejection when both finish or the deadline expires.",
+    "observation": "Both services continue to completion or eight seconds from shared start, retained through waitUntil; late replies cannot revise the gate or observation."
+  },
+  "calibration": {
+    "syntheticPrompts": 305,
+    "calibrationExamples": 217,
+    "validationExamples": 40,
+    "finalTestExamples": 48,
+    "clef": "Complete; existing profile retained because the fitted alternative had more false rejects on validation.",
+    "clefFinalTest": {
+      "harmlessAccepted": 23,
+      "harmlessTotal": 24,
+      "unsafeRejected": 24,
+      "unsafeTotal": 24,
+      "unavailable": 0
+    },
+    "jev": "Complete: 305 live direct Jev 1.14.0 score sets; fitted thresholds validated and written to source.",
+    "combined": "First-approval union re-evaluated from all 610 recorded provider scores; see first-approval-calibration-report.json.",
+    "readyForActivation": true,
+    "finalTest": {
+      "clef": {
+        "unavailable": 0,
+        "harmless": 24,
+        "harmlessApproved": 23,
+        "unsafe": 24,
+        "unsafeApproved": 0
+      },
+      "jev": {
+        "unavailable": 0,
+        "harmless": 24,
+        "harmlessApproved": 23,
+        "unsafe": 24,
+        "unsafeApproved": 0
+      }
+    },
+    "combinedFinalTest": {
+      "unavailablePairs": 0,
+      "harmless": 24,
+      "harmlessApproved": 23,
+      "unsafe": 24,
+      "unsafeApproved": 0
+    },
+    "observations": "Profiles fitted using 217 calibration examples; 40 validation examples selected baseline versus fitted; 48 final-test examples excluded from fitting and selection. Clef observations were reused after explicitly recording the split refinement; TypeSafe used the final fixed split. No claim of blinded or population-level accuracy.",
+    "currentReport": "../../moderation/2026-10-31/first-approval-calibration-report.json"
+  },
+  "tests": {
+    "workerCI": "Full offline Worker/API/lab/retention/configuration suites passed.",
+    "newTests": [
+      "Scripts/test_parallel_moderation.mjs",
+      "Scripts/test_moderation_calibration.mjs",
+      "Scripts/test_batch_moderation.mjs (parallel batch integration)"
+    ],
+    "iOSUnitTests": {
+      "testLog": ".build/parallel-moderation-tests.log",
+      "executed": 93,
+      "skipped": 7,
+      "failures": 0,
+      "note": "XCTest finished all 93 tests with seven skipped and zero failures. Xcode then stalled in simulator diagnostics/result packaging; after interruption the command exited 75. This is not a clean xcodebuild exit.",
+      "finalizedResultSummary": "../../moderation/2026-10-31/ios-unit-test-summary.json",
+      "finalizedResult": "Passed"
+    },
+    "build9": "build9-preparation.json"
+  },
+  "consent": {
+    "newVersion": 2,
+    "description": "Names direct TypeSafe sharing, requires renewed local permission, and sends X-AI-Sharing-Version:2.",
+    "legacy": "Older builds including build8 remain Cloudflare-only; updated app required to use direct TypeSafe moderation.",
+    "newBuild": "1.0 (9), signed/exported and tested; not uploaded"
+  },
+  "remaining": [
+    "Upload build 1.0 (9), wait for Apple processing, select it for the rejected app version, and resubmit with the prepared review notes."
+  ],
+  "productionChanged": true,
+  "paidImageRequests": 5,
+  "liveVerification": {
+    "passed": true,
+    "evidence": "../../moderation/2026-10-31/first-approval-live-verification.json",
+    "productionEvidence": "build9-first-approval-production-logs-sanitized.json"
+  },
+  "workerVersion": "514278ef-aef1-4c08-a954-87df93525154",
+  "paidImageRequestsScope": "This deployment/preparation turn: one initial API sheet, three physical-device sheets, one final-policy API sheet."
+}

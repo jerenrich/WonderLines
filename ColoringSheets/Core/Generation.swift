@@ -442,7 +442,7 @@ final class WorkerClient: GenerationServing {
     // bundle or use shared credentials.
     private let legacyCredential: String?
     private let identities: AnonymousIdentityStore?
-    private let appAttest = AppAttestClient()
+    private let appAttest: AppAttestClient
     private let session: URLSession
     private let pendingStore: PendingGenerationStore
     private let recoverySleep: @Sendable (Duration) async throws -> Void
@@ -450,10 +450,12 @@ final class WorkerClient: GenerationServing {
 
     init(serviceURL: URL = defaultServiceURL, session: URLSession? = nil, identities: AnonymousIdentityStore = AnonymousIdentityStore(),
          pendingStore: PendingGenerationStore = .shared,
-         recoverySleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+         recoverySleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+         appAttest: AppAttestClient = AppAttestClient()) {
         self.serviceURL = serviceURL
         self.endpoint = serviceURL.appending(path: "/v1/generations")
         self.legacyCredential = nil
+        self.appAttest = appAttest
         self.identities = identities
         self.pendingStore = pendingStore
         self.recoverySleep = recoverySleep
@@ -464,6 +466,7 @@ final class WorkerClient: GenerationServing {
         self.serviceURL = Self.defaultServiceURL
         self.endpoint = Self.endpoint
         self.legacyCredential = credential
+        self.appAttest = AppAttestClient()
         self.identities = nil
         self.pendingStore = .shared
         self.recoverySleep = { try await Task.sleep(for: $0) }
@@ -504,6 +507,7 @@ final class WorkerClient: GenerationServing {
         let idempotencyKey = generationID.uuidString.lowercased()
         http.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
         http.setValue("2", forHTTPHeaderField: "X-Coloring-API-Version")
+        http.setValue(String(PrivacyConsent.currentVersion), forHTTPHeaderField: "X-AI-Sharing-Version")
         let requestBody = try request.encoded()
         http.httpBody = requestBody
         if legacyCredential == nil, let accountID = await identities?.session()?.accountID {

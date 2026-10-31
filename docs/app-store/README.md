@@ -1,6 +1,8 @@
 # App Store submission records
 
-The latest recorded submission is **1.0 (8), submitted 17 October 2026 at 16:50 Europe/London**. App Store Connect showed **Waiting for Review** at that time. This is a historical record, not a fresh check of Apple's current status. See the [build 8 submission receipt](2026-10-17/build8-resubmission.json), [verification](2026-10-17/build8-verification.txt), and [submitted review notes](2026-10-17/build8-review-notes.txt). Build 8 replaced build 7; the public listing and automatic release after approval were preserved.
+**1.0 (9) is prepared locally for resubmission; it has not been uploaded or submitted to Apple.** The signed App Store export, tests, renewed TypeSafe consent and production deployment are recorded in the [build 9 preparation](2026-10-31/build9-preparation.json), [artifact verification](2026-10-31/build9-artifact-verification.json), and [draft review notes](2026-10-31/build9-review-notes.txt).
+
+The latest recorded submission remains **1.0 (8), submitted 17 October 2026 at 08:50 PDT / 16:50 Europe/London**. Apple rejected it on 31 October for a generation error under guideline 2.1(a). A matching service session hit the eight-second Clef moderation timeout before image generation; see the [investigation](2026-10-31/investigation.json) and [sanitized findings](2026-10-31/log-findings.json). Build 8's original [submission receipt](2026-10-17/build8-resubmission.json), [verification](2026-10-17/build8-verification.txt), and [submitted review notes](2026-10-17/build8-review-notes.txt) remain historical records.
 
 ## Submission history
 

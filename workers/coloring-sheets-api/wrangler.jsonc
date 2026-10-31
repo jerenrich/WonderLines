@@ -35,6 +35,8 @@
     // Redmond and Z-Image Turbo via fal share FAL_KEY and FAL_DAILY_GENERATION_LIMIT.
     // Workers AI models additionally require a distinct WORKERS_AI_API_TOKEN.
     // Gateway and model settings are dashboard-managed; deploy with --keep-vars.
+    // MODERATION_STRATEGY=parallel additionally requires TYPESAFE_API_KEY,
+    // evaluated profiles and the client's revised AI-sharing notice (version 2).
     "required": ["ACCOUNT_TOKEN_SECRET"]
   }
 }

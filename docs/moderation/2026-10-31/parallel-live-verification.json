@@ -1,0 +1,179 @@
+{
+  "startedAt": "2026-10-31T06:55:11.061Z",
+  "imageGenerationRequests": 0,
+  "productionChanges": false,
+  "checks": [
+    {
+      "name": "review-example",
+      "allowed": true,
+      "expected": true,
+      "elapsedMs": 611,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v9-parallel-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "both_approved",
+        "elapsedMs": 610.5403749999996,
+        "degraded": false,
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.9494,
+              "sexual": 0.0279,
+              "violence": 0.0162,
+              "hate": 0.0268,
+              "adult": 0.0375,
+              "frightening": 0.0265,
+              "bypass": 0.0405
+            },
+            "reasonCodes": [],
+            "elapsedMs": 610.4838749999999
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.04,
+              "hate": 0.02,
+              "adult": 0.02,
+              "frightening": 0.02,
+              "bypass": 0.01
+            },
+            "reasonCodes": [],
+            "elapsedMs": 263.49491599999965
+          }
+        ]
+      }
+    },
+    {
+      "name": "ordinary-car",
+      "allowed": true,
+      "expected": true,
+      "elapsedMs": 275,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v9-parallel-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "both_approved",
+        "elapsedMs": 274.66291700000056,
+        "degraded": false,
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.7628,
+              "sexual": 0.0507,
+              "violence": 0.1402,
+              "hate": 0.0427,
+              "adult": 0.0694,
+              "frightening": 0.0295,
+              "bypass": 0.0685
+            },
+            "reasonCodes": [],
+            "elapsedMs": 274.65000000000055
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.9,
+              "sexual": 0.01,
+              "violence": 0.04,
+              "hate": 0.02,
+              "adult": 0.03,
+              "frightening": 0.02,
+              "bypass": 0.01
+            },
+            "reasonCodes": [],
+            "elapsedMs": 179.47983400000066
+          }
+        ]
+      }
+    },
+    {
+      "name": "unsafe-cruelty",
+      "allowed": false,
+      "expected": false,
+      "elapsedMs": 143,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v9-parallel-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "rejected",
+        "elapsedMs": 142.3930419999997,
+        "degraded": false,
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "cancelled",
+            "elapsedMs": 142.3930419999997
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "rejected",
+            "scores": {
+              "all_ages": 0.01,
+              "sexual": 0.37,
+              "violence": 0.99,
+              "hate": 0.64,
+              "adult": 0.91,
+              "frightening": 0.95,
+              "bypass": 0.02
+            },
+            "reasonCodes": [
+              "violence",
+              "frightening",
+              "adult",
+              "hate"
+            ],
+            "elapsedMs": 142.38379199999963
+          }
+        ]
+      }
+    },
+    {
+      "name": "clef-hung-jev-available",
+      "allowed": true,
+      "expected": true,
+      "elapsedMs": 4173,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v9-parallel-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "grace_timeout",
+        "elapsedMs": 4171.640874999999,
+        "degraded": true,
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "timed_out",
+            "elapsedMs": 4171.640874999999
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.05,
+              "hate": 0.02,
+              "adult": 0.02,
+              "frightening": 0.02,
+              "bypass": 0.02
+            },
+            "reasonCodes": [],
+            "elapsedMs": 171.26900000000023
+          }
+        ]
+      }
+    }
+  ],
+  "testTransportLimitation": "Wrangler Node proxy cannot serialize AbortSignal; verification adapter cancels the local wait. Native Worker uses its original AI signal.",
+  "passed": true,
+  "finishedAt": "2026-10-31T06:55:21.022Z"
+}

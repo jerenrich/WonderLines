@@ -1,0 +1,111 @@
+{
+  "checkedAtUTC": "2026-10-31T07:22:36.649854+00:00",
+  "network": "Offline synthetic fixtures only",
+  "results": [
+    {
+      "command": "node Scripts/test_worker.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_z_image.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_image_cost.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_comparison_queue.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_comparison_runner.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_provider_diagnostics.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_operational_events.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_request_security.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_privacy.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_reporting_concurrency.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_batch_moderation.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_moderation.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_parallel_moderation.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_moderation_calibration.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/moderation-lab/tests/worker.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/generation-lab/tests/worker.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/generation-lab/tests/library.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/generation-lab/tests/retry.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/generation-lab/tests/cost-display.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/generation-lab/tests/model-reference-cost.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/generation-lab/tests/fal.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node workers/log-retention/tests/worker.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_diagnostic_retention.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check workers/moderation-lab/public/app.js",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check workers/generation-lab/public/app.js",
+      "exitCode": 0
+    },
+    {
+      "command": "node Scripts/test_app_attest.mjs",
+      "exitCode": 0
+    }
+  ],
+  "passed": true
+}

@@ -4,6 +4,74 @@ import XCTest
 /// Opt-in only. Standard test runs skip this test and never send paid requests.
 final class LiveIntegrationTests: XCTestCase {
     @MainActor
+    func testExplicitBuild9ParallelGenerationAndConsent() async throws {
+        guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_BUILD9_CHECK"] == "one-batch" else {
+            throw XCTSkip("Build 9 physical verification requires explicit one-batch opt-in.")
+        }
+        let configuration = AppConfiguration.load()
+        XCTAssertFalse(configuration.mock)
+        guard !configuration.mock else { return }
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("LiveVerification", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let claim = directory.appendingPathComponent("build9-one-batch-claimed")
+        guard !FileManager.default.fileExists(atPath: claim.path) else {
+            throw XCTSkip("This installation has already claimed its build 9 batch.")
+        }
+        try Data("claimed".utf8).write(to: claim, options: .withoutOverwriting)
+        let suite = "Build9Live-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.set(1, forKey: PrivacyConsent.key)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let identities = AnonymousIdentityStore(service: suite)
+        let attestation = AppAttestClient(keychainService: suite + ".app-attest")
+        defer { Task { try? await attestation.clearLocalEnrollment() } }
+        let client = WorkerClient(serviceURL: configuration.serviceURL, identities: identities,
+                                  pendingStore: PendingGenerationStore(defaults: defaults), appAttest: attestation)
+        let gallery = GalleryStore(url: directory.appendingPathComponent("build9-test-gallery.json"))
+        defer { try? gallery.remove() }
+        let store = ColoringViewModel(service: client, isMock: false, defaults: defaults, galleryStore: gallery)
+        store.description = "A friendly dinosaur riding a bicycle on the moon"
+        store.setImageCount(3)
+        store.generate()
+        XCTAssertTrue(store.showsConsent)
+        XCTAssertFalse(store.hasConsent)
+        let beforeConsent = await identities.session()
+        XCTAssertNil(beforeConsent, "Old consent must send no registration or generation request.")
+        store.acceptConsent()
+        let deadline = ContinuousClock.now + .seconds(240)
+        while store.isGenerating && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        do {
+            XCTAssertFalse(store.isGenerating)
+            XCTAssertEqual(store.results.count, 3, "All default sheets must arrive: \(store.phase)")
+            XCTAssertTrue(store.hasConsent)
+            let ids = store.results.compactMap { $0.generationID?.uuidString.lowercased() }
+            XCTAssertEqual(Set(ids).count, 3)
+            for (index, result) in store.results.enumerated() {
+                let attachment = XCTAttachment(image: result.image)
+                attachment.name = "Build 9 real iOS 27.2 sheet \(index + 1)"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+            }
+            let receipt: [String: Any] = ["version": "1.0", "build": "9", "generationIDs": ids,
+                "sheetCount": store.results.count, "consentVersion": PrivacyConsent.currentVersion,
+                "finishedAt": ISO8601DateFormatter().string(from: Date())]
+            let data = try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: directory.appendingPathComponent("build9-live-verification.json"), options: .atomic)
+            let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+            attachment.name = "Build 9 generation receipt"; attachment.lifetime = .keepAlways; add(attachment)
+            try await client.deleteAccount()
+            let saved = await identities.session()
+            XCTAssertNil(saved)
+        } catch {
+            store.cancel()
+            try? await client.deleteAccount()
+            throw error
+        }
+    }
+    @MainActor
     func testExplicitBuild7GenerationReportingAndDeletion() async throws {
         guard ProcessInfo.processInfo.environment["COLORING_EXPLICIT_BUILD7_CHECK"] == "one-sheet" else {
             throw XCTSkip("Build 7 live verification requires explicit opt-in.")

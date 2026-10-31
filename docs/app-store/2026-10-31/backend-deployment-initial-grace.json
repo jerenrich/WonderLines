@@ -1,0 +1,53 @@
+{
+  "deployedAtUTC": "2026-10-31T07:05:30.664608+00:00",
+  "service": "coloring-sheets-api",
+  "sourceSHA256": "d282fca1d9673c8dc9e4a007b89e88494703e4e3b51b3420607d4294f97f567f",
+  "strategy": "parallel",
+  "secretBinding": "TYPESAFE_API_KEY",
+  "secretValueRecorded": false,
+  "previousDeployment": {
+    "id": "ddce067b-8f83-4eae-b1c4-3c537e29a5db",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "annotations": {
+      "workers/message": "GitHub main 9889a5e03554081eccd9c46afe6bc0737213d40b",
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "e9835307-5de0-4b7d-ae9a-593ca1d904e2",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-27T21:17:13.707248Z"
+  },
+  "activeDeployment": {
+    "id": "94aade39-eaac-46e6-8bea-0e580226669c",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "jordan.erenrich@gmail.com",
+    "annotations": {
+      "workers/message": "Calibrated parallel moderation for build9; source d282fca1d967",
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "a3f80983-ba5b-4468-b916-948071bfb940",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-31T07:05:23.000441Z"
+  },
+  "compatibilityDate": "2026-09-20",
+  "preservedOtherSettings": true,
+  "liveVerification": {
+    "passed": true,
+    "apiSmoke": "build9-service-probe.json",
+    "physicalDevice": "iPhone 17 Pro, iOS 27.2; three sheets generated and account deleted",
+    "logs": "build9-production-logs-sanitized.json",
+    "bothProvidersApproved": true,
+    "graceMs": 4000,
+    "overallTimeoutMs": 8000,
+    "legacyClients": "Cloudflare-only until updated notice accepted"
+  }
+}

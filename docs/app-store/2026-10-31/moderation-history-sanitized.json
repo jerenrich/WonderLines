@@ -1,0 +1,249 @@
+{
+  "windowUTC": {
+    "from": "2026-10-29T00:00:00Z",
+    "to": "2026-10-31T06:15:00Z"
+  },
+  "queryLimit": 1000,
+  "returnedEvents": 26,
+  "moderationChecks": 23,
+  "approved": 22,
+  "unavailable": 1,
+  "approvedLatencyMs": {
+    "min": 226,
+    "max": 1846,
+    "median": 755.5
+  },
+  "checks": [
+    {
+      "timestampUTC": "2026-10-30T07:10:01.112Z",
+      "event": "description_moderation",
+      "batchID": "a838cceb-7eff-4204-b69a-0b4106be714a",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1846
+    },
+    {
+      "timestampUTC": "2026-10-30T07:11:29.175Z",
+      "event": "description_moderation",
+      "batchID": "a0c91c8c-0b69-4413-8ccb-c7c0049a1acf",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 641
+    },
+    {
+      "timestampUTC": "2026-10-30T07:12:14.352Z",
+      "event": "description_moderation",
+      "batchID": "10e6aa0a-8e46-4940-800e-817d915fd3cb",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 477
+    },
+    {
+      "timestampUTC": "2026-10-30T07:13:28.492Z",
+      "event": "description_moderation",
+      "batchID": "bd563a0c-4ed6-4c3e-9ddf-6e1d9d5f4085",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1031
+    },
+    {
+      "timestampUTC": "2026-10-30T07:14:12.104Z",
+      "event": "description_moderation",
+      "batchID": "4f786373-625e-4064-b7d1-99d1744609fe",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1139
+    },
+    {
+      "timestampUTC": "2026-10-30T07:16:16.143Z",
+      "event": "description_moderation",
+      "batchID": "d1f7645a-2aef-416d-a502-f160a4082050",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 669
+    },
+    {
+      "timestampUTC": "2026-10-30T07:17:25.859Z",
+      "event": "description_moderation",
+      "batchID": "fde8d03c-dd49-4224-a83f-217e3f665426",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 544
+    },
+    {
+      "timestampUTC": "2026-10-30T07:18:06.961Z",
+      "event": "description_moderation",
+      "batchID": "f2e98384-8726-4c3a-b0d1-737d799e9ca2",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 340
+    },
+    {
+      "timestampUTC": "2026-10-30T07:18:52.150Z",
+      "event": "description_moderation",
+      "batchID": "3da6ba63-e157-4ba6-ac2b-a914b86ef845",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 344
+    },
+    {
+      "timestampUTC": "2026-10-30T07:20:06.063Z",
+      "event": "description_moderation",
+      "batchID": "c55e37c6-23b9-4661-b969-f3e522ac9da0",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 855
+    },
+    {
+      "timestampUTC": "2026-10-30T07:25:39.573Z",
+      "event": "description_moderation",
+      "batchID": "3aad1608-8649-4a6c-8dad-859bcff93fd2",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1207
+    },
+    {
+      "timestampUTC": "2026-10-30T07:27:19.292Z",
+      "event": "description_moderation",
+      "batchID": "949ec68e-f9a1-449a-96d5-6594faf7d3ea",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1089
+    },
+    {
+      "timestampUTC": "2026-10-30T07:28:39.044Z",
+      "event": "description_moderation",
+      "batchID": "e73f9fe4-63b6-476c-a568-4b781cb32281",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 809
+    },
+    {
+      "timestampUTC": "2026-10-30T07:29:33.232Z",
+      "event": "description_moderation",
+      "batchID": "61983b72-67d9-4a41-9380-acbcff6533e8",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 702
+    },
+    {
+      "timestampUTC": "2026-10-30T07:30:17.835Z",
+      "event": "description_moderation",
+      "batchID": "ee78f8d9-e00f-4efa-81eb-b50a1c9d9e32",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 451
+    },
+    {
+      "timestampUTC": "2026-10-30T10:38:13.003Z",
+      "event": "description_moderation",
+      "batchID": "adbdcf33-ad82-4065-91c2-fb184a7f18f4",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1823
+    },
+    {
+      "timestampUTC": "2026-10-30T10:38:47.963Z",
+      "event": "description_moderation",
+      "batchID": "85c09de5-49d8-495d-8145-285e7a81e9ab",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 668
+    },
+    {
+      "timestampUTC": "2026-10-30T17:37:58.537Z",
+      "event": "description_moderation",
+      "batchID": "4836fffe-90ce-426d-977d-19939b3d8e4b",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1589
+    },
+    {
+      "timestampUTC": "2026-10-30T17:38:58.183Z",
+      "event": "description_moderation",
+      "batchID": "dcbeb143-5a88-4409-a394-3add5914f908",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 1205
+    },
+    {
+      "timestampUTC": "2026-10-31T00:58:01.934Z",
+      "event": "description_moderation",
+      "batchID": "85a0607e-25d9-4904-a61a-3005e44aa14a",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "moderation_unavailable",
+      "gateway": "coloring-sheets",
+      "failure": "timeout",
+      "elapsedMs": 8000
+    },
+    {
+      "timestampUTC": "2026-10-31T05:26:46.673Z",
+      "event": "description_moderation",
+      "batchID": "39a06af9-1349-4a5f-bdf4-43efb1dd35b8",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 977
+    },
+    {
+      "timestampUTC": "2026-10-31T05:27:12.786Z",
+      "event": "description_moderation",
+      "batchID": "8293a02c-d0df-4410-bcea-4e3af4f3452f",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 226
+    },
+    {
+      "timestampUTC": "2026-10-31T06:04:49.743Z",
+      "event": "description_moderation",
+      "batchID": "56ca6c17-515d-4e2a-ab13-0ca877411607",
+      "model": "@cf/cloudflare/clef",
+      "policy": "all-ages-v8",
+      "outcome": "approved",
+      "gateway": "coloring-sheets",
+      "elapsedMs": 360
+    }
+  ]
+}

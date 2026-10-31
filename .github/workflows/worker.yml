@@ -10,6 +10,7 @@ on:
       - 'Scripts/test_comparison_queue.mjs'
       - 'Scripts/test_comparison_runner.mjs'
       - 'Scripts/test_provider_diagnostics.mjs'
+      - 'Scripts/test_operational_events.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -17,6 +18,9 @@ on:
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
+      - 'Scripts/test_parallel_moderation.mjs'
+      - 'Scripts/test_moderation_calibration.mjs'
+      - 'Scripts/lib/moderation-calibration.mjs'
       - 'Scripts/test_batch_moderation.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
@@ -29,6 +33,7 @@ on:
       - 'Scripts/test_comparison_queue.mjs'
       - 'Scripts/test_comparison_runner.mjs'
       - 'Scripts/test_provider_diagnostics.mjs'
+      - 'Scripts/test_operational_events.mjs'
       - 'Scripts/test_request_security.mjs'
       - 'Scripts/test_privacy.mjs'
       - 'Scripts/test_reporting_concurrency.mjs'
@@ -36,6 +41,9 @@ on:
       - 'Scripts/test_image_cost.mjs'
       - 'Scripts/test_app_attest.mjs'
       - 'Scripts/test_moderation.mjs'
+      - 'Scripts/test_parallel_moderation.mjs'
+      - 'Scripts/test_moderation_calibration.mjs'
+      - 'Scripts/lib/moderation-calibration.mjs'
       - 'Scripts/test_batch_moderation.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
@@ -82,11 +90,14 @@ jobs:
           node Scripts/test_comparison_queue.mjs
           node Scripts/test_comparison_runner.mjs
           node Scripts/test_provider_diagnostics.mjs
+          node Scripts/test_operational_events.mjs
           node Scripts/test_request_security.mjs
           node Scripts/test_privacy.mjs
           node Scripts/test_reporting_concurrency.mjs
           node Scripts/test_batch_moderation.mjs
           node Scripts/test_moderation.mjs
+          node Scripts/test_parallel_moderation.mjs
+          node Scripts/test_moderation_calibration.mjs
           node workers/moderation-lab/tests/worker.mjs
           node workers/generation-lab/tests/worker.mjs
           node workers/generation-lab/tests/library.mjs

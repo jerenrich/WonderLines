@@ -1,0 +1,11 @@
+{
+  "title": "Test - ColoringSheets",
+  "result": "Passed",
+  "totalTestCount": 93,
+  "passedTests": 86,
+  "failedTests": 0,
+  "skippedTests": 7,
+  "testFailures": [],
+  "commandExitCode": 75,
+  "reportingNote": "XCTest and finalized result summary passed. xcodebuild was interrupted after a simulator-diagnostics/result-packaging stall; its exit is not a clean success."
+}

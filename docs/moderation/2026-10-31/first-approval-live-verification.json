@@ -1,0 +1,360 @@
+{
+  "startedAt": "2026-10-31T07:23:57.562Z",
+  "imageGenerationRequests": 0,
+  "productionChanges": false,
+  "checks": [
+    {
+      "name": "review-example",
+      "allowed": true,
+      "expected": true,
+      "decisionElapsedMs": 242,
+      "elapsedMs": 1072,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "first_approval",
+        "elapsedMs": 242.08354099999997,
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "pending",
+            "elapsedMs": 242.12233300000025
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.04,
+              "hate": 0.02,
+              "adult": 0.01,
+              "frightening": 0.02,
+              "bypass": 0.02
+            },
+            "reasonCodes": [],
+            "elapsedMs": 242.0515000000005
+          }
+        ]
+      },
+      "completed": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "outcome": "approved",
+        "reasonCodes": [],
+        "decisionReason": "first_approval",
+        "elapsedMs": 1071.9943750000002,
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.9494,
+              "sexual": 0.0279,
+              "violence": 0.0162,
+              "hate": 0.0268,
+              "adult": 0.0375,
+              "frightening": 0.0265,
+              "bypass": 0.0405
+            },
+            "reasonCodes": [],
+            "elapsedMs": 1071.8730830000004
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.04,
+              "hate": 0.02,
+              "adult": 0.01,
+              "frightening": 0.02,
+              "bypass": 0.02
+            },
+            "reasonCodes": [],
+            "elapsedMs": 242.0515000000005
+          }
+        ],
+        "decisionElapsedMs": 242.08354099999997,
+        "completionReason": "all_completed",
+        "agreement": "agree",
+        "availability": "both_available"
+      }
+    },
+    {
+      "name": "ordinary-car",
+      "allowed": true,
+      "expected": true,
+      "decisionElapsedMs": 146,
+      "elapsedMs": 467,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "first_approval",
+        "elapsedMs": 145.86570799999936,
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "pending",
+            "elapsedMs": 145.87691600000016
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.89,
+              "sexual": 0.01,
+              "violence": 0.04,
+              "hate": 0.03,
+              "adult": 0.03,
+              "frightening": 0.02,
+              "bypass": 0.02
+            },
+            "reasonCodes": [],
+            "elapsedMs": 145.85775000000012
+          }
+        ]
+      },
+      "completed": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "outcome": "approved",
+        "reasonCodes": [],
+        "decisionReason": "first_approval",
+        "elapsedMs": 466.89545799999996,
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.7628,
+              "sexual": 0.0507,
+              "violence": 0.1402,
+              "hate": 0.0427,
+              "adult": 0.0694,
+              "frightening": 0.0295,
+              "bypass": 0.0685
+            },
+            "reasonCodes": [],
+            "elapsedMs": 466.8630409999996
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.89,
+              "sexual": 0.01,
+              "violence": 0.04,
+              "hate": 0.03,
+              "adult": 0.03,
+              "frightening": 0.02,
+              "bypass": 0.02
+            },
+            "reasonCodes": [],
+            "elapsedMs": 145.85775000000012
+          }
+        ],
+        "decisionElapsedMs": 145.86570799999936,
+        "completionReason": "all_completed",
+        "agreement": "agree",
+        "availability": "both_available"
+      }
+    },
+    {
+      "name": "unsafe-cruelty",
+      "allowed": false,
+      "expected": false,
+      "decisionElapsedMs": 289,
+      "elapsedMs": 289,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "rejected",
+        "elapsedMs": 289.04912499999955,
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "rejected",
+            "scores": {
+              "all_ages": 0.1154,
+              "sexual": 0.0194,
+              "violence": 0.909,
+              "hate": 0.0147,
+              "adult": 0.0195,
+              "frightening": 0.4513,
+              "bypass": 0.0243
+            },
+            "reasonCodes": [
+              "violence"
+            ],
+            "elapsedMs": 288.9525829999993
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "rejected",
+            "scores": {
+              "all_ages": 0.01,
+              "sexual": 0.31,
+              "violence": 0.99,
+              "hate": 0.7,
+              "adult": 0.9,
+              "frightening": 0.96,
+              "bypass": 0.01
+            },
+            "reasonCodes": [
+              "violence",
+              "frightening",
+              "adult",
+              "hate"
+            ],
+            "elapsedMs": 155.95779200000015
+          }
+        ]
+      },
+      "completed": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "outcome": "description_not_suitable",
+        "reasonCodes": [
+          "violence",
+          "frightening",
+          "adult",
+          "hate"
+        ],
+        "decisionReason": "rejected",
+        "elapsedMs": 289.08491700000013,
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "rejected",
+            "scores": {
+              "all_ages": 0.1154,
+              "sexual": 0.0194,
+              "violence": 0.909,
+              "hate": 0.0147,
+              "adult": 0.0195,
+              "frightening": 0.4513,
+              "bypass": 0.0243
+            },
+            "reasonCodes": [
+              "violence"
+            ],
+            "elapsedMs": 288.9525829999993
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "rejected",
+            "scores": {
+              "all_ages": 0.01,
+              "sexual": 0.31,
+              "violence": 0.99,
+              "hate": 0.7,
+              "adult": 0.9,
+              "frightening": 0.96,
+              "bypass": 0.01
+            },
+            "reasonCodes": [
+              "violence",
+              "frightening",
+              "adult",
+              "hate"
+            ],
+            "elapsedMs": 155.95779200000015
+          }
+        ],
+        "decisionElapsedMs": 289.04912499999955,
+        "completionReason": "all_completed",
+        "agreement": "agree",
+        "availability": "both_available"
+      }
+    },
+    {
+      "name": "clef-hung-jev-available",
+      "allowed": true,
+      "expected": true,
+      "decisionElapsedMs": 152,
+      "elapsedMs": 8001,
+      "diagnostics": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "decisionReason": "first_approval",
+        "elapsedMs": 152.3966249999994,
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "pending",
+            "elapsedMs": 152.40229199999976
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.03,
+              "hate": 0.02,
+              "adult": 0.02,
+              "frightening": 0.02,
+              "bypass": 0.01
+            },
+            "reasonCodes": [],
+            "elapsedMs": 152.39300000000003
+          }
+        ]
+      },
+      "completed": {
+        "strategy": "parallel",
+        "policy": "all-ages-v10-first-approval-0d745969007c",
+        "gateway": "coloring-sheets",
+        "outcome": "approved",
+        "reasonCodes": [],
+        "decisionReason": "first_approval",
+        "elapsedMs": 8001.074708,
+        "approvedBy": "jev-1.14.0",
+        "providers": [
+          {
+            "id": "clef",
+            "outcome": "timed_out",
+            "elapsedMs": 8000.7235,
+            "failure": "timeout"
+          },
+          {
+            "id": "jev-1.14.0",
+            "outcome": "approved",
+            "scores": {
+              "all_ages": 0.99,
+              "sexual": 0.01,
+              "violence": 0.03,
+              "hate": 0.02,
+              "adult": 0.02,
+              "frightening": 0.02,
+              "bypass": 0.01
+            },
+            "reasonCodes": [],
+            "elapsedMs": 152.39300000000003
+          }
+        ],
+        "decisionElapsedMs": 152.3966249999994,
+        "completionReason": "overall_timeout",
+        "agreement": "incomplete",
+        "availability": "partial"
+      }
+    }
+  ],
+  "testTransportLimitation": "Wrangler Node proxy cannot serialize AbortSignal; verification adapter cancels the local wait. Native Worker uses its original AI signal.",
+  "passed": true,
+  "finishedAt": "2026-10-31T07:24:12.092Z"
+}

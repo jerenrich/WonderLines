@@ -1,0 +1,129 @@
+{
+  "checkedAt": "2026-10-31T06:04:48.669Z",
+  "generationPosts": 1,
+  "appAttestExercised": false,
+  "requestProtocol": "Build 8 structured request; X-Coloring-API-Version: 2",
+  "checks": [
+    {
+      "name": "registration",
+      "status": 201
+    },
+    {
+      "name": "/v1/models",
+      "status": 200,
+      "data": {
+        "defaultModel": "gpt-image-2.5-flare",
+        "models": [
+          {
+            "id": "coloringbook-redmond-v2",
+            "provider": "fal",
+            "model": "coloringbook-redmond-v2"
+          },
+          {
+            "id": "z-image-turbo",
+            "provider": "fal",
+            "model": "z-image-turbo"
+          },
+          {
+            "id": "gpt-image-2.5-flare",
+            "provider": "openai",
+            "model": "gpt-image-2.5-flare"
+          },
+          {
+            "id": "gpt-image-2.5-sunburst",
+            "provider": "openai",
+            "model": "gpt-image-2.5-sunburst"
+          },
+          {
+            "id": "flux-2-klein-4b",
+            "provider": "workers-ai",
+            "model": "@cf/black-forest-labs/flux-2-klein-4b"
+          },
+          {
+            "id": "flux-2-klein-9b",
+            "provider": "workers-ai",
+            "model": "@cf/black-forest-labs/flux-2-klein-9b"
+          },
+          {
+            "id": "flux-2-dev",
+            "provider": "workers-ai",
+            "model": "@cf/black-forest-labs/flux-2-dev"
+          },
+          {
+            "id": "flux-1-schnell",
+            "provider": "workers-ai",
+            "model": "@cf/black-forest-labs/flux-1-schnell"
+          },
+          {
+            "id": "lucid-origin",
+            "provider": "workers-ai",
+            "model": "@cf/leonardo/lucid-origin"
+          },
+          {
+            "id": "phoenix-1.0",
+            "provider": "workers-ai",
+            "model": "@cf/leonardo/phoenix-1.0"
+          },
+          {
+            "id": "stable-diffusion-xl-base-1.0",
+            "provider": "workers-ai",
+            "model": "@cf/stabilityai/stable-diffusion-xl-base-1.0"
+          },
+          {
+            "id": "stable-diffusion-xl-lightning",
+            "provider": "workers-ai",
+            "model": "@cf/bytedance/stable-diffusion-xl-lightning"
+          },
+          {
+            "id": "dreamshaper-8-lcm",
+            "provider": "workers-ai",
+            "model": "@cf/lykon/dreamshaper-8-lcm"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/v1/app-attest/challenge",
+      "status": 200,
+      "challengeIssued": true
+    }
+  ],
+  "access": {
+    "features": [],
+    "generationCredits": 0,
+    "freeGenerationsRemaining": 100,
+    "allowanceResetsAt": "2026-11-01T00:00:00.000Z"
+  },
+  "generationID": "24549a18-7ad6-45c3-aa69-3bacd8219a2e",
+  "postStatus": 202,
+  "polls": 3,
+  "finalStatus": 200,
+  "elapsedMs": 16127,
+  "contentType": "image/png",
+  "imageBytes": 1345464,
+  "metrics": {
+    "requestedModel": "gpt-image-2.5-sunburst",
+    "provider": "openai",
+    "upstreamModel": "gpt-image-2.5-sunburst",
+    "viaGateway": true,
+    "requestedSize": "1456x1024",
+    "size": "1456x1024",
+    "inputTokens": 119,
+    "textInputTokens": 119,
+    "imageInputTokens": 0,
+    "cachedInputTokens": null,
+    "outputTokens": 154,
+    "totalTokens": 273,
+    "elapsedMs": 13156,
+    "estimatedInputUsd": 0.000595,
+    "estimatedOutputUsd": 0.00462,
+    "estimatedTotalUsd": 0.005215,
+    "costStatus": "estimated",
+    "ratesChecked": "2026-10-23",
+    "costEstimateVersion": 3,
+    "estimateBasis": "OpenAI reported token usage at standard text/image input and image output rates. No cache discount assumed. Inference estimate before credits or free allowances; excludes image conversion, Worker and storage charges. Not a billing receipt."
+  },
+  "passed": true,
+  "temporaryAccountCleanupStatus": 200,
+  "finishedAt": "2026-10-31T06:05:06.267Z"
+}

@@ -4,6 +4,85 @@ Cloudflare Worker used by the iPhone and iPad app for anonymous, authenticated i
 
 Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause categories), `upstreamErrorParameters` (known parameter names only), and `upstreamErrorDetailStatus` (`classified`, `unclassified`, or `unavailable`). Raw error messages, echoed input, credentials and image data are never retained, including hashes of provider messages. Classification identifies provider-reported symptoms, not independently verified root causes. Unknown wording remains explicitly unclassified. Image failures, persistence retries, failed starts and library outages use error-level logs, so query `outcome = "failed"` or the error-level view. The same safe fields persist with comparison jobs and appear in image details. This does not enable Gateway payload logging or retry inference.
 
+## Parallel moderation (31 October 2026)
+
+`MODERATION_STRATEGY=parallel` runs Cloudflare Clef and direct TypeSafe Jev
+(`jev-1.14.0`) together. The first valid approval immediately permits image
+reservation and generation, even if the other service rejects. A rejection waits
+for the other service because a later approval can still allow the batch. With
+no approval, a valid rejection rejects the batch once both services finish or the
+deadline expires; if neither returns a valid decision, the API returns HTTP 503.
+
+Both checks continue independently until they finish or eight seconds from their
+shared start. There is no post-approval grace wait. `waitUntil` retains the
+observation after the response; approval does not cancel the second request. The
+deadline cancels unfinished requests. Late responses cannot revise either the
+approval or the completed observation. `description_moderation` logs the gate;
+`description_moderation_complete` logs both final outcomes, `agreement`
+(`agree`, `disagree`, `incomplete`), `availability`, provider durations, decision
+latency and completion latency, correlated by the same batch or generation ID.
+Partial availability and disagreement are explicit, not treated as two approvals.
+
+Direct Jev uses only `https://api.typesafe.ai/v1/systemone`, without AI Gateway,
+redirects or automatic retries. Its `TYPESAFE_API_KEY` is a Worker secret, never an
+app configuration value. Responses must match the pinned model, contain all seven
+finite scores, and fit a 64 KiB JSON envelope. Logs retain only fixed outcome/
+failure fields, numeric scores, timings and HTTP status; no descriptions, keys or
+provider response text. TypeSafe failures use fixed details: `network_error`,
+`http_error`, `content_type`, `response_too_large`, `invalid_json`, `model_mismatch`
+and `invalid_scores`; timeouts have `outcome: timed_out` and `failure: timeout`.
+HTTP status is retained even for invalid successful responses. No raw exception,
+request/response body or arbitrary upstream diagnostic fields enter these logs.
+Clef Gateway payload collection stays disabled. One account batch shares one pair of checks. Valid
+decisions last ten minutes; total moderation outages have a one-second cooldown
+so the next explicit attempt can recover. No image reservation occurs first.
+
+The revised app notice names TypeSafe and uses consent version 2. New generation
+requests carry `X-AI-Sharing-Version: 2`. Older clients, including submitted build
+8, retain Cloudflare-only moderation even when parallel mode is enabled. The
+private comparison studio also retains its existing route until it supplies the
+updated sharing version. The consent marker is a client declaration, not an
+additional authentication mechanism. Existing image recovery never invokes
+moderation again.
+
+Prepare the direct key with `python3 Scripts/setup_typesafe_key.py` from the
+repository root. It saves `.secrets/typesafe-api-key` with mode 0600 and never
+echoes the value. The calibration command requires explicit opt-in to billed,
+text-only provider calls:
+
+```sh
+WRANGLER_CLI=/absolute/path/to/wrangler/bin/wrangler.js \
+  node Scripts/calibrate_parallel_moderation.mjs --live --provider=both \
+  --output=.build/parallel-moderation-calibration/live-scores.json \
+  --report=.build/parallel-moderation-calibration/report.json
+```
+
+Runs resume without repeating completed calls. To finish a run where Clef is
+already collected, use `--provider=jev`. `--retry-unavailable` explicitly rescores
+failed observations; ordinary resumes do not silently retry them. Offline fitting
+omits `--live`. It uses calibration labels to fit seven thresholds under a zero
+observed unsafe-approval constraint, separate validation labels to select the
+baseline or fitted profile, and a final held-out test set. The first-approval policy
+and each provider acting alone are evaluated separately. Sample performance does
+not establish a general error rate.
+
+`--write-profiles` writes the selected profiles only after both providers have
+complete calibration, validation and final-test results with zero observed unsafe
+approvals. This does not deploy or enable the feature. After inspecting the report,
+install the saved key as the production `TYPESAFE_API_KEY` secret and deploy the
+tested source with `--keep-vars --var MODERATION_STRATEGY:parallel`. Existing CI
+preserves this dashboard-managed strategy. Publish the matching consent/policy
+update and app build for the new route. The production key and strategy were activated on 31 October; see the dated
+backend deployment and build 9 preparation records under `docs/app-store/2026-10-31/`.
+
+Offline verification:
+
+```sh
+node Scripts/test_parallel_moderation.mjs
+node Scripts/test_moderation_calibration.mjs
+node Scripts/test_batch_moderation.mjs
+```
+
 ## Files
 
 - `src/index.mjs` — dependency-free Worker entry point and Durable Object account ledger.

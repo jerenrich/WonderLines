@@ -1,0 +1,79 @@
+{
+  "queryWindowUTC": [
+    "2026-10-31T07:04:00Z",
+    "2026-10-31T07:17:00Z"
+  ],
+  "moderationChecks": [
+    {
+      "timestampUTC": "2026-10-31T07:06:34.041000+00:00",
+      "workerVersion": "a3f80983-ba5b-4468-b916-948071bfb940",
+      "outcome": "approved",
+      "strategy": "parallel",
+      "policy": "all-ages-v9-parallel-0d745969007c",
+      "decisionReason": "both_approved",
+      "degraded": false,
+      "elapsedMs": 711,
+      "providers": [
+        {
+          "id": "clef",
+          "outcome": "approved",
+          "elapsedMs": 711
+        },
+        {
+          "id": "jev-1.14.0",
+          "outcome": "approved",
+          "elapsedMs": 84
+        }
+      ]
+    },
+    {
+      "timestampUTC": "2026-10-31T07:09:55.519000+00:00",
+      "workerVersion": "a3f80983-ba5b-4468-b916-948071bfb940",
+      "outcome": "approved",
+      "strategy": "parallel",
+      "policy": "all-ages-v9-parallel-0d745969007c",
+      "decisionReason": "both_approved",
+      "degraded": false,
+      "elapsedMs": 1678,
+      "providers": [
+        {
+          "id": "clef",
+          "outcome": "approved",
+          "elapsedMs": 1678
+        },
+        {
+          "id": "jev-1.14.0",
+          "outcome": "approved",
+          "elapsedMs": 98
+        }
+      ]
+    }
+  ],
+  "appAttestRequests": [
+    {
+      "route": "/v1/app-attest/challenge",
+      "status": 200
+    },
+    {
+      "route": "/v1/app-attest/challenge",
+      "status": 200
+    },
+    {
+      "route": "/v1/app-attest/challenge",
+      "status": 200
+    },
+    {
+      "route": "/v1/app-attest/attest",
+      "status": 200
+    },
+    {
+      "route": "/v1/app-attest/challenge",
+      "status": 200
+    },
+    {
+      "route": "/v1/app-attest/challenge",
+      "status": 200
+    }
+  ],
+  "note": "One check belongs to the single-sheet API smoke test, one to the shared physical three-sheet batch. No descriptions, account IDs, headers or tokens copied from raw logs."
+}

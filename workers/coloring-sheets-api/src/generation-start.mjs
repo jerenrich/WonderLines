@@ -1,6 +1,6 @@
 import {DEFAULT_MODEL, modelCatalog, imageRequest, falImageTask} from './image-provider.mjs';
 import {structuredComposition, MAX_DESCRIPTION_LENGTH, MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
-import {moderateSubject, ModerationError} from './moderation.mjs';
+import {moderateSubject, ModerationError, moderationEnvironment} from './moderation.mjs';
 
 const failure = (code,message,status,details={}) => ({status,value:{error:{code,message,...details}}});
 const DEFAULT_SIZE = {width:1024,height:1456};
@@ -36,7 +36,7 @@ export async function prepareGeneration(input,generationId,env={}) {
 
 // Authentication, HTTP/image responses and library storage belong to the
 // caller. Validation, recovery, moderation and reservation follow one path.
-export async function startGeneration(prepared,{env,call,queueImages=false,comparisonModels=false,validateProvider=true,fingerprintFormat='base64url',allowRoute,rateLimit,beforeReserve,onModeration}) {
+export async function startGeneration(prepared,{env,call,queueImages=false,comparisonModels=false,validateProvider=true,fingerprintFormat='base64url',allowRoute,rateLimit,beforeReserve,onModeration,sharingVersion,waitUntil}) {
   if(prepared.value?.error)return prepared;
   const {generationId,subject,model,size,composed,fingerprints}=prepared;
   const existing=await call('/job',{generationId});
@@ -53,10 +53,13 @@ export async function startGeneration(prepared,{env,call,queueImages=false,compa
   }catch{return failure('service_unavailable','Image provider configuration is incomplete.',503);}
   if(rateLimit){const limited=await rateLimit();if(limited)return limited;}
   if(composed) {
-    const decision=await call('/moderate-batch',{batchID:composed.batchID,description:composed.description});
+    const decision=await call('/moderate-batch',{batchID:composed.batchID,description:composed.description,
+      ...(sharingVersion ? {sharingVersion} : {})});
     if(decision.status!==200){onModeration?.({structured:true,generationId,batchID:composed.batchID,outcome:decision.value.error?.code,status:decision.status});return decision;}
   } else try {
-    const diagnostics=await moderateSubject(env,subject);
+    const diagnostics=await moderateSubject(moderationEnvironment(env, sharingVersion),subject, {
+      waitUntil, onComplete: diagnostics => onModeration?.({structured:false,stage:'complete',generationId,diagnostics}),
+    });
     onModeration?.({structured:false,generationId,outcome:'approved',diagnostics,reasonCodes:[]});
   }catch(error){
     if(!(error instanceof ModerationError))throw error;

@@ -1,0 +1,24 @@
+{
+  "verifiedAtUTC": "2026-10-31T07:17:08.877571+00:00",
+  "version": "1.0",
+  "build": "9",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "minimumOSVersion": "17.0",
+  "deviceFamilies": [
+    1,
+    2
+  ],
+  "signatureVerified": true,
+  "distribution": "App Store Connect export; not uploaded",
+  "appAttestEnvironment": "production",
+  "debuggingEntitlement": false,
+  "privacyManifestTracking": false,
+  "productionBackend": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+  "mockMode": false,
+  "typeSafeNoticePresent": true,
+  "localSecretScan": "No saved local secret values found in exported IPA",
+  "ipaSHA256": "910cf9cf507c24c54e4d731edc89cde13a8f8166507f86c1b0ec826b9e989766",
+  "ipaBytes": 6096000,
+  "ipaPath": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build9/Export/ColoringSheets.ipa",
+  "archivePath": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build9/WonderLines-1.0-9.xcarchive"
+}
