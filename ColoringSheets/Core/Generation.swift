@@ -2,20 +2,40 @@ import Foundation
 import OSLog
 import UIKit
 
-enum ImageModel: String, CaseIterable, Codable, Identifiable {
-    case flare = "gpt-image-2.5-flare"
-    case sunburst = "gpt-image-2.5-sunburst"
-    case zImageTurbo = "z-image-turbo"
-    case fluxKlein4B = "flux-2-klein-4b"
-    case fluxKlein9B = "flux-2-klein-9b"
-    case fluxDev = "flux-2-dev"
-    case fluxSchnell = "flux-1-schnell"
-    case lucidOrigin = "lucid-origin"
-    case phoenix = "phoenix-1.0"
-    case sdxl = "stable-diffusion-xl-base-1.0"
-    case sdxlLightning = "stable-diffusion-xl-lightning"
-    case dreamShaper = "dreamshaper-8-lcm"
-    case redmond = "coloringbook-redmond-v2"
+// Open identifiers let new server models work without a new binary. Keep the
+// original single-string encoding so saved galleries and pending jobs migrate.
+struct ImageModel: RawRepresentable, Codable, Hashable, Identifiable, CaseIterable {
+    let rawValue: String
+    init?(rawValue: String) {
+        guard rawValue.range(of: "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$", options: .regularExpression) != nil else { return nil }
+        self.rawValue = rawValue
+    }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        guard let model = Self(rawValue: value) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid model identifier")
+        }
+        self = model
+    }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+    static let flare = ImageModel(rawValue: "gpt-image-2.5-flare")!
+    static let sunburst = ImageModel(rawValue: "gpt-image-2.5-sunburst")!
+    static let zImageTurbo = ImageModel(rawValue: "z-image-turbo")!
+    static let fluxKlein4B = ImageModel(rawValue: "flux-2-klein-4b")!
+    static let fluxKlein9B = ImageModel(rawValue: "flux-2-klein-9b")!
+    static let fluxDev = ImageModel(rawValue: "flux-2-dev")!
+    static let fluxSchnell = ImageModel(rawValue: "flux-1-schnell")!
+    static let lucidOrigin = ImageModel(rawValue: "lucid-origin")!
+    static let phoenix = ImageModel(rawValue: "phoenix-1.0")!
+    static let sdxl = ImageModel(rawValue: "stable-diffusion-xl-base-1.0")!
+    static let sdxlLightning = ImageModel(rawValue: "stable-diffusion-xl-lightning")!
+    static let dreamShaper = ImageModel(rawValue: "dreamshaper-8-lcm")!
+    static let redmond = ImageModel(rawValue: "coloringbook-redmond-v2")!
+    static let allCases: [ImageModel] = [.flare, .sunburst, .zImageTurbo, .fluxKlein4B, .fluxKlein9B, .fluxDev, .fluxSchnell, .lucidOrigin, .phoenix, .sdxl, .sdxlLightning, .dreamShaper, .redmond]
     // Keep older cases decodable so unfinished generations can still be recovered.
     static let selectable: [ImageModel] = [
         .flare, .sunburst, .zImageTurbo, .fluxKlein4B, .fluxKlein9B, .phoenix
@@ -37,6 +57,7 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
         case .sdxl: return "Stable Diffusion XL"
         case .sdxlLightning: return "SDXL Lightning"
         case .dreamShaper: return "DreamShaper 8 LCM"
+        default: return rawValue
         }
     }
     // Reference presets and historical samples audited on 23 October 2026.
@@ -54,10 +75,11 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
         case .sdxl, .sdxlLightning: return 0
         case .dreamShaper: return 0.000002728
         case .redmond: return 0.0119645
+        default: return 0
         }
     }
     var priceEvidence: String { self == .zImageTurbo ? "Billing confirmed" : "Estimate" }
-    var priceSummary: String { "\(PriceDisplay.cents(referenceCostUsd)) / image · \(priceEvidence)" }
+    var priceSummary: String { Self.allCases.contains(self) ? "\(PriceDisplay.cents(referenceCostUsd)) / image · \(priceEvidence)" : "Reference price unavailable" }
     var priceExplanation: String {
         switch self {
         case .flare, .sunburst:
@@ -90,8 +112,56 @@ enum ImageModel: String, CaseIterable, Codable, Identifiable {
         case .sdxl: return "A classic illustration alternative. Available in beta."
         case .sdxlLightning: return "A faster Stable Diffusion alternative. Available in beta."
         case .dreamShaper: return "An alternative to compare for imaginative subjects and illustration styles."
+        default: return "Image generation model."
         }
     }
+}
+
+struct ModelReferencePrice: Codable, Equatable {
+    let usd: Double
+    let evidence: String
+    let explanation: String
+    var summary: String { "\(PriceDisplay.cents(usd)) / image · \(evidence)" }
+}
+
+struct ModelDescriptor: Codable, Identifiable, Equatable {
+    let id: ImageModel
+    let label: String
+    let detail: String
+    let price: ModelReferencePrice?
+    var priceSummary: String { price?.summary ?? "Reference price unavailable" }
+}
+
+struct ModelCatalogue: Codable, Equatable {
+    let schemaVersion: Int
+    let revision: String
+    let defaultModel: ImageModel?
+    let models: [ModelDescriptor]
+
+    func fallback(excluding unavailable: ImageModel) -> ModelDescriptor? {
+        models.first { $0.id == defaultModel && $0.id != unavailable }
+            ?? models.first { $0.id != unavailable }
+    }
+
+    func validated() throws -> Self {
+        guard schemaVersion == 1, !revision.isEmpty, revision.count <= 128, models.count <= 32,
+              Set(models.map(\.id)).count == models.count,
+              (models.isEmpty ? defaultModel == nil : models.contains { $0.id == defaultModel }),
+              models.allSatisfy({ model in
+                  !model.label.isEmpty && model.label.count <= 120 && !model.detail.isEmpty && model.detail.count <= 600 &&
+                  (model.price.map { $0.usd.isFinite && $0.usd >= 0 && $0.usd <= 100 &&
+                      !$0.evidence.isEmpty && $0.evidence.count <= 80 && !$0.explanation.isEmpty && $0.explanation.count <= 600 } ?? true)
+              }) else { throw GenerationError.configuration }
+        return self
+    }
+
+    // Used by previews and mock services only. Live clients start from a cached
+    // server catalogue or an empty list; compiled choices cannot reappear.
+    static let preview = ModelCatalogue(schemaVersion: 1, revision: "preview", defaultModel: .sunburst,
+        models: ImageModel.selectable.map { model in
+            ModelDescriptor(id: model, label: model.label, detail: model.detail,
+                price: ModelReferencePrice(usd: model.referenceCostUsd, evidence: model.priceEvidence, explanation: model.priceExplanation))
+        })
 }
 
 // App-owned page policy: a future format picker only needs to bind pageFormat.
@@ -157,11 +227,12 @@ struct GenerationRequest: Encodable, Equatable {
     let composition: SheetComposition
     let batchID: UUID
     let model: ImageModel
+    let modelLabel: String?
     let width: Int
     let height: Int
 
     init(description: String, age: Int, model: ImageModel, size: GenerationSize = .a4Default,
-         composition: SheetComposition? = nil, batchID: UUID? = nil) throws {
+         composition: SheetComposition? = nil, batchID: UUID? = nil, modelLabel: String? = nil) throws {
         guard size.isValid else { throw GenerationError.validation("The page size is unsupported. Choose a smaller page size.") }
         guard (3...18).contains(age) else { throw GenerationError.validation("Choose a child’s age from 3 to 18.") }
         let original = description.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -169,7 +240,7 @@ struct GenerationRequest: Encodable, Equatable {
         guard original.utf16.count <= 500 else {
             throw GenerationError.validation("Please shorten the description to 500 characters or fewer.")
         }
-        originalDescription = original; self.age = age; self.model = model
+        originalDescription = original; self.age = age; self.model = model; self.modelLabel = modelLabel
         self.composition = composition ?? .front; self.batchID = batchID ?? UUID()
         width = size.width; height = size.height
         _ = try encoded()
@@ -192,6 +263,12 @@ struct GenerationRequest: Encodable, Equatable {
         let data = try JSONEncoder().encode(self)
         guard data.count <= 4096 else { throw GenerationError.validation("Please shorten the description; the request is too large.") }
         return data
+    }
+
+    func replacingModel(with replacement: ModelDescriptor) throws -> Self {
+        try Self(description: originalDescription, age: age, model: replacement.id,
+                 size: GenerationSize(width: width, height: height), composition: composition,
+                 batchID: batchID, modelLabel: replacement.label)
     }
 }
 
@@ -266,24 +343,28 @@ struct ColoringResult: Identifiable {
     let data: Data
     let image: UIImage
     let requestedModel: ImageModel
+    var modelLabel: String?
+    var displayModelLabel: String { modelLabel ?? requestedModel.label }
     var metrics: GenerationMetrics?
     let access: AccessSnapshot?
     let generationID: UUID?
 
     init(data: Data, image: UIImage, requestedModel: ImageModel, metrics: GenerationMetrics?,
-         access: AccessSnapshot? = nil, generationID: UUID? = nil, id: UUID = UUID()) {
+         access: AccessSnapshot? = nil, generationID: UUID? = nil, id: UUID = UUID(), modelLabel: String? = nil) {
         self.id = id
         self.data = data; self.image = image; self.requestedModel = requestedModel
+        self.modelLabel = modelLabel
         self.metrics = metrics; self.access = access; self.generationID = generationID
     }
 }
 
 enum GenerationError: LocalizedError, Equatable {
-    case validation(String), configuration, deviceVerification, deviceRejected, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled, resultMissing
+    case validation(String), configuration, modelUnavailable, deviceVerification, deviceRejected, allowance, serviceBudget, upstream(String), server(Int), invalidImage, uncertain, cancelled, resultMissing
     var errorDescription: String? {
         switch self {
         case .validation(let message), .upstream(let message): return message
         case .configuration: return "The coloring service needs a configuration update. Contact the developer for an updated app."
+        case .modelUnavailable: return "Image generation is temporarily unavailable. Please try again shortly."
         case .deviceVerification: return "Secure device verification failed before the generation request was sent. Check Settings → Diagnostics for the failing step and code."
         case .deviceRejected: return "The service rejected secure device verification before image generation. Check Diagnostics for the Worker error code."
         case .allowance: return "Today’s image allowance has been used. Please try again after midnight UTC."
@@ -300,11 +381,12 @@ enum GenerationError: LocalizedError, Equatable {
 struct PendingGeneration: Codable, Identifiable {
     let id: UUID
     let model: ImageModel
+    let modelLabel: String?
     let createdAt: Date
     let batchID: UUID?
 
-    init(id: UUID, model: ImageModel, createdAt: Date, batchID: UUID? = nil) {
-        self.id = id; self.model = model; self.createdAt = createdAt; self.batchID = batchID
+    init(id: UUID, model: ImageModel, createdAt: Date, batchID: UUID? = nil, modelLabel: String? = nil) {
+        self.id = id; self.model = model; self.createdAt = createdAt; self.batchID = batchID; self.modelLabel = modelLabel
     }
 }
 
@@ -331,6 +413,8 @@ actor PendingGenerationStore {
 }
 
 protocol GenerationServing {
+    var modelCatalogueCacheKey: String? { get }
+    func modelCatalogue() async throws -> ModelCatalogue
     func generate(_ request: GenerationRequest) async throws -> ColoringResult
     func generationMetrics(_ id: UUID) async throws -> GenerationMetrics?
     func pendingGenerations() async -> [PendingGeneration]
@@ -341,6 +425,8 @@ protocol GenerationServing {
     func reportSheet(_ id: UUID, reason: String) async throws
 }
 extension GenerationServing {
+    var modelCatalogueCacheKey: String? { nil }
+    func modelCatalogue() async throws -> ModelCatalogue { .preview }
     func generationMetrics(_ id: UUID) async throws -> GenerationMetrics? { nil }
     func pendingGenerations() async -> [PendingGeneration] { [] }
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult { throw GenerationError.configuration }
@@ -437,6 +523,7 @@ final class WorkerClient: GenerationServing {
     static let endpoint = defaultServiceURL.appending(path: "/v1/generations")
     private static let logger = Logger(subsystem: "com.jordan.family.ColoringSheets", category: "WorkerClient")
     private let serviceURL: URL
+    var modelCatalogueCacheKey: String? { "modelCatalogue.v1." + serviceURL.absoluteString }
     private let endpoint: URL
     // This exists solely for isolated legacy-parser/network tests. The app does not
     // bundle or use shared credentials.
@@ -486,6 +573,23 @@ final class WorkerClient: GenerationServing {
     }
 
     func generate(_ request: GenerationRequest) async throws -> ColoringResult {
+        var result = try await generateImage(request)
+        result.modelLabel = request.modelLabel
+        return result
+    }
+
+    func modelCatalogue() async throws -> ModelCatalogue {
+        var request = URLRequest(url: serviceURL.appending(path: "/v1/models"))
+        request.setValue("Bearer " + (try await authorization()), forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 20
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              http.value(forHTTPHeaderField: "Content-Type")?.lowercased().contains("application/json") == true,
+              data.count <= 65536 else { throw GenerationError.server((response as? HTTPURLResponse)?.statusCode ?? 0) }
+        return try JSONDecoder().decode(ModelCatalogue.self, from: data).validated()
+    }
+
+    private func generateImage(_ request: GenerationRequest) async throws -> ColoringResult {
         // A lock must not cancel App Attest or the POST before the server saves
         // the job. iOS grants a bounded window; polling does not hold this lease.
         let submissionLease = await GenerationSubmissionLease()
@@ -524,7 +628,7 @@ final class WorkerClient: GenerationServing {
         }
         if let scope = await pendingScope() {
             try await pendingStore.add(PendingGeneration(id: generationID, model: request.model, createdAt: Date(),
-                                                       batchID: request.batchID), scope: scope)
+                                                       batchID: request.batchID, modelLabel: request.modelLabel), scope: scope)
         }
         if Task.isCancelled {
             if let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
@@ -677,8 +781,10 @@ final class WorkerClient: GenerationServing {
     func recoverPending(_ pending: PendingGeneration) async throws -> ColoringResult {
         let credential = try await authorization()
         guard await pendingGenerations().contains(where: { $0.id == pending.id }) else { throw GenerationError.configuration }
-        return try await recover(pending.id, authorization: credential, requestedModel: pending.model,
-                                 reservationGraceUntil: pending.createdAt.addingTimeInterval(60))
+        var result = try await recover(pending.id, authorization: credential, requestedModel: pending.model,
+                                       reservationGraceUntil: pending.createdAt.addingTimeInterval(60))
+        result.modelLabel = pending.modelLabel
+        return result
     }
 
     func acknowledgeResult(_ id: UUID) async {
@@ -743,6 +849,7 @@ final class WorkerClient: GenerationServing {
                                               model: requestedModel, error: error)
             // Keep interrupted, authentication and transient failures recoverable.
             let terminal = [400, 410, 422, 429].contains(response.statusCode) ||
+                (response.statusCode == 409 && Self.workerErrorCode(data, response: response) == "model_unavailable") ||
                 (response.statusCode == 404 && Self.workerErrorCode(data, response: response) == "not_found") ||
                 (response.statusCode == 502 && Self.workerErrorCode(data, response: response) != nil)
             if terminal, let scope = await pendingScope() { await pendingStore.remove(generationID, scope: scope) }
@@ -857,6 +964,9 @@ final class WorkerClient: GenerationServing {
     static func parse(_ data: Data, response: HTTPURLResponse, requestedModel: ImageModel) throws -> ColoringResult {
         let contentType = response.value(forHTTPHeaderField: "Content-Type")?.lowercased().split(separator: ";").first?.trimmingCharacters(in: .whitespaces)
         guard response.statusCode == 200 else {
+            if response.statusCode == 409, workerErrorCode(data, response: response) == "model_unavailable" {
+                throw GenerationError.modelUnavailable
+            }
             if response.statusCode == 404, workerErrorCode(data, response: response) == "not_found" {
                 throw GenerationError.resultMissing
             }

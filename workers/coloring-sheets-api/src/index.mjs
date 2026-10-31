@@ -1,5 +1,6 @@
 // Public v1 API. An account is a random UUID; no sign-in or personal profile exists.
-import {modelCatalog, imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits, validateFalConfiguration, falQueueURL} from './image-provider.mjs';
+import {imageRequest, runImageRequest, ImageProviderError, submitFalRequest, pollFalRequest, falBillableUnits, validateFalConfiguration, falQueueURL} from './image-provider.mjs';
+import {loadModelCatalog} from './model-registry.mjs';
 import {imageCost, refreshImageCostMetrics} from './image-cost.mjs';
 export {ComparisonImageRunner} from './comparison-image-runner.mjs';
 import {cleanLegacyUsageLogs} from './diagnostic-retention.mjs';
@@ -387,10 +388,24 @@ export class Account {
     const usage = await this.state.storage.get('usage'), credits = (await this.state.storage.get('credits')) ?? 0;
     return {features: [], generationCredits: credits, freeGenerationsRemaining: Math.max(0, allowance - (usage?.day === day ? usage.used : 0)), allowanceResetsAt: new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString()};
   }
-  async reserve({generationId, fingerprint, falTask, imageTask}) {
+  async reserve({generationId, publicModel, modelRoute, fingerprint, falTask, imageTask}) {
     if (!/^[0-9a-f-]{36}$/.test(generationId) || typeof fingerprint !== 'string') return fail('invalid_request', 'Invalid generation.', 400);
     const jobKey = 'job:' + generationId, existing = await this.state.storage.get(jobKey);
     if (existing) return existing.fingerprint === fingerprint ? reply({job: existing, access: await this.access()}) : fail('idempotency_conflict', 'Generation ID was already used.', 409);
+    if (this.env.MODEL_REGISTRY !== undefined) {
+      let catalogue;
+      try {
+        const account = await this.state.storage.get('account');
+        catalogue = await loadModelCatalog(this.env, {comparison: account.id === this.env.COMPARISON_ACCOUNT_ID});
+      } catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
+      const selected = publicModel ?? imageTask?.publicModel ?? falTask?.publicModel;
+      if (!Object.hasOwn(catalogue.routes, selected)) return fail('model_unavailable', 'This model is no longer available. Refresh the model list and choose another model.', 409);
+      // Admission uses the same resolved route as preflight, even while KV is
+      // propagating. Never reserve a queued request against a different preset.
+      const submittedRoute = modelRoute ?? imageTask?.route;
+      if (!submittedRoute || submittedRoute.provider !== catalogue.routes[selected].provider || submittedRoute.model !== catalogue.routes[selected].model) return fail('model_unavailable', 'Model settings changed. Refresh the model list and try again.', 409);
+      if (imageTask && (imageTask.route?.provider !== submittedRoute.provider || imageTask.route?.model !== submittedRoute.model)) return fail('model_unavailable', 'Model settings changed. Refresh the model list and try again.', 409);
+    }
     if (falTask) try {
       validateFalConfiguration(this.env);
       falQueueURL(falTask.request?.model);
@@ -404,7 +419,7 @@ export class Account {
     if (global.status >= 400) return fail('service_unavailable', 'Could not reserve service capacity.', 503);
     await this.state.storage.put('usage', {day, used: used + 1});
     if (used >= allowance) await this.state.storage.put('credits', --credits);
-    const job = {id: generationId, fingerprint, state: 'processing', createdAt: Date.now(),
+    const job = {id: generationId, publicModel, fingerprint, state: 'processing', createdAt: Date.now(),
       ...(falTask ? {fal: {...falTask, stage: 'queued'}} : {}),
       ...(imageTask ? {imageTask: {...imageTask, stage: 'queued'}} : {})};
     if (falTask || imageTask) {
@@ -797,8 +812,8 @@ async function fetchRequest(request, env, ctx) {
 
   if (url.pathname === '/v1/models' && request.method === 'GET') {
     try {
-      const {defaultModel, routes} = modelCatalog(env);
-      return reply({defaultModel, models: Object.entries(routes).map(([id, route]) => ({id, ...route}))});
+      const {schemaVersion, revision, defaultModel, models} = await loadModelCatalog(env);
+      return reply({schemaVersion, revision, defaultModel, models});
     } catch { return fail('service_unavailable', 'Image model configuration is incomplete.', 503); }
   }
   if (url.pathname === '/v1/access' && request.method === 'GET') return reply({access: account.access});

@@ -27,7 +27,10 @@ struct ContentView: View {
     private var demoCountLabel: String { "\(store.imageCount) demo \(store.imageCount == 1 ? "sheet" : "sheets")" }
     private var needsIdea: Bool { store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var generateTitle: String { store.isMock ? "Make \(demoCountLabel)" : "Generate \(sheetCountLabel)" }
-    private var primaryActionTitle: String { store.isGenerating ? "STOP" : (needsIdea ? "Surprise me" : generateTitle) }
+    private var primaryActionTitle: String {
+        if store.isRefreshingModels && store.availableModels.isEmpty { return "Loading models…" }
+        return store.isGenerating ? "STOP" : (needsIdea ? "Surprise me" : generateTitle)
+    }
     private var primaryActionSymbol: String { store.isGenerating ? "stop.fill" : (needsIdea ? "shuffle" : "sparkles") }
 
     var body: some View {
@@ -300,7 +303,7 @@ struct ContentView: View {
                 .fixedSize(horizontal: true, vertical: false)
                 .buttonStyle(.borderedProminent)
                 .tint(store.isGenerating ? Color(uiColor: .systemGray5) : accent)
-                .disabled((!store.isGenerating && !needsIdea && store.validationMessage != nil) || store.deletionPending || store.isReporting)
+                .disabled((!store.isGenerating && !needsIdea && store.validationMessage != nil) || store.deletionPending || store.isReporting || (store.isRefreshingModels && store.availableModels.isEmpty))
                 .accessibilityLabel(store.isGenerating ? "Stop waiting" : primaryActionTitle)
                 .accessibilityHint(store.isGenerating ? "Stops waiting for results. Sheets already requested may still finish." : (needsIdea ? "Fills the description so you can edit it before generating" : ""))
                 .accessibilityIdentifier(store.isGenerating ? "stopGeneration" : (needsIdea ? "surpriseMe" : "generate"))
@@ -309,7 +312,7 @@ struct ContentView: View {
                 if !store.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    let message = store.validationMessage {
                     Button { detailMessage = message } label: {
-                        Label("Shorten the description", systemImage: "exclamationmark.circle")
+                        Label("Review generation settings", systemImage: "exclamationmark.circle")
                             .font(.footnote)
                             .frame(minHeight: 44)
                     }
@@ -498,24 +501,36 @@ struct ContentView: View {
                 }
                 Section("Generation") {
                     Picker("Model", selection: $store.model) {
-                        ForEach(ImageModel.selectable) { model in
+                        ForEach(store.availableModels) { model in
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(model.label)
                                 Text(model.priceSummary).font(.caption).foregroundStyle(.secondary)
                             }
                             .accessibilityElement(children: .combine)
-                            .accessibilityIdentifier("modelChoice.\(model.rawValue)")
-                            .tag(model)
+                            .accessibilityIdentifier("modelChoice.\(model.id.rawValue)")
+                            .tag(model.id)
                         }
                     }
                     .pickerStyle(.navigationLink)
+                    .disabled(store.availableModels.isEmpty)
                     .accessibilityIdentifier("modelSetting")
-                    Text(store.model.detail)
+                    Text(store.selectedModel?.detail ?? "No image models are currently available.")
                         .font(.footnote).foregroundStyle(.secondary)
-                    Text(store.model.priceExplanation)
+                    Text(store.selectedModel?.price?.explanation ?? "Reference price unavailable.")
                         .font(.footnote).foregroundStyle(.secondary)
-                    Text("Reference prices are in US cents, checked 23 Oct 2026. Tiny nonzero costs show <¢0.01. Credits and other service charges are excluded.")
+                    Text("Reference prices are in US cents. Tiny nonzero costs show <¢0.01. Actual costs may vary; credits and other service charges are excluded.")
                         .font(.footnote).foregroundStyle(.secondary)
+                    if let message = store.modelCatalogueMessage {
+                        Text(message).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Button {
+                        Task { await store.refreshModelCatalogue() }
+                    } label: {
+                        if store.isRefreshingModels { ProgressView("Refreshing models") }
+                        else { Text("Refresh models") }
+                    }
+                    .disabled(store.isRefreshingModels || !store.canUseService)
+                    .accessibilityIdentifier("refreshModels")
                     Picker("Images per generation", selection: Binding(
                         get: { store.imageCount }, set: { store.setImageCount($0) })) {
                         ForEach(1...ColoringViewModel.batchSize, id: \.self) { count in
@@ -571,6 +586,7 @@ struct ContentView: View {
                 Button("Withdraw consent", role: .destructive) { store.withdrawConsent() }
             } message: { Text("New generation and recovery will pause. Requests already sent cannot be recalled. Your saved sheets remain available. Use Delete account and data to remove stored records.") }
             .navigationTitle("Settings")
+            .task { await store.refreshModelCatalogue() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
         }
@@ -620,7 +636,7 @@ struct ContentView: View {
                     Section("Selected sheet · \(store.selectedIndex + 1) of \(store.results.count)") {
                         metric(result.metrics?.costStatus == "reported" ? "Reported cost" : "Estimated cost",
                                result.metrics?.estimatedTotalUsd.map(PriceDisplay.cents) ?? "Unavailable")
-                        metric("Model", result.requestedModel.label)
+                        metric("Model", result.displayModelLabel)
                         metric("Provider", result.metrics?.provider ?? "Unavailable")
                         metric("Model used", result.metrics?.upstreamModel ?? result.metrics?.requestedModel ?? "Unavailable")
                         metric("Requested pixels", result.metrics?.requestedSize ?? "Unavailable")
@@ -630,7 +646,7 @@ struct ContentView: View {
                         metric("Output tokens", count(result.metrics?.outputTokens))
                         metric("Total tokens", count(result.metrics?.totalTokens))
                         metric("Duration", result.metrics?.elapsedMs.map { String(format: "%.1f seconds", $0 / 1000) } ?? "Unavailable")
-                        if result.requestedModel.usesFalQueue {
+                        if result.metrics?.provider == "fal" || (result.metrics?.provider == nil && result.requestedModel.usesFalQueue) {
                             metric("Inference time", result.metrics?.inferenceMs.map { String(format: "%.3f seconds", $0 / 1000) } ?? "Unavailable")
                             metric("Billable units", result.metrics?.billableUnits.map { String(format: "%.6f", $0) } ?? "Not yet reported")
                             metric("Unit price", result.metrics?.unitPriceUsd.map {

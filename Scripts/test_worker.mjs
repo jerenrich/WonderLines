@@ -11,7 +11,7 @@ import {modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mj
 // All decodable model IDs need a server route, including retired recovery-only models.
 const swiftModels = readFileSync(new URL('../ColoringSheets/Core/Generation.swift', import.meta.url), 'utf8')
   .split('// App-owned page policy:')[0];
-const pickerIDs = [...swiftModels.matchAll(/case \w+ = "([^"]+)"/g)].map(match => match[1]);
+const pickerIDs = [...swiftModels.matchAll(/static let \w+ = ImageModel\(rawValue: "([^"]+)"\)!/g)].map(match => match[1]);
 assert.deepEqual(pickerIDs.sort(), Object.keys(modelCatalog({}).routes).sort());
 
 class MemoryStorage {

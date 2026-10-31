@@ -7,18 +7,19 @@ struct GallerySnapshot: Codable {
         let id: UUID
         let data: Data
         let model: ImageModel
+        let modelLabel: String?
         let metrics: GenerationMetrics?
         let access: AccessSnapshot?
         let generationID: UUID?
 
         init(_ result: ColoringResult) {
-            id = result.id; data = result.data; model = result.requestedModel
+            id = result.id; data = result.data; model = result.requestedModel; modelLabel = result.modelLabel
             metrics = result.metrics; access = result.access; generationID = result.generationID
         }
         var result: ColoringResult? {
             guard let image = UIImage(data: data) else { return nil }
             return ColoringResult(data: data, image: image, requestedModel: model, metrics: metrics,
-                                  access: access, generationID: generationID, id: id)
+                                  access: access, generationID: generationID, id: id, modelLabel: modelLabel)
         }
     }
     let sheets: [Sheet]
@@ -70,6 +71,12 @@ final class ColoringViewModel: ObservableObject {
     }
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
     @Published var model: ImageModel { didSet { defaults.set(model.rawValue, forKey: "generationModel") } }
+    @Published private(set) var modelCatalogue: ModelCatalogue
+    @Published private(set) var isRefreshingModels = false
+    @Published private(set) var modelCatalogueMessage: String?
+    private var hasModelCatalogue: Bool
+    var availableModels: [ModelDescriptor] { modelCatalogue.models }
+    var selectedModel: ModelDescriptor? { availableModels.first { $0.id == model } }
     @Published private(set) var imageCount: Int { didSet { defaults.set(imageCount, forKey: "imageCount") } }
     @Published var pageFormat: PageFormat = .a4Landscape
     private var previewSize = CGSize(width: 728, height: 512)
@@ -100,6 +107,9 @@ final class ColoringViewModel: ObservableObject {
     private let now: () -> Date
     private var lastActiveAt: Date?
     private var tasks: [Task<Void, Never>] = []
+    private var catalogueRefreshTask: Task<Void, Never>?
+    private var catalogueGenerationTask: Task<Void, Never>?
+    private var batchFallbackModels: [ImageModel: ModelDescriptor] = [:]
     private var attempt = UUID()
     private var receivedFirstResult = false
     private var pendingResults: [ColoringResult] = []
@@ -132,8 +142,15 @@ final class ColoringViewModel: ObservableObject {
         lastActiveAt = defaults.object(forKey: Self.sessionActivityKey) as? Date ?? self.galleryStore?.modificationDate
         let stored = defaults.integer(forKey: "childAge")
         age = (3...18).contains(stored) ? stored : Self.defaultAge
-        let storedModel = defaults.string(forKey: "generationModel")
-        model = ImageModel.selectable.first(where: { $0.rawValue == storedModel }) ?? .sunburst
+        let cached = service.modelCatalogueCacheKey.flatMap { defaults.data(forKey: $0) }
+            .flatMap { try? JSONDecoder().decode(ModelCatalogue.self, from: $0).validated() }
+        let initialCatalogue = cached ?? (service.modelCatalogueCacheKey == nil ? .preview :
+            ModelCatalogue(schemaVersion: 1, revision: "pending", defaultModel: nil, models: []))
+        modelCatalogue = initialCatalogue
+        hasModelCatalogue = cached != nil || service.modelCatalogueCacheKey == nil
+        let storedModel = defaults.string(forKey: "generationModel").flatMap(ImageModel.init(rawValue:))
+        model = initialCatalogue.models.first(where: { $0.id == storedModel })?.id ?? initialCatalogue.defaultModel ??
+            (service.modelCatalogueCacheKey == nil ? nil : storedModel) ?? .sunburst
         let storedCount = defaults.object(forKey: "imageCount") == nil ? Self.batchSize : defaults.integer(forKey: "imageCount")
         imageCount = min(max(storedCount, 1), Self.batchSize)
         if !sessionHasExpired, !defaults.bool(forKey: Self.discardGalleryKey), let saved = self.galleryStore?.load() {
@@ -221,8 +238,12 @@ final class ColoringViewModel: ObservableObject {
         // Drain any registration/submission already started before removing its
         // credential. Cancellation alone does not finish an async registration.
         let running = tasks
+        let catalogueRequest = catalogueRefreshTask
+        let preparingGeneration = catalogueGenerationTask
         cancel()
         for task in running { await task.value }
+        await catalogueRequest?.value
+        await preparingGeneration?.value
         do {
             try await service.deleteAccount()
             try galleryStore?.remove()
@@ -233,6 +254,12 @@ final class ColoringViewModel: ObservableObject {
             completedCount = 0; failedCount = 0; activeBatchSize = 0; isRecovering = false
             access = .free; firstFailure = nil; receivedFirstResult = false
             description = ""; age = Self.defaultAge; model = .sunburst; imageCount = Self.batchSize
+            if let key = service.modelCatalogueCacheKey {
+                defaults.removeObject(forKey: key)
+                modelCatalogue = ModelCatalogue(schemaVersion: 1, revision: "pending", defaultModel: nil, models: [])
+                hasModelCatalogue = false
+            }
+            modelCatalogueMessage = nil
             for key in ["descriptionDraft", "childAge", "generationModel", "imageCount", PrivacyConsent.key, PrivacyConsent.deletionKey] {
                 defaults.removeObject(forKey: key)
             }
@@ -269,6 +296,45 @@ final class ColoringViewModel: ObservableObject {
         imageCount = min(max(count, 1), Self.batchSize)
     }
 
+    func refreshModelCatalogue() async {
+        guard canUseService else { return }
+        if let active = catalogueRefreshTask { await active.value; return }
+        isRefreshingModels = true
+        let shared = Task<Void, Never> { [weak self] in
+            guard let self else { return }
+            await self.fetchModelCatalogue()
+        }
+        catalogueRefreshTask = shared
+        await shared.value
+        catalogueRefreshTask = nil
+        isRefreshingModels = false
+    }
+
+    private func fetchModelCatalogue() async {
+        do {
+            let catalogue = try await service.modelCatalogue().validated()
+            guard canUseService else { return }
+            modelCatalogue = catalogue
+            hasModelCatalogue = true
+            if let key = service.modelCatalogueCacheKey {
+                defaults.set(try JSONEncoder().encode(catalogue), forKey: key)
+            }
+            let hadSavedSelection = defaults.string(forKey: "generationModel") != nil
+            let selectionRemoved = !catalogue.models.contains(where: { $0.id == model })
+            if (!hadSavedSelection || selectionRemoved), let replacement = catalogue.defaultModel {
+                model = replacement
+                modelCatalogueMessage = nil
+            } else {
+                modelCatalogueMessage = catalogue.models.isEmpty ? "Image generation is temporarily paused. Please try again later." : nil
+            }
+        } catch {
+            guard canUseService else { return }
+            modelCatalogueMessage = hasModelCatalogue
+                ? "The model list could not be refreshed. Showing the last saved list; availability is checked when you generate."
+                : "The model list could not be loaded. Check your connection and tap Refresh models."
+        }
+    }
+
     func selectResult(at index: Int) {
         guard results.indices.contains(index) else { return }
         selectedResultID = results[index].id
@@ -279,13 +345,16 @@ final class ColoringViewModel: ObservableObject {
         selectResult(at: index)
     }
     var validationMessage: String? {
-        do { _ = try requests(); return nil } catch { return error.localizedDescription }
+        do { _ = try requests(requireAvailableModel: hasModelCatalogue); return nil } catch { return error.localizedDescription }
     }
-    private func requests(batchID: UUID? = nil) throws -> [GenerationRequest] {
+    private func requests(batchID: UUID? = nil, requireAvailableModel: Bool = true) throws -> [GenerationRequest] {
+        if requireAvailableModel && selectedModel == nil {
+            throw GenerationError.validation(hasModelCatalogue ? "Image generation is temporarily unavailable. Refresh models in Settings and try again." : "Open Settings to load the available models.")
+        }
         let size = pageFormat.imageSize(for: previewSize, displayScale: displayScale)
         return try SheetComposition.allCases.prefix(imageCount).map { composition in
             try GenerationRequest(description: description, age: age, model: model,
-                                  size: size, composition: composition, batchID: batchID)
+                                  size: size, composition: composition, batchID: batchID, modelLabel: selectedModel?.label)
         }
     }
 
@@ -298,6 +367,19 @@ final class ColoringViewModel: ObservableObject {
     func generate() {
         guard !isGenerating, !deletionPending, !isReporting else { return }
         guard canUseService else { consentForRecovery = false; showsConsent = true; return }
+        if !hasModelCatalogue {
+            guard catalogueGenerationTask == nil else { return }
+            catalogueGenerationTask = Task { [weak self] in
+                guard let self else { return }
+                await refreshModelCatalogue()
+                guard !Task.isCancelled else { return }
+                catalogueGenerationTask = nil
+                guard canUseService else { return }
+                if hasModelCatalogue { generate() }
+                else { phase = .error(modelCatalogueMessage ?? "The model list could not be loaded. Please try again.") }
+            }
+            return
+        }
         let current = UUID()
         let requests: [GenerationRequest]
         do { requests = try self.requests(batchID: current) } catch { phase = .error(error.localizedDescription); return }
@@ -309,6 +391,7 @@ final class ColoringViewModel: ObservableObject {
         revealTask?.cancel(); revealTask = nil
         pendingResults = []; hasRevealedResults = false
         attempt = current
+        batchFallbackModels = [:]
         generationBatchID = current
         recoveringIDs = nil
         resumesAfterBackground = false
@@ -320,14 +403,36 @@ final class ColoringViewModel: ObservableObject {
         // Validate and capture every composition before starting any paid request.
         // Editing/resizing cannot change the subject, age, or size of this batch.
         tasks = requests.map { request in
-            Task { [weak self, service] in
-                guard !Task.isCancelled else { return }
+            Task { [weak self] in
+                guard let self, !Task.isCancelled else { return }
                 let outcome: Result<ColoringResult, Error>
-                do { outcome = .success(try await DiagnosticContext.$batchID.withValue(current) { try await service.generate(request) }) }
+                do { outcome = .success(try await DiagnosticContext.$batchID.withValue(current) { try await generateWithModelFallback(request, attempt: current) }) }
                 catch { outcome = .failure(error) }
                 guard !Task.isCancelled else { return }
-                self?.receive(outcome, attempt: current)
+                receive(outcome, attempt: current)
             }
+        }
+    }
+
+    private func generateWithModelFallback(_ request: GenerationRequest, attempt current: UUID) async throws -> ColoringResult {
+        do { return try await service.generate(request) }
+        catch GenerationError.modelUnavailable {
+            // Only this explicit pre-admission rejection proves that no job or
+            // paid inference started. Timeouts and provider failures never retry.
+            try Task.checkCancellation()
+            guard canUseService, isGenerating, attempt == current else { throw GenerationError.cancelled }
+            if batchFallbackModels[request.model] == nil { await refreshModelCatalogue() }
+            try Task.checkCancellation()
+            guard canUseService, isGenerating, attempt == current else { throw GenerationError.cancelled }
+            guard let replacement = batchFallbackModels[request.model] ?? modelCatalogue.fallback(excluding: request.model) else {
+                throw GenerationError.modelUnavailable
+            }
+            batchFallbackModels[request.model] = replacement
+            if model == request.model { model = replacement.id }
+            // Every image in this batch uses the same replacement, even if KV
+            // propagation returns another catalogue revision during the batch.
+            let retry = try request.replacingModel(with: replacement)
+            return try await service.generate(retry)
         }
     }
 
@@ -415,6 +520,7 @@ final class ColoringViewModel: ObservableObject {
     }
 
     private func cancel(reason: String) {
+        catalogueGenerationTask?.cancel(); catalogueGenerationTask = nil
         guard isGenerating else { return }
         logBatchSummary(reason)
         attempt = UUID()
@@ -453,6 +559,8 @@ final class ColoringViewModel: ObservableObject {
         if returningFromBackground { resetExpiredSessionIfNeeded() }
         recordActivity()
         guard canUseService else { await refreshUnfinishedSheets(); return }
+        // Catalogue loading must not hold up polling of already-submitted jobs.
+        Task { await refreshModelCatalogue() }
         if localSaveFailed { persistState() }
         let interruptedAttempt = attempt
         if returningFromBackground && isGenerating {
