@@ -438,7 +438,8 @@ final class GenerationTests: XCTestCase {
             (502, "upstream_failed", "The image provider could not complete the request (HTTP 418)."),
             (503, "service_unavailable", "Image provider configuration is incomplete."),
             (400, "invalid_request", "Model is invalid."),
-            (410, "result_unavailable", "Saved image is unavailable.")
+            (410, "result_unavailable", "Saved image is unavailable."),
+            (403, "account_suspended", "Generation has been suspended for this account. Contact support for review.")
         ] {
             let data = try JSONSerialization.data(withJSONObject: ["error": ["code": code, "message": message]])
             XCTAssertThrowsError(try WorkerClient.parse(data, response: response(status, type: "application/json; charset=utf-8"), requestedModel: .fluxKlein4B)) {

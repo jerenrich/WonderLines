@@ -51,6 +51,7 @@ let calls=[], moderation=0;
 const call=async(path,input)=>{
   calls.push({path,input});
   if(path==='/job')return {status:404,value:{}};
+  if(path==='/generation-gate')return {status:200,value:{allowed:true}};
   if(path==='/moderate-batch'){moderation++;return {status:200,value:{}};}
   if(path==='/reserve')return {status:201,value:{job:{id:input.generationId,state:'processing'},access:{}}};
   throw new Error(path);
@@ -67,7 +68,7 @@ assert.deepEqual(pinned.modelRoute,pinned.imageTask.route);
 document.models.find(model=>model.id===input.model).enabled=false;
 calls=[]; moderation=0; result=await start({});
 assert.equal(result.status,409); assert.equal(result.value.error.code,'model_unavailable');
-assert.deepEqual(calls.map(entry=>entry.path),['/job']); assert.equal(moderation,0);
+assert.deepEqual(calls.map(entry=>entry.path),['/job','/generation-gate']); assert.equal(moderation,0);
 const existing={...pinned,state:'processing'};
 result=await startGeneration(await prepare({}),{env:{MODEL_REGISTRY:{get:async()=>{throw new Error('must not read on recovery');}}},
   call:async()=>({status:200,value:{job:existing,access:{}}})});

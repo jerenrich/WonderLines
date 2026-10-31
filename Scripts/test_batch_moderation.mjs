@@ -10,6 +10,8 @@ class Storage {
   async delete(key) { this.values.delete(key); }
   async list({prefix}) { return new Map([...this.values].filter(([key]) => key.startsWith(prefix))); }
   async transaction(callback) { return callback(this); }
+  async setAlarm(time) { this.alarm = time; }
+  async getAlarm() { return this.alarm ?? null; }
 }
 class Namespace {
   objects = new Map(); pending = [];
@@ -149,12 +151,13 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
       call:async(path,value)=>{
         calls.push(path);
         if(path==='/job')return {status:404,value:{}};
+        if(path==='/generation-gate')return {status:200,value:{allowed:true}};
         if(path==='/moderate-batch'){assert.equal(value.description,input.description);return {status:200,value:{approved:true}};}
         assert.equal(path,'/reserve');reservations.push(value);
         return {status:201,value:{job:{id:generationId,state:'processing',imageTask:value.imageTask},access:{}}};
       }
     });
-    assert.equal(result.status,201);assert.deepEqual(calls,['/job','/moderate-batch','/reserve']);
+    assert.equal(result.status,201);assert.deepEqual(calls,['/job','/generation-gate','/moderate-batch','/reserve']);
   }
   assert.deepEqual(reservations[0].imageTask,reservations[1].imageTask);
   assert.match(reservations[0].imageTask.subject,/Complexity: simple clear outlines/);
@@ -171,7 +174,7 @@ console.log('PASS: original-only batch moderation, concurrency/restart deduplica
   const denied=await startGeneration(prepared,{
     env:{},validateProvider:false,queueImages:true,
     beforeReserve:async()=>{reserved=true;},
-    call:async(path)=>path==='/job'?{status:404,value:{}}:{status:400,value:{error:{code:'description_not_suitable',message:'Choose another description.'}}}
+    call:async(path)=>path==='/job'?{status:404,value:{}}:path==='/generation-gate'?{status:200,value:{}}:{status:400,value:{error:{code:'description_not_suitable',message:'Choose another description.'}}}
   });
   assert.equal(denied.value.error.code,'description_not_suitable');assert.equal(reserved,false);
   const invalid=await prepareGeneration({...input,description:'x'.repeat(501)},generationId);

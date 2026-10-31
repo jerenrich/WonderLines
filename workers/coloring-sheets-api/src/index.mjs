@@ -9,6 +9,8 @@ import {MODERATION_CANARY_CRON, runModerationCanary} from './moderation-canary.m
 import {falCostData} from './fal-cost.mjs';
 import {isUUID} from './composition.mjs';
 import {prepareGeneration, startGeneration} from './generation-start.mjs';
+import {AccountSafety, safetyDirectory, cleanSafetyDirectory, suspensionError} from './account-safety.mjs';
+import {ADMIN_EMAIL} from '../../shared/admin-identity.mjs';
 import {moderateSubject, ModerationError, moderationModel, moderationPolicy, moderationEnvironment} from './moderation.mjs';
 import {DIRECT_JEV_MODEL} from './moderation-profiles.mjs';
 import {verifyAttestation, verifyAssertion, acceptCounter, fromB64url, b64url} from './app-attest.mjs';
@@ -113,9 +115,16 @@ export class Budget {
     this.reservations = reservation.catch(() => {});
     return reservation;
   }
+  alarm() {
+    const work = this.reservations.then(() => cleanSafetyDirectory(this.state.storage));
+    this.reservations = work.catch(() => {});
+    return work;
+  }
   async reserve(request) {
     const input = await request.json().catch(() => null);
-    if (new URL(request.url).pathname === '/register') {
+    const path = new URL(request.url).pathname;
+    if (['/safety-index', '/suspensions'].includes(path)) return safetyDirectory(this.state.storage, path, input);
+    if (path === '/register') {
       const day = new Date().toISOString().slice(0, 10), existing = await this.state.storage.get('registrations');
       const used = existing?.day === day ? existing.used : 0;
       const limit = globalDailyGenerationLimit(this.env.GLOBAL_DAILY_REGISTRATION_LIMIT ?? '1000');
@@ -128,6 +137,7 @@ export class Budget {
       return reply({reserved: true}, 201);
     }
     if (new URL(request.url).pathname === '/forget-account' && isUUID(input?.accountId)) {
+      await this.state.storage.delete('suspension:' + input.accountId);
       const entries = await this.state.storage.list({prefix: 'claim:' + input.accountId + ':'});
       for (const key of entries.keys()) await this.state.storage.delete(key);
       // Keep aggregate daily spend counters, without the deleted account IDs.
@@ -155,7 +165,7 @@ export class Budget {
 
 // One DO per anonymous account makes allowance reservation and credit deduction atomic.
 export class Account {
-  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); this.activeOperations = new Set(); this.deletionWork = null; this.comparisonAdmissions = Promise.resolve(); }
+  constructor(state, env) { this.state = state; this.env = env; this.reservations = Promise.resolve(); this.attestUpdates = Promise.resolve(); this.moderationUpdates = Promise.resolve(); this.usageUpdates = new Map(); this.activeOperations = new Set(); this.deletionWork = null; this.comparisonAdmissions = Promise.resolve(); this.safety = new AccountSafety(state.storage); }
   track(operation) {
     const pending = Promise.resolve().then(operation);
     this.activeOperations.add(pending);
@@ -175,6 +185,17 @@ export class Account {
     if (path === '/initialize') return this.initialize(input);
     const account = await this.state.storage.get('account');
     if (!account) return fail('unknown_account', 'Unknown account.', 404);
+    if (path === '/generation-gate') {
+      const blocked = await this.safety.gate();
+      return blocked ? reply(blocked, 403) : reply({allowed: true});
+    }
+    if (path === '/admin/safety' || path === '/admin/safety/change') {
+      if (input.actor?.email !== ADMIN_EMAIL || typeof input.actor.id !== 'string' || !input.actor.id || input.actor.id.length > 255) return fail('forbidden', 'Operator access required.', 403);
+      if (path === '/admin/safety') return reply({accountId: account.id, ...await this.safety.read()});
+      const result = await this.safety.change(input);
+      if (result.status === 200) await this.syncSafetyDirectory();
+      return reply({accountId: account.id, ...result.value}, result.status);
+    }
     if (path === '/authorize') return account.credentialId === input.credentialId ? reply({access: await this.access(), appAttested: !!account.appAttested}) : fail('invalid_token', 'Invalid token.', 401);
     if (path === '/attest-status') {
       const enrolled = await this.state.storage.get('app-attest');
@@ -298,17 +319,34 @@ export class Account {
     await observeStorage('image_write', generationId, () => this.env.GENERATIONS.put(objectKey, unb64(image), {httpMetadata: {contentType: 'image/png'}}));
     return this.complete({generationId, result: {state: 'completed', objectKey, metrics}});
   }
-  async moderateBatch({batchID, description, sharingVersion}) {
+  async syncSafetyDirectory() {
+    try {
+      const account = await this.state.storage.get('account');
+      await this.safety.maintain(async record => {
+        const directory = this.env.BUDGET.get(this.env.BUDGET.idFromName('daily-generation-budget'));
+        const response = await directory.fetch('https://budget/safety-index', {method: 'POST', body: JSON.stringify({...record, accountId: account.id})});
+        await response.body?.cancel();
+        if (!response.ok) throw new Error('Safety index unavailable');
+      });
+    } catch {
+      await this.safety.schedule(this.state.storage, Date.now() + 5000);
+      console.error(JSON.stringify({event: 'suspension_index_unavailable'}));
+    }
+  }
+  async moderateBatch({batchID, description, sharingVersion, legacy = false}) {
     if (!isUUID(batchID) || typeof description !== 'string' || !description.trim() || description.length > 500) return fail('invalid_request', 'Invalid batch.', 400);
+    const safety = await this.safety.read();
+    if (safety.suspension) return reply(suspensionError(safety.suspension), 403);
     const moderationEnv = moderationEnvironment(this.env, sharingVersion);
     const fingerprint = await digest(JSON.stringify({batchID, description, policy: moderationPolicy(moderationEnv),
       ...(moderationEnv.MODERATION_STRATEGY === 'parallel' ? {strategy: 'parallel'} : {}),
       model: moderationEnv.MODERATION_MODEL ?? 'clef'}));
+    if (!await this.safety.bindingMatches(batchID, fingerprint)) return fail('batch_conflict', 'This submission ID uses a different description. Start a new submission.', 409);
     const name = 'moderation:' + batchID;
-    const previous = await this.state.storage.get(name);
+    const previous = legacy ? null : await this.state.storage.get(name);
     if (previous && previous.expires > Date.now()) {
       if (previous.fingerprint !== fingerprint) return fail('batch_conflict', 'This batch uses a different description.', 409);
-      return previous.error ? fail(previous.error.code, previous.error.message, previous.error.status, {reasonCodes: previous.error.reasonCodes}) : reply({approved: true});
+      return this.moderationReply(batchID, previous.error, safety.epoch, fingerprint);
     }
     // Retain only opaque fingerprints and fixed outcomes, never user text or
     // model scores. Bound storage and expire decisions after ten minutes.
@@ -316,14 +354,14 @@ export class Account {
     const current = [...entries].filter(([, value]) => value.expires > Date.now());
     for (const [key, value] of entries) if (value.expires <= Date.now()) await this.state.storage.delete(key);
     if (current.length >= 64) {
-      console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(moderationEnv),
+      console.info(JSON.stringify({event: 'description_moderation', ...(legacy ? {generationID: batchID} : {batchID}), model: moderationModelForLog(moderationEnv),
         policy: moderationPolicy(moderationEnv), outcome: 'moderation_unavailable', failure: 'batch_limit'}));
       return fail('moderation_unavailable', 'The description safety check is temporarily unavailable. No sheet allowance was used. Please try again later.', 503);
     }
     let error, diagnostics;
     try { diagnostics = await moderateSubject(moderationEnv, description, {
       waitUntil: promise => this.state.waitUntil?.(promise),
-      onComplete: observation => console.info(JSON.stringify({event: 'description_moderation_complete', batchID,
+      onComplete: observation => console.info(JSON.stringify({event: 'description_moderation_complete', ...(legacy ? {generationID: batchID} : {batchID}),
         model: moderationModelForLog(moderationEnv), ...observation})),
     }); }
     catch (caught) {
@@ -332,9 +370,19 @@ export class Account {
       error = {code: caught.code, message: caught.message, status: caught.status, reasonCodes: caught.reasonCodes};
     }
     const transient = moderationEnv.MODERATION_STRATEGY === 'parallel' && error?.code === 'moderation_unavailable';
-    await this.state.storage.put(name, {fingerprint, expires: Date.now() + (transient ? 1000 : 600000), ...(error ? {error} : {})});
-    console.info(JSON.stringify({event: 'description_moderation', batchID, model: moderationModelForLog(moderationEnv),
+    if (!legacy) await this.state.storage.put(name, {fingerprint, expires: Date.now() + (transient ? 1000 : 600000), ...(error ? {error} : {})});
+    console.info(JSON.stringify({event: 'description_moderation', ...(legacy ? {generationID: batchID} : {batchID}), model: moderationModelForLog(moderationEnv),
       policy: moderationPolicy(moderationEnv), outcome: error?.code ?? 'approved', ...diagnostics, reasonCodes: error?.reasonCodes ?? []}));
+    return this.moderationReply(batchID, error, safety.epoch, fingerprint);
+  }
+  async moderationReply(batchID, error, epoch, fingerprint) {
+    if (error) {
+      // Retry the idempotent strike write even for cached decisions. A failed
+      // storage commit after caching must not permanently lose this strike.
+      await this.safety.reject(batchID, error, epoch, fingerprint);
+      const blocked = await this.safety.gate();
+      if (blocked) { await this.syncSafetyDirectory(); return reply(blocked, 403); }
+    }
     return error ? fail(error.code, error.message, error.status, {reasonCodes: error.reasonCodes}) : reply({approved: true});
   }
   async registerAttestation(input) {
@@ -390,6 +438,7 @@ export class Account {
     return {features: [], generationCredits: credits, freeGenerationsRemaining: Math.max(0, allowance - (usage?.day === day ? usage.used : 0)), allowanceResetsAt: new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString()};
   }
   async reserve({generationId, publicModel, modelRoute, fingerprint, falTask, imageTask}) {
+    const blocked = await this.safety.gate(); if (blocked) return reply(blocked, 403);
     if (!/^[0-9a-f-]{36}$/.test(generationId) || typeof fingerprint !== 'string') return fail('invalid_request', 'Invalid generation.', 400);
     const jobKey = 'job:' + generationId, existing = await this.state.storage.get(jobKey);
     if (existing) return existing.fingerprint === fingerprint ? reply({job: existing, access: await this.access()}) : fail('idempotency_conflict', 'Generation ID was already used.', 409);
@@ -418,24 +467,27 @@ export class Account {
     const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask || imageTask?.route?.provider === 'fal' ? 'fal' : undefined);
     if (global.status === 429) return fail('service_budget_exhausted', global.value.error.message, 429);
     if (global.status >= 400) return fail('service_unavailable', 'Could not reserve service capacity.', 503);
-    await this.state.storage.put('usage', {day, used: used + 1});
-    if (used >= allowance) await this.state.storage.put('credits', --credits);
     const job = {id: generationId, publicModel, fingerprint, state: 'processing', createdAt: Date.now(),
       ...(falTask ? {fal: {...falTask, stage: 'queued'}} : {}),
       ...(imageTask ? {imageTask: {...imageTask, stage: 'queued'}} : {})};
-    if (falTask || imageTask) {
-      // Job and alarm commit together; a disconnected POST cannot strand a queue submission.
-      await this.state.storage.transaction(async storage => {
-        await storage.put(jobKey, job);
+    const committed = await this.state.storage.transaction(async storage => {
+      const blocked = await new AccountSafety(storage).gate();
+      if (blocked) return blocked;
+      await storage.put('usage', {day, used: used + 1});
+      if (used >= allowance) await storage.put('credits', credits - 1);
+      await storage.put(jobKey, job);
+      if (falTask || imageTask) {
         await storage.put((falTask ? 'fal:' : 'image:') + generationId, generationId);
         await storage.setAlarm(Date.now() + 1000);
-      });
-    } else await this.state.storage.put(jobKey, job);
+      }
+      return null;
+    });
+    if (committed) return reply(committed, 403);
     return reply({job, access: await this.access()}, 201);
   }
   async alarm() {
     await this.track(async () => {
-      if (!await this.state.storage.get('deletion')) await this.runAlarm();
+      if (!await this.state.storage.get('deletion')) { await this.syncSafetyDirectory(); await this.runAlarm(); }
     });
     if (await this.state.storage.get('deletion')) await this.finishDeletion();
   }
@@ -481,6 +533,21 @@ export class Account {
     });
     this.comparisonAdmissions=admission.catch(()=>{});return admission;
   }
+  async claimQueuedJob(id, kind) {
+    return this.state.storage.transaction(async storage => {
+      const current = await storage.get('job:' + id);
+      if (!current || current.state !== 'processing' || current[kind]?.stage !== 'queued') return {claimed: false};
+      const blocked = await new AccountSafety(storage).gate();
+      if (blocked) return {claimed: false, blocked};
+      current[kind].stage = 'submitting';
+      await storage.put('job:' + id, current);
+      return {claimed: true};
+    });
+  }
+  async cancelSuspendedJob(id, queueKey, blocked) {
+    await this.complete({generationId: id, result: {state: 'failed', errorCode: 'account_suspended', message: blocked.error.message}});
+    await this.state.storage.delete(queueKey + id);
+  }
   async advanceImage(id) {
     const job = await this.state.storage.get('job:' + id);
     if (!job || job.state !== 'processing') { await this.state.storage.delete('image:' + id); return; }
@@ -523,8 +590,9 @@ export class Account {
       await finishFailure('provider_unavailable', 'Image provider configuration changed before the queued sheet could start. No provider request was sent.');
       return;
     }
+    const claim = await this.claimQueuedJob(id, 'imageTask');
+    if (!claim.claimed) { if (claim.blocked) await this.cancelSuspendedJob(id, 'image:', claim.blocked); return; }
     job.imageTask.stage = 'submitting';
-    await this.state.storage.put('job:' + id, job);
     try {
       const result = await runImageRequest(request);
       const metrics = {requestedModel: job.imageTask.publicModel, provider: request.provider, upstreamModel: request.model,
@@ -563,8 +631,9 @@ export class Account {
       return;
     }
     if (job.fal.stage === 'queued') {
+      const claim = await this.claimQueuedJob(id, 'fal');
+      if (!claim.claimed) { if (claim.blocked) await this.cancelSuspendedJob(id, 'fal:', claim.blocked); return; }
       job.fal.stage = 'submitting';
-      await this.state.storage.put('job:' + id, job);
       let requestID;
       try { requestID = await submitFalRequest(this.env, job.fal.request); }
       catch (error) {
@@ -637,7 +706,7 @@ export class Account {
   async usage({generationId}) {
     let job = await this.state.storage.get('job:' + generationId);
     if (!job) return fail('not_found', 'Generation not found.', 404);
-    if (job.fal && job.state !== 'processing' && job.metrics?.costStatus !== 'reported' &&
+    if (job.fal && job.errorCode !== 'account_suspended' && job.state !== 'processing' && job.metrics?.costStatus !== 'reported' &&
         (!job.metrics?.costCheckedAt || Date.now() - Date.parse(job.metrics.costCheckedAt) > 60000)) {
       job = await this.updateFalUsage(job, true);
     }
@@ -682,14 +751,14 @@ export class Account {
     }
     if (ready.imageTask) delete ready.imageTask;
     await observeStorage('job_write', generationId, () => this.state.storage.put(k, ready));
-    generationResult(generationId, ready.state);
+    generationResult(generationId, ready.state, ready.errorCode);
     if (comparisonImage) {
       await this.state.storage.delete('image:' + generationId);
       await this.state.storage.setAlarm(Date.now() + 1);
     }
     // Completion and concurrent usage reads share one update, so a slow lookup
     // cannot overwrite newer billing metadata or duplicate external requests.
-    if (ready.fal?.request) await this.updateFalUsage(ready);
+    if (ready.fal?.request && ready.errorCode !== 'account_suspended') await this.updateFalUsage(ready);
     return reply({access: await this.access()});
   }
 }
@@ -703,7 +772,7 @@ async function saved(env, job, access) {
     if (!image) { storageFailure('image_missing', job.id); return fail('result_unavailable', 'Saved image is unavailable.', 410); }
     return new Response(image.body, {headers: {'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Generation-ID': job.id, 'X-Generation-Metrics': encodeURIComponent(JSON.stringify(job.metrics)), 'X-Access-Snapshot': accessHeader(access)}});
   }
-  if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, 502);
+  if (job.state === 'failed') return fail(job.errorCode ?? 'upstream_failed', job.message, job.errorCode === 'account_suspended' ? 403 : 502);
   return reply({generationId: job.id, status: 'processing'}, 202, {'Retry-After': '5', 'X-Access-Snapshot': accessHeader(access)});
 }
 async function generate(request, env, account, raw, ctx) {
@@ -716,14 +785,17 @@ async function generate(request, env, account, raw, ctx) {
     queueImages:request.headers.get('X-Coloring-API-Version')==='2',
     onModeration:event=>{
       if(event.structured)console.info(JSON.stringify({event:'moderation_gate',generationID:event.generationId,batchID:event.batchID,outcome:event.outcome,status:event.status}));
-      else { const policyEnv=moderationEnvironment(env,request.headers.get('X-AI-Sharing-Version'));
-        console.info(JSON.stringify({event:event.stage === 'complete' ? 'description_moderation_complete' : 'description_moderation',generationID:event.generationId,model:moderationModelForLog(policyEnv),policy:moderationPolicy(policyEnv),outcome:event.outcome,...event.diagnostics,reasonCodes:event.reasonCodes})); }
     }
   });
   if(reservation.value?.error)return reply(reservation.value,reservation.status);
   const {job,access,upstreamRequest}=reservation;
   if(reservation.recovered||job.state!=='processing'||job.fal||job.imageTask)return saved(env,job,access);
   const {model,size}=prepared;
+  const gate = await call(env, account.id, '/generation-gate', {});
+  if (gate.status !== 200) {
+    if (gate.status === 403) await call(env, account.id, '/complete', {generationId, result: {state: 'failed', errorCode: 'account_suspended', message: gate.value.error.message}});
+    return reply(gate.value, gate.status);
+  }
   try {
     const started = Date.now(), result = await runImageRequest(upstreamRequest);
     const {image, size: actualSize, inputTokens, textInputTokens, imageInputTokens, cachedInputTokens, outputTokens, totalTokens} = result;
@@ -826,6 +898,8 @@ async function fetchRequest(request, env, ctx) {
   }
   if (url.pathname === '/v1/access' && request.method === 'GET') return reply({access: account.access});
   if (url.pathname === '/v1/generations' && request.method === 'POST') {
+    const gate = await call(env, account.id, '/generation-gate', {});
+    if (gate.status !== 200) return reply(gate.value, gate.status);
     const signed = request.headers.get('X-App-Attest-Assertion');
     if (env.APP_ATTEST_ENFORCE && !['true', 'false'].includes(env.APP_ATTEST_ENFORCE)) return fail('service_unavailable', 'App Attest policy is invalid.', 503);
     const raw = await readBoundedBody(request, 4096);

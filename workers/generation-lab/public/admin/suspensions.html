@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef"><meta name="robots" content="noindex,nofollow">
+  <title>Account safety · WonderLines</title>
+  <link rel="icon" href="/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/admin/models.css"><link rel="stylesheet" href="/admin/suspensions.css">
+  <script src="/admin/suspensions.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><img src="/mark.svg" alt="" width="34" height="34"><span>WonderLines<span class="brand-divider">/</span><span class="brand-section">Account safety</span></span></a>
+    <nav class="top-actions" aria-label="Administration"><a class="text-button" href="/admin/models">Model controls</a><a class="text-button" href="/">Comparison studio ↗</a><button id="sign-out" class="text-button" hidden>Sign out</button></nav>
+  </header>
+  <main id="admin-login" class="admin-login">
+    <span class="eyebrow">WONDERLINES ADMINISTRATION</span><h1>Keep creativity safe.</h1>
+    <p>Review account suspensions and manage access to generation.</p>
+    <section class="signin-card"><h2>Sign in to manage accounts</h2><p>Use your authorized Google account.</p>
+      <a id="google-signin" class="google-signin" href="/api/admin/auth/start?destination=safety" hidden>Sign in with Google</a><p id="login-status" role="status">Checking sign-in…</p>
+    </section>
+  </main>
+  <main id="admin-workspace" hidden>
+    <section class="admin-heading"><div><div class="eyebrow">ACCOUNT SAFETY</div><h1>Review access to generation.</h1><p>Twenty content-policy rejections in a rolling 24 hours suspend generation for 24 hours.<br>One batch counts once. Service failures and uncertain results do not count.</p></div></section>
+    <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
+    <div class="safety-layout">
+      <section class="admin-card"><div class="card-heading"><h2>Active suspensions</h2><button id="refresh-list" type="button" class="text-button">Refresh</button></div>
+        <p class="field-hint">Select an account to read its current status. Updates can take a few seconds to appear here.</p>
+        <p id="list-status" role="status"></p><ul id="suspension-list" class="suspension-list"></ul><button id="more" class="secondary" type="button" hidden>Load more</button>
+      </section>
+      <div class="account-column">
+        <section class="admin-card"><h2>Find an account</h2><form id="lookup-form"><label class="field-label" for="account-id">Anonymous account ID</label><div class="lookup-row"><input id="account-id" type="text" required maxlength="36" placeholder="Account UUID from a safety report" autocomplete="off" spellcheck="false"><button type="submit" class="secondary">Look up</button></div></form><p class="field-hint">Reporting a generated sheet does not add a strike. Investigate reports before taking action.</p></section>
+        <section id="account-details" class="admin-card" hidden>
+          <div class="card-heading"><h2>Account details</h2><button id="refresh-account" type="button" class="text-button">Refresh</button></div>
+          <p id="selected-id" class="account-id"></p><p id="account-status" class="status-label"></p><p id="strike-count"></p><p id="suspension-reason"></p>
+          <form id="action-form"><fieldset id="action-fields">
+            <label class="field-label" for="action">Action</label><select id="action"><option value="suspend">Suspend generation</option><option value="reinstate">Reinstate / clear current strikes</option></select>
+            <div id="duration-field"><label class="field-label" for="duration">Duration</label><select id="duration"><option value="24">24 hours</option><option value="168">7 days</option><option value="indefinite">Until manually reinstated</option></select></div>
+            <label class="field-label" for="reason">Reason for this change</label><textarea id="reason" required maxlength="300" rows="3" placeholder="Brief operator note; do not include descriptions or personal information"></textarea>
+            <p class="field-hint">The reason and your operator identity are saved in history. Reinstating starts a fresh strike allowance. Account deletion, reporting and support stay available.</p>
+            <button id="review-action" type="submit" class="primary">Review change</button>
+          </fieldset></form>
+          <h3>Recent history</h3><p class="field-hint">Up to 50 changes from the last 90 days.</p><ol id="history" class="admin-history"></ol>
+        </section>
+      </div>
+    </div>
+  </main>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><div class="dialog-toolbar"><strong id="confirm-title">Review account change</strong></div><div class="confirm-content"><p id="confirm-copy"></p><p id="confirm-reason"></p><div class="publish-actions"><button id="cancel-change" class="secondary" type="button">Cancel</button><button id="confirm-change" class="primary" type="button">Apply change</button></div></div></dialog>
+</body>
+</html>

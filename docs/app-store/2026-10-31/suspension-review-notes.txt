@@ -1,0 +1,13 @@
+Suggested addition to the next App Review notes, after deployment verification:
+
+Wonder Lines can suspend abusive anonymous accounts from image generation.
+Twenty confirmed content-policy rejections in a rolling 24 hours automatically
+suspend generation for 24 hours. A description batch and its retries count once;
+moderation service failures and uncertain results do not add strikes. Authorized
+operators can also suspend or reinstate an account through private administration
+controls. Suspension is enforced server-side, including existing access tokens
+and queued work that has not started provider submission. Reporting, support and
+account deletion remain available.
+
+This is a draft for the next submission. It does not modify already submitted
+App Store Connect review notes or assert that Apple has approved these controls.

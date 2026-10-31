@@ -13,9 +13,9 @@ export async function observeStorage(operation, generationID, action) {
   catch (error) { storageFailure(operation, generationID); throw error; }
 }
 
-export function generationResult(generationID, state) {
+export function generationResult(generationID, state, errorCode) {
   if (state === 'failed' || state === 'completed') {
     (state === 'failed' ? console.error : console.info)(JSON.stringify({event: 'generation_result',
-      outcome: state, ...identity(generationID)}));
+      outcome: state, ...identity(generationID), ...(['account_suspended', 'account_deleted'].includes(errorCode) ? {errorCode} : {})}));
   }
 }

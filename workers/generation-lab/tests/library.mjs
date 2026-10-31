@@ -8,6 +8,7 @@ let reservations=0;
 const env={LAB_ACCOUNT_ID:accountId,GENERATION_LIMITER:{limit:async()=>({success:true})},GENERATIONS:{delete:async key=>deleted.push(key)},ACCOUNTS:{idFromName:id=>{assert.equal(id,accountId);return id;},get:()=>({fetch:async(url,options)=>{
   const path=new URL(url).pathname,input=JSON.parse(options.body);
   if(path==='/job')return Response.json(jobs.has(input.generationId)?{job:jobs.get(input.generationId),access:{freeGenerationsRemaining:99}}:{error:{}},{status:jobs.has(input.generationId)?200:404});
+  if(path==='/generation-gate')return Response.json({allowed:true});
   if(path==='/moderate-batch')return Response.json({approved:true});
   if(path==='/reserve'){reservations++;const job={id:input.generationId,state:'processing',fingerprint:input.fingerprint,createdAt:Date.now()};jobs.set(job.id,job);return Response.json({job,access:{}},{status:201});}
   throw Error('Unexpected '+path);

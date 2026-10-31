@@ -650,14 +650,15 @@ try {
   // Earlier credential-failure checks remove fal's key; restore it for this check.
   falEnv.FAL_KEY = 'synthetic-fal-key';
   for (const [testEnv, post, testAccount] of rejectionEnvs) {
-    const ai = testEnv.AI, before = await testAccount.access(), id = crypto.randomUUID();
-    testEnv.AI = {run: async () => unsafe};
+    const ai = testEnv.AI, accountAI = testAccount.env.AI, before = await testAccount.access(), id = crypto.randomUUID();
+    // Moderation now runs inside the account, including legacy requests.
+    testAccount.env.AI = testEnv.AI = {run: async () => unsafe};
     response = await post(id);
     assert.equal(response.status, 400, 'All providers must reject unsuitable descriptions.');
     assert.equal((await response.json()).error.code, 'description_not_suitable');
     assert.deepEqual(await testAccount.access(), before);
     assert.equal(await testAccount.state.storage.get('job:' + id), undefined, 'No image job or fal alarm may be queued.');
-    testEnv.AI = ai;
+    testEnv.AI = ai; testAccount.env.AI = accountAI;
   }
   assert.equal(nativeCalls, 0, 'Rejection cannot call a native image model.');
   for (const [model, width, height, expectedWidth, expectedHeight] of [

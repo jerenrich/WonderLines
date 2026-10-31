@@ -131,3 +131,22 @@ node --check workers/generation-lab/public/admin/models.js
 Auth tests exercise cryptographically signed synthetic Google identities, the PKCE/state/nonce flow, the owner allowlist, expiration, rotation and CSRF. Store/API tests cover invalid drafts, immutable versions, attribution, concurrent stale tabs, rollback, pagination, direct-edit imports and ambiguous publication recovery. No test calls Google or changes production KV. After replacing OAuth credentials, repeat a real Google sign-in as a rollout check; the initial production sign-in passed on 31 October 2026.
 
 Retention deployment: run `node Scripts/test_image_retention.mjs` and the library tests. Deploy both the API and comparison Workers before removing `deleteObjectsTransition` from the bucket-wide `recovery-images` R2 lifecycle rule. Preserve its multipart-upload abort policy and all other bucket rules. The hourly API sweep keeps the 24-hour expiry for ordinary app PNGs, exempts the configured comparison account, and leaves diagnostic JSON to the separate seven-day sweep. Never restore a blanket object-expiry rule on this shared bucket. Files deleted by the earlier rule cannot be recreated by changing retention.
+
+## Account safety administration
+
+Open [Account safety](https://wonderlines-compare.jordan-erenrich.workers.dev/admin/suspensions)
+from the comparison studio or Model controls. It shares the same restricted
+Google session. Active automatic and operator suspensions appear in the list;
+select one or look up an anonymous account UUID from a safety report. The details
+show the rolling strike count, current suspension and recent action history.
+
+Choose suspend (24 hours, 7 days or until manually reinstated) or reinstate, enter
+a brief reason without descriptions/personal data, review the account and action,
+then apply. Reinstatement clears current strikes. A stale tab must refresh before
+writing. If a save outcome is uncertain, refresh that account to reconcile the
+original action ID before trying again. The page never silently resubmits writes.
+
+Reports themselves are not strikes and do not justify automatic suspension. See
+the API README for counting, enforcement, retention and anonymity limitations.
+The new `BUDGET` cross-script binding points to `coloring-sheets-api`'s existing
+Budget object. Deploy the API first. No additional credentials are required.

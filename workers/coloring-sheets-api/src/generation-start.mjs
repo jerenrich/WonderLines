@@ -1,7 +1,6 @@
 import {DEFAULT_MODEL, imageRequest, falImageTask} from './image-provider.mjs';
 import {loadModelCatalog} from './model-registry.mjs';
 import {structuredComposition, MAX_DESCRIPTION_LENGTH, MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
-import {moderateSubject, ModerationError, moderationEnvironment} from './moderation.mjs';
 
 const failure = (code,message,status,details={}) => ({status,value:{error:{code,message,...details}}});
 const DEFAULT_SIZE = {width:1024,height:1456};
@@ -49,6 +48,8 @@ export async function startGeneration(prepared,{env,call,queueImages=false,compa
     ? {status:200,job:existing.value.job,access:existing.value.access,recovered:true}
     : failure('idempotency_conflict','Generation ID was already used.',409);
   if(existing.status!==404)return failure('service_unavailable','Could not check generation.',503);
+  const gate = await call('/generation-gate', {});
+  if (gate.status !== 200) return gate;
   let routes,upstreamRequest,catalog;
   try {catalog=await loadModelCatalog(env,{comparison:comparisonModels});routes=catalog.routes;}catch{return failure('service_unavailable','Image model configuration is incomplete.',503);}
   if(prepared.modelWasOmitted) {
@@ -63,25 +64,14 @@ export async function startGeneration(prepared,{env,call,queueImages=false,compa
       routes[model].provider==='fal'?falImageTask(routes[model].model,subject,size):{provider:routes[model].provider,model:routes[model].model};
   }catch{return failure('service_unavailable','Image provider configuration is incomplete.',503);}
   if(rateLimit){const limited=await rateLimit();if(limited)return limited;}
-  if(composed) {
-    const decision=await call('/moderate-batch',{batchID:composed.batchID,description:composed.description,
-      ...(sharingVersion ? {sharingVersion} : {})});
-    if(decision.status!==200){onModeration?.({structured:true,generationId,batchID:composed.batchID,outcome:decision.value.error?.code,status:decision.status});return decision;}
-  } else try {
-    const diagnostics=await moderateSubject(moderationEnvironment(env, sharingVersion),subject, {
-      waitUntil, onComplete: diagnostics => onModeration?.({structured:false,stage:'complete',generationId,diagnostics}),
-    });
-    onModeration?.({structured:false,generationId,outcome:'approved',diagnostics,reasonCodes:[]});
-  }catch(error){
-    if(!(error instanceof ModerationError))throw error;
-    onModeration?.({structured:false,generationId,outcome:error.code,diagnostics:error.diagnostics,reasonCodes:error.reasonCodes});
-    return failure(error.code,error.message,error.status,{reasonCodes:error.reasonCodes});
-  }
+  const decision=await call('/moderate-batch',{batchID:composed?.batchID ?? generationId,description:composed?.description ?? subject,...(!composed ? {legacy:true} : {}),
+    ...(sharingVersion ? {sharingVersion} : {})});
+  if(decision.status!==200){onModeration?.({structured:!!composed,generationId,batchID:composed?.batchID,outcome:decision.value.error?.code,status:decision.status});return decision;}
   await beforeReserve?.();
   const result=await call('/reserve',{generationId,publicModel:model,modelRoute:routes[model],fingerprint:fingerprints[fingerprintFormat],
     ...(upstreamRequest.provider==='fal'&&!comparisonModels?{falTask:{request:upstreamRequest,publicModel:model,requestedSize:size.width+'x'+size.height}}:
       queueImages?{imageTask:{route:routes[model],subject,size,publicModel:model}}:{})});
-  if(result.status===429||result.value?.error?.code==='model_unavailable')return result;
+  if(result.status===429||['model_unavailable','account_suspended'].includes(result.value?.error?.code))return result;
   if(result.status>=400)return failure('generation_unavailable','Could not start generation.',result.status);
   return {status:result.status,job:result.value.job,access:result.value.access,recovered:result.status===200,upstreamRequest};
 }

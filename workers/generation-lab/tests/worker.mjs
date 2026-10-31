@@ -12,6 +12,7 @@ const stub={fetch:async(url,options)=>{
   const path=new URL(url).pathname, input=JSON.parse(options.body); calls.push({path,input});
   if(path==='/access')return Response.json(initialized?{access}:{error:{}},{status:initialized?200:404});
   if(path==='/initialize'){initialized=true;return Response.json({credentialId:'PRIVATE_CREDENTIAL',access},{status:201});}
+  if(path==='/generation-gate')return Response.json({allowed:true});
   if(path==='/moderate-batch')return Response.json(approved?{approved:true}:{error:{code:'description_not_suitable',message:'Choose another description.'}},{status:approved?200:400});
   if(path==='/job')return Response.json(jobs.has(input.generationId)?{job:jobs.get(input.generationId),access}:{error:{}},{status:jobs.has(input.generationId)?200:404});
   if(path==='/reserve'){
