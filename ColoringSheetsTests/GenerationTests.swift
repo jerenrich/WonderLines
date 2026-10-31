@@ -373,7 +373,7 @@ final class GenerationTests: XCTestCase {
 
     func testDescriptionModerationErrors() {
         let cases: [(String, Int, GenerationError)] = [
-            ("description_not_suitable", 400, .validation("Please describe a gentle scene. No sheet allowance was used.")),
+            ("description_not_suitable", 400, .validation("This description was rejected because it was flagged by content moderation.")),
             ("moderation_unavailable", 503, .upstream("Please describe a gentle scene. No sheet allowance was used."))
         ]
         for (code, status, expected) in cases {
