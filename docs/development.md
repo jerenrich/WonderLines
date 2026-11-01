@@ -148,6 +148,8 @@ The project generator has no third-party dependencies. Run `python3 Scripts/crea
 
 ## Verification status
 
+Privacy-policy buttons in Settings, the AI consent notice, and Report sheet present an embedded WebKit browser with Done, back navigation, loading, and retry states. HTTPS links, including links that request a new window, stay in the viewer; other URL schemes do not launch external apps. The viewer uses an in-memory website data store and disables link previews. Closing it preserves the invoking screen and does not accept consent or send a report. `PrivacyUITests.testPrivacyPolicyStaysInAppAndReturnsToEachScreen` covers all three entry points.
+
 - Xcode 27.0 (27A266a), iOS 27 simulator runtime available.
 - Debug simulator build succeeded; eight XCTest cases passed, zero failures.
 - Offline Worker and build-configuration checks passed. The live test was separately verified to skip without explicit opt-in. A privacy scan confirmed the real Worker credential is absent from project source and build/test logs.
