@@ -95,7 +95,7 @@ node Scripts/test_batch_moderation.mjs
 
 ## Personal-information check and account retention (1 November 2026)
 
-Wonder Lines targets the App Store Kids Category (ages 6–8). The moderation rubric
+Wonder Lines is a general-audience family app that children may use with a parent or guardian. The moderation rubric
 adds an eighth question, `personal`: full names, addresses, schools, phone numbers,
 email addresses, usernames or exact locations of a private person are rejected; a
 first name alone, family words, pets and fictional or well-known figures are allowed.

@@ -1,13 +1,13 @@
 Hello App Review team,
 
-Please review Wonder Lines 1.0 (build 10), submitted in the Kids Category for ages 6 to 8.
+Please review Wonder Lines 1.0 (build 10).
 
 Build 8 was rejected under guideline 2.1(a) after a generation error. We traced it to our description safety check: the Cloudflare-hosted moderation service did not respond within our eight-second limit, so image generation never started.
 
 Descriptions are now checked by two independent services in parallel, Cloudflare Clef and TypeSafe Jev. A rejection from either service blocks generation. If one service is slow or unavailable, generation proceeds on the other service's approval after a short wait, so a single service outage no longer blocks image generation.
 
-Kids Category safeguards:
-- Before the first sheet, a parental gate asks an adult-level multiplication question. Only after it is answered is the AI sharing notice shown, which a grown-up must accept before any description is sent. The notice names Cloudflare, TypeSafe AI and the image provider, and links to the privacy policy.
+Wonder Lines is a coloring app for families. Children should use it with a parent or guardian, and because younger users may use it, it includes these protections:
+- Before the first sheet, the app asks an adult-level multiplication question. Only then is the AI sharing notice shown, which a grown-up must accept before any description is sent. The notice names Cloudflare, TypeSafe AI and the image provider, and links to the privacy policy.
 - Every description is checked before any image is generated. Unsuitable content is rejected, and so are personal details such as full names, addresses, schools, phone numbers, email addresses and usernames.
 - Requests to AI providers contain only the description and drawing settings, never an account identifier, device identifier or IP address.
 - There is no sign-in, advertising, analytics, tracking or in-app purchase. Sheets are private; there is no feed, messaging or other users' content.

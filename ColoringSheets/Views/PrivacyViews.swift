@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// An adult-level task shown before the AI sharing notice can be accepted.
-/// Apple's Kids Category requires a parental gate before permissions and links out.
+/// An adult-level task shown before the AI sharing notice can be accepted, so a
+/// parent or guardian, not a child, makes the data-sharing choice.
 struct ParentalGateQuestion: Equatable {
     let left: Int, right: Int
     var answer: Int { left * right }
@@ -59,6 +59,8 @@ struct AIConsentView: View {
 
     @ViewBuilder private var notice: some View {
         Text("Before the first sheet").font(.title2.bold())
+        Text("Children should use Wonder Lines with a parent or guardian.").font(.headline)
+            .accessibilityIdentifier("supervisionNotice")
         Text("To create a sheet, Wonder Lines sends the description to Cloudflare and TypeSafe AI for safety checks. The description, drawing difficulty and model choice are also sent to Cloudflare for processing and to the selected image provider: OpenAI, Cloudflare Workers AI or fal.ai. These requests don’t include a name, account or device identifier.")
         Text("These services may retain request logs. Wonder Lines keeps an anonymous service account so unfinished sheets can be recovered, and deletes it after 180 days without use. Descriptions that include personal details such as full names or addresses are rejected, but please remind children to leave them out.")
         Link("Read the privacy policy", destination: PrivacyConsent.policyURL)

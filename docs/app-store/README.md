@@ -1,6 +1,6 @@
 # App Store submission records
 
-**1.0 (10) is the next submission; it has not been archived, uploaded or submitted.** Source on `main` sets build 10. Draft review notes: [build 10 review notes](2026-11-01/build10-review-notes.txt). Build 10 targets the Kids Category (ages 6–8); App Store Connect settings and listing copy are drafted in [Kids Category listing](2026-11-01/kids-category-listing.md).
+**1.0 (10) is the next submission; it has not been archived, uploaded or submitted.** Source on `main` sets build 10. Draft review notes: [build 10 review notes](2026-11-01/build10-review-notes.txt). Build 10 is listed as a general-audience family app (not the Kids Category); App Store Connect settings and listing copy are drafted in [build 10 listing](2026-11-01/build10-listing.md).
 
 1.0 (9) was uploaded on 31 October but never selected for the version or submitted; it is superseded by build 10. Its records ([preparation](2026-10-31/build9-preparation.json), [artifact verification](2026-10-31/build9-artifact-verification.json), [upload](2026-10-31/build9-upload-and-selection.json), [draft notes](2026-10-31/build9-review-notes.txt)) remain historical. Since build 9, the backend added the moderation veto rule (policy `all-ages-v11-veto`), automatic and operator account suspension, and plain-language service errors; build 10 adds the matching app wording, suspension handling and the encryption declaration.
 

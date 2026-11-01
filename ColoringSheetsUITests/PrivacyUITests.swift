@@ -18,6 +18,7 @@ final class PrivacyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["cancelAIConsent"].waitForExistence(timeout: 5))
         let disclosure = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Cloudflare and TypeSafe AI")).firstMatch
         XCTAssertTrue(disclosure.exists, "Updated disclosure must name both safety providers.")
+        XCTAssertTrue(app.staticTexts["supervisionNotice"].exists, "The notice asks for a parent or guardian.")
         capture("Build 9 TypeSafe sharing notice")
         reveal(app.buttons["cancelAIConsent"], in: app)
         app.buttons["cancelAIConsent"].tap()
