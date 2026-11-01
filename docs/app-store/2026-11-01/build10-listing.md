@@ -8,7 +8,7 @@ Wonder Lines is listed as a general-audience family app, not in the Kids Categor
 
 - **Category:** keep Graphics & Design. Do not select Kids.
 - **Age rating questionnaire:** answer **No** to Made for Kids.
-- **Content questions:** Wonder Lines rejects violence, weapons, horror and frightening content before generation (policy `all-ages-v12-veto-personal`). If you are comfortable that this is reliable, answer **None** for Cartoon or Fantasy Violence, Horror/Fear Themes and Guns or Other Weapons (previously **Infrequent**), which gives 4+. Keeping the previous answers gives 9+; both are defensible. Keep every other answer as submitted.
+- **Content questions:** Wonder Lines' automated filters are designed to reject violence, weapons, horror and frightening content before generation (policy `all-ages-v12-veto-personal`), but cannot guarantee it. If you are comfortable that this is reliable, answer **None** for Cartoon or Fantasy Violence, Horror/Fear Themes and Guns or Other Weapons (previously **Infrequent**), which gives 4+. Keeping the previous answers gives 9+; both are defensible. Keep every other answer as submitted.
 
 ## Listing copy
 
@@ -39,7 +39,7 @@ FOR FAMILIES AND CLASSROOMS
 Children should use Wonder Lines with a parent or guardian.
 - A grown-up answers a quick question and agrees to how descriptions are used before the first sheet.
 - No sign-in, no ads, no tracking and no in-app purchases.
-- Every description is checked before drawing. Unsuitable ideas are turned away, and so are personal details such as full names or addresses when the check finds them. Automated checks can miss things, so please keep an eye on what children type.
+- Every description is screened by automated filters before drawing, which turn away unsuitable ideas and personal details such as full names or addresses when they find them. Filters can miss things, so please keep an eye on what children type, and use Report sheet if a sheet isn't right.
 - Sheets are private. There is no feed, chat or sharing with other users.
 - Delete everything at any time from Settings.
 

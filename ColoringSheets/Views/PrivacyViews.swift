@@ -62,7 +62,7 @@ struct AIConsentView: View {
         Text("Children should use Wonder Lines with a parent or guardian.").font(.headline)
             .accessibilityIdentifier("supervisionNotice")
         Text("To create a sheet, Wonder Lines sends the description to Cloudflare and TypeSafe AI for safety checks. The description, drawing difficulty and model choice are also sent to Cloudflare for processing and to the selected image provider: OpenAI, Cloudflare Workers AI or fal.ai. These requests don’t include a name, account or device identifier.")
-        Text("Sheets are kept on our service for 24 hours so an interrupted one can be recovered, then deleted. The app uses an anonymous account with no name or sign-in, which is deleted after 180 days without use. These services may keep request logs under their own terms. Descriptions are checked for personal details such as full names or addresses and rejected when they are found, but the check is automated and can miss things, so please remind children to leave them out.")
+        Text("Sheets are kept on our service for 24 hours so an interrupted one can be recovered, then deleted. The app uses an anonymous account with no name or sign-in, which is deleted after 180 days without use. These services may keep request logs under their own terms. Descriptions are screened for personal details, such as full names or addresses, by an automated filter, and rejected when it finds them. The filter can miss things, so please remind children to leave them out.")
         Link("Read the privacy policy", destination: PrivacyConsent.policyURL)
         Text("Your choice is remembered. You can withdraw consent or delete the account and its data in Settings.")
             .font(.footnote).foregroundStyle(.secondary)
