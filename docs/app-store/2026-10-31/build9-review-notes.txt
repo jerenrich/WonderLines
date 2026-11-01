@@ -16,7 +16,7 @@ To test:
 3. Tap Generate and then Agree and Generate on the AI sharing notice.
 4. Wait for the three sheets, then swipe or use the arrows to view them.
 
-No sign-in, purchase or settings change is required. Generation is free for users, subject to service availability and a daily allowance of 100 images per anonymous account. Settings includes consent withdrawal, account and data deletion, the privacy policy, and support.
+No sign-in, purchase or settings change is required. Generation is free for users, subject to service availability and a daily allowance of 100 images per anonymous account. Settings includes consent withdrawal, account and data deletion, the privacy policy, and support. Sheet actions includes Report sheet, which sends a private report to support and removes that sheet from the gallery.
 
 Privacy: https://jerenrich.github.io/WonderLines/privacy.html
 Support: https://jerenrich.github.io/WonderLines/#support

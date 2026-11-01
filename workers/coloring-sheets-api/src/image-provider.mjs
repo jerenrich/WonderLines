@@ -196,35 +196,35 @@ function providerFailure(request, status, body) {
   const failure = (code, message, suffix = detail) => new ImageProviderError(message + suffix + '.', code,{upstreamErrorCodes,...safeDetails});
   if (request.provider === 'workers-ai' && (known('4006') || /daily free allocation.*10,?000 neurons/.test(messages))) {
     return failure('provider_daily_quota_exhausted',
-      'Cloudflare Workers AI has used its daily free allowance of 10,000 neurons. It resets at 00:00 UTC. Choose Flare or Sunburst to use OpenAI, or upgrade the Cloudflare Workers plan',
+      'This image model has reached its daily limit and resets at midnight UTC. Choose Flare or Sunburst in Settings, or try again later',
       status >= 400 ? ` (HTTP ${status}; Cloudflare code 4006)` : ' (Cloudflare code 4006)');
   }
   if ((request.provider === 'fal' && status === 402) || known('insufficient_quota', 'billing_hard_limit_reached', 'billing_not_active') || /insufficient.{0,20}(credit|quota)|billing.{0,20}limit/.test(messages)) {
-    return failure('provider_quota_exhausted', `${name} reports exhausted credits or quota. Check that provider’s billing and usage limits, or choose another provider`);
+    return failure('provider_quota_exhausted', `${name} is temporarily unavailable for new sheets. Choose another model in Settings, or try again later`);
   }
   if (known('content_policy_violation', 'safety_violations', 'IMAGE_SAFETY', 'SAFETY') || /content policy|safety filter/.test(messages)) {
     return failure('provider_content_rejected', `${name} rejected this description under its content rules. Revise the description`);
   }
   if (status === 401 || known('invalid_api_key', 'UNAUTHENTICATED')) {
-    return failure('provider_authentication_failed', `${name} or AI Gateway rejected the service credentials. The developer needs to check the server’s API keys`);
+    return failure('provider_authentication_failed', `${name} is temporarily unavailable. Choose another model in Settings, or try again later`);
   }
   if (status === 403 || known('PERMISSION_DENIED')) {
-    return failure('provider_access_denied', `${name} or AI Gateway denied access. The developer needs to check token permissions and model access`);
+    return failure('provider_access_denied', `${name} is temporarily unavailable. Choose another model in Settings, or try again later`);
   }
   if (status === 404 || known('model_not_found', 'NOT_FOUND')) {
-    return failure('provider_model_unavailable', `${name} could not find or grant access to the selected model. Choose another model or check model access`);
+    return failure('provider_model_unavailable', `${name} could not provide the selected model. Choose another model in Settings`);
   }
   if (status === 429 || known('rate_limit_exceeded', 'RESOURCE_EXHAUSTED')) {
-    return failure('provider_rate_limited', `${name} or AI Gateway has reached a request or usage limit. Wait before retrying, or check the provider’s limits`);
+    return failure('provider_rate_limited', `${name} has reached a request or usage limit. Wait a moment before retrying, or choose another model`);
   }
   if (status === 408 || status === 504) {
-    return failure('provider_timeout', `${name} timed out. You have not been charged. Check unfinished sheets before generating again`);
+    return failure('provider_timeout', `${name} timed out. Check unfinished sheets before generating again`);
   }
-  if (status >= 500) return failure('provider_unavailable', `${name} or AI Gateway is temporarily unavailable. Try again later`);
+  if (status >= 500) return failure('provider_unavailable', `${name} is temporarily unavailable. Try again later`);
   if ([400, 413, 422].includes(status)) {
     return failure('provider_request_rejected', `${name} rejected the description, image size, or model parameters. Revise the description or choose another model`);
   }
-  return failure('upstream_failed', `${name} could not complete the image request. Check the provider or Gateway logs for this failure`);
+  return failure('upstream_failed', `${name} could not complete the image request. Please try again`);
 }
 
 function decodeBase64(encoded) {
@@ -253,7 +253,7 @@ export async function runImageRequest(request) {
       body: request.payload instanceof FormData ? request.payload : JSON.stringify(request.payload), redirect: 'manual', signal: AbortSignal.timeout(180000)});
   } catch (error) {
     const timeout = error?.name === 'TimeoutError' || error?.name === 'AbortError';
-    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. You have not been charged. Check unfinished sheets before generating again.`,
+    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. Check unfinished sheets before generating again.`,
       timeout ? 'provider_timeout' : 'provider_connection_failed');
   }
   const diagnostics=responseDiagnostics(response);
@@ -410,7 +410,7 @@ async function falJSON(env, target, payload) {
 export async function submitFalRequest(env, request) {
   const {data: result} = await falJSON(env, falQueueURL(request.model), request.payload);
   if (typeof result.request_id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(result.request_id)) {
-    throw new ImageProviderError('fal.ai did not return a usable job ID. You have not been charged.', 'provider_invalid_response');
+    throw new ImageProviderError('fal.ai did not return a usable job ID. Please try again.', 'provider_invalid_response');
   }
   return result.request_id;
 }

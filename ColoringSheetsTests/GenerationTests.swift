@@ -362,7 +362,7 @@ final class GenerationTests: XCTestCase {
         }
         XCTAssertThrowsError(try WorkerClient.parse(Data("OpenAI reports insufficient credit or quota.".utf8), response: response(502, type: "text/plain"), requestedModel: .flare)) {
             XCTAssertNotEqual($0 as? GenerationError, .configuration)
-            XCTAssertTrue($0.localizedDescription.contains("quota"))
+            XCTAssertTrue($0.localizedDescription.contains("temporarily unavailable"))
         }
         for status in [302, 400, 413, 500, 502, 504] {
             XCTAssertThrowsError(try WorkerClient.parse(Data("<html>private diagnostics</html>".utf8), response: response(status, type: "text/html"), requestedModel: .flare)) {
@@ -397,7 +397,7 @@ final class GenerationTests: XCTestCase {
         XCTAssertEqual(WorkerClient.moderationDiagnostic(legacy, response: response(400, type: "application/json")),
                        "description rejected; reasons=unspecified; allowanceUsed=false")
         XCTAssertThrowsError(try WorkerClient.parse(legacy, response: response(400, type: "application/json"), requestedModel: .flare)) {
-            XCTAssertEqual($0 as? GenerationError, .validation("Please rewrite your description."))
+            XCTAssertEqual($0 as? GenerationError, .validation("This description was rejected because it was flagged by content moderation."))
         }
     }
 
@@ -701,7 +701,10 @@ final class NetworkingTests: XCTestCase {
                 return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!, data)
             }
             do { _ = try await client.generate(GenerationRequest(description: "Synthetic flower", age: 8, model: .flare)); XCTFail("Expected moderation failure") }
-            catch { XCTAssertTrue(error.localizedDescription.contains("No sheet allowance")) }
+            catch {
+                // Rejections now show one fixed message; outages still relay the service text.
+                XCTAssertTrue(error.localizedDescription.contains(code == "description_not_suitable" ? "flagged by content moderation" : "No sheet allowance"))
+            }
             XCTAssertEqual(calls, 1)
             let pending = await client.pendingGenerations()
             XCTAssertTrue(pending.isEmpty, "Moderation failed before any image job was reserved.")
