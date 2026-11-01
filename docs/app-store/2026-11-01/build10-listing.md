@@ -39,7 +39,7 @@ FOR FAMILIES AND CLASSROOMS
 Children should use Wonder Lines with a parent or guardian.
 - A grown-up answers a quick question and agrees to how descriptions are used before the first sheet.
 - No sign-in, no ads, no tracking and no in-app purchases.
-- Every description is checked before drawing. Unsuitable ideas, and personal details such as full names or addresses, are turned away.
+- Every description is checked before drawing. Unsuitable ideas are turned away, and so are personal details such as full names or addresses when the check finds them. Automated checks can miss things, so please keep an eye on what children type.
 - Sheets are private. There is no feed, chat or sharing with other users.
 - Delete everything at any time from Settings.
 

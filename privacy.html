@@ -18,7 +18,7 @@
   <h2>The short version</h2>
   <ul>
     <li>Wonder Lines does not ask for a child's name, email address, phone number, photo or location, and there is no sign-in.</li>
-    <li>Descriptions that include personal details, such as a full name, address, school or phone number, are rejected before any sheet is made.</li>
+    <li>Descriptions are checked for personal details, such as a full name, address, school or phone number, and rejected when they are found. The check is automated and can miss things, so please remind children to leave personal details out.</li>
     <li>A grown-up must answer a question and agree before the first sheet is made.</li>
     <li>There is no advertising, no tracking and no analytics software. Information is never sold.</li>
     <li>Generated images are deleted from the service after 24 hours. The anonymous account and its records are deleted after 180 days without use, or at any time from Settings.</li>
@@ -29,7 +29,7 @@
 
   <h2>Information we collect</h2>
   <ul>
-    <li><strong>Descriptions.</strong> When Generate is tapped, the description, drawing-difficulty setting, selected model and image size are sent to the Wonder Lines service. Each description is checked first. Descriptions that include identifying or contact details of a real person, such as a full name, home address, school name, phone number, email address or username, are rejected. A first name on its own, family words like "grandma", pet names and story characters are allowed.</li>
+    <li><strong>Descriptions.</strong> When Generate is tapped, the description, drawing-difficulty setting, selected model and image size are sent to the Wonder Lines service. Each description is checked first. Descriptions that appear to include identifying or contact details of a real person, such as a full name, home address, school name, phone number, email address or username, are rejected. This automated check can miss some details or occasionally reject a harmless description. A first name on its own, family words like "grandma", pet names and story characters are allowed.</li>
     <li><strong>Generated images.</strong> The service keeps each generated image for 24 hours so an interrupted sheet can be recovered, then deletes it.</li>
     <li><strong>An anonymous account and device verification.</strong> The app creates a random account automatically, without a name, email or sign-in. The service stores the account identifier, a credential identifier and records of each generation. On supported devices, Apple's App Attest checks that requests come from the genuine app; the service stores the related key identifier, public key and counters. These identifiers are used only to run the service: to authenticate requests, apply daily limits, prevent abuse and recover sheets. They link activity from the same installation but do not identify who the child is.</li>
     <li><strong>Usage and technical data.</strong> The service records generation counts, request identifiers, model choices, times, status and error codes, and performance and cost measurements. Cloudflare, which hosts the service, processes connection information, including IP addresses.</li>
