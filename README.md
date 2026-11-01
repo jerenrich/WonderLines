@@ -17,7 +17,7 @@ Created by Jordan Erenrich. Built with SwiftUI for iOS and iPadOS 17 and later.
 - Lets you swipe through results and save, share, or print A4 landscape sheets.
 - Pinch to zoom up to 5× and drag to explore details; double-tap to zoom in or return to the full sheet.
 - Offers a “Surprise me” button that fills an editable starter idea.
-- Keeps your draft and sheets for quick returns; starts fresh after 15 minutes away, with unfinished live jobs available for recovery.
+- Keeps your draft and sheets for quick returns; starts fresh after 15 minutes away. Sheets still drawing when the app is interrupted are recovered automatically.
 - Works on iPhone and iPad, with no sign-in required.
 
 ## Start with the demo

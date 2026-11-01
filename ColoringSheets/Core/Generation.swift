@@ -370,9 +370,9 @@ enum GenerationError: LocalizedError, Equatable {
         case .allowance: return "Today’s image allowance has been used. Please try again after midnight UTC."
         case .serviceBudget: return "The coloring service has reached today’s limit. Please try again after it resets."
         case .server(let status): return "The service could not complete the request (HTTP \(status)). Please try again, or contact support in Settings if this continues."
-        case .invalidImage: return "The service did not return a usable sheet. Check unfinished sheets before generating again."
-        case .uncertain: return "The connection was interrupted or timed out. Your sheet may still finish. Check unfinished sheets before generating again."
-        case .cancelled: return "Stopped waiting. Your sheet may still finish. Check unfinished sheets before generating again."
+        case .invalidImage: return "The service did not return a usable sheet. Please try again."
+        case .uncertain: return "The connection was interrupted or timed out. Please wait a few minutes before trying again."
+        case .cancelled: return "Stopped waiting for this sheet."
         case .resultMissing: return "The service has no saved job for this sheet, so it cannot be recovered. No new generation was started automatically."
         }
     }

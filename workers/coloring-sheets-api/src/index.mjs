@@ -598,7 +598,7 @@ export class Account {
         await this.complete({generationId: id, result: {state: 'completed', objectKey, metrics: job.metrics}});
         await this.state.storage.delete('image:' + id);
       } else {
-        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. Check unfinished sheets before generating again.');
+        await finishFailure('provider_connection_failed', 'The image request was interrupted before its result was saved. Please try again.');
       }
       return;
     }
@@ -641,11 +641,11 @@ export class Account {
       await this.state.storage.delete('fal:' + id);
     };
     if (Date.now() - job.createdAt > 30 * 60 * 1000) {
-      await finishFailure('provider_timeout', 'The fal job could not be recovered within 30 minutes. Check unfinished sheets before generating again.');
+      await finishFailure('provider_timeout', 'The fal job could not be recovered within 30 minutes. Please try again.');
       return;
     }
     if (job.fal.stage === 'submitting') {
-      await finishFailure('provider_connection_failed', 'The fal submission was interrupted before its job ID could be saved. Check unfinished sheets before generating again.');
+      await finishFailure('provider_connection_failed', 'The fal submission was interrupted before its job ID could be saved. Please try again.');
       return;
     }
     if (job.fal.stage === 'queued') {
@@ -693,7 +693,7 @@ export class Account {
     if (job?.state === 'processing' && !job.fal && !job.imageTask && Date.now() - job.createdAt > 600000) {
       // Old synchronous requests cannot finish indefinitely after disconnection.
       await this.complete({generationId, result: {state: 'failed', errorCode: 'provider_timeout',
-        message: 'This earlier request was interrupted before its image was saved. Check unfinished sheets before generating again.'}});
+        message: 'This earlier request was interrupted before its image was saved. Please try again.'}});
       job = await this.state.storage.get('job:' + generationId);
     }
     if (job?.state === 'completed') job.metrics = refreshImageCostMetrics(job.metrics);

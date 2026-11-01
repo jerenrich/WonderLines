@@ -313,7 +313,7 @@ struct ContentView: View {
                 .tint(store.isGenerating ? Color(uiColor: .systemGray5) : accent)
                 .disabled((!store.isGenerating && !needsIdea && store.validationMessage != nil) || store.deletionPending || store.isReporting || (store.isRefreshingModels && store.availableModels.isEmpty))
                 .accessibilityLabel(store.isGenerating ? "Stop waiting" : primaryActionTitle)
-                .accessibilityHint(store.isGenerating ? "Stops waiting for results. Sheets already requested may still finish." : (needsIdea ? "Fills the description so you can edit it before generating" : ""))
+                .accessibilityHint(store.isGenerating ? "Stops waiting for results. Sheets already received stay available." : (needsIdea ? "Fills the description so you can edit it before generating" : ""))
                 .accessibilityIdentifier(store.isGenerating ? "stopGeneration" : (needsIdea ? "surpriseMe" : "generate"))
             }
             Group {

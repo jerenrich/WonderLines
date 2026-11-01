@@ -125,7 +125,7 @@ final class ColoringViewModel: ObservableObject {
     private let galleryStore: GalleryStore?
     private var acknowledgedResultIDs: Set<UUID> = []
     private var localSaveFailed = false
-    private static let saveFailureMessage = "The sheets could not be saved on this device. Keep the app open; received jobs remain available for recovery."
+    private static let saveFailureMessage = "The sheets could not be saved on this device. Keep the app open so they stay available; saving is retried when you leave or return to the app."
 
     init(service: any GenerationServing, isMock: Bool, defaults: UserDefaults = .standard,
          galleryStore: GalleryStore? = nil, requiresConsent: Bool? = nil,
@@ -528,7 +528,7 @@ final class ColoringViewModel: ObservableObject {
         Task { await refreshUnfinishedSheets() }
         revealTask?.cancel(); revealTask = nil
         revealPendingResults()
-        let message = "Stopped waiting. Any sheets already received are still available. Unfinished sheets may still complete."
+        let message = "Stopped waiting. Any sheets already received are still available."
         if receivedFirstResult {
             batchMessage = message; phase = .result
         } else {

@@ -218,7 +218,7 @@ function providerFailure(request, status, body) {
     return failure('provider_rate_limited', `${name} has reached a request or usage limit. Wait a moment before retrying, or choose another model`);
   }
   if (status === 408 || status === 504) {
-    return failure('provider_timeout', `${name} timed out. Check unfinished sheets before generating again`);
+    return failure('provider_timeout', `${name} timed out. Please try again`);
   }
   if (status >= 500) return failure('provider_unavailable', `${name} is temporarily unavailable. Try again later`);
   if ([400, 413, 422].includes(status)) {
@@ -253,7 +253,7 @@ export async function runImageRequest(request) {
       body: request.payload instanceof FormData ? request.payload : JSON.stringify(request.payload), redirect: 'manual', signal: AbortSignal.timeout(180000)});
   } catch (error) {
     const timeout = error?.name === 'TimeoutError' || error?.name === 'AbortError';
-    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. Check unfinished sheets before generating again.`,
+    throw new ImageProviderError(`${providerName(request.provider)} ${timeout ? 'timed out' : 'could not be reached'}. Please try again.`,
       timeout ? 'provider_timeout' : 'provider_connection_failed');
   }
   const diagnostics=responseDiagnostics(response);
@@ -404,7 +404,7 @@ async function falJSON(env, target, payload) {
       billableUnits: Number.isFinite(units) ? units : null};
   } catch (error) {
     if (error instanceof ImageProviderError) throw error;
-    throw new ImageProviderError('fal.ai could not return the job status. Check unfinished sheets before generating again.', 'provider_connection_failed');
+    throw new ImageProviderError('fal.ai could not return the job status. Please try again.', 'provider_connection_failed');
   }
 }
 export async function submitFalRequest(env, request) {
@@ -432,7 +432,7 @@ export async function pollFalRequest(env, requestID, model = FAL_ENDPOINT) {
       !(url.hostname === 'fal.media' || url.hostname.endsWith('.fal.media'))) throw new ImageProviderError(INVALID_IMAGE);
   // CDN downloads carry no credentials and may not redirect to another host.
   const response = await fetch(url.href, {redirect: 'manual', signal: AbortSignal.timeout(20000)});
-  if (!response.ok) throw new ImageProviderError('The generated sheet could not be downloaded. Check unfinished sheets again.', 'provider_connection_failed');
+  if (!response.ok) throw new ImageProviderError('The generated sheet could not be downloaded. Please try again.', 'provider_connection_failed');
   let bytes = await boundedBytes(response, 20 * 1024 * 1024);
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
     try {
