@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'workers/**'
+      - '!workers/**/*.md'
+      - 'Scripts/worker_deployments.mjs'
+      - 'Scripts/test_worker_deployments.mjs'
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_model_registry.mjs'
       - 'Scripts/model_registry.mjs'
@@ -34,6 +37,9 @@ on:
     branches: [main]
     paths:
       - 'workers/**'
+      - '!workers/**/*.md'
+      - 'Scripts/worker_deployments.mjs'
+      - 'Scripts/test_worker_deployments.mjs'
       - 'Scripts/test_worker.mjs'
       - 'Scripts/test_model_registry.mjs'
       - 'Scripts/model_registry.mjs'
@@ -60,9 +66,22 @@ on:
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:
+    inputs:
+      worker:
+        description: Worker to deploy from main (all preserves dependency order)
+        type: choice
+        default: all
+        options:
+          - all
+          - api
+          - comparison
+          - moderation
+          - monitoring
+          - log_retention
 
 permissions:
   contents: read
+  actions: read
 
 # Never interrupt a production upload. PR checks can replace older PR checks.
 concurrency:
@@ -83,6 +102,7 @@ jobs:
           # An old rerun therefore cannot roll production back to an old commit.
           ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -99,6 +119,7 @@ jobs:
 
       - name: Run offline Worker and image cost tests
         run: |
+          node Scripts/test_worker_deployments.mjs
           node Scripts/test_worker.mjs
           node Scripts/test_model_registry.mjs
           node Scripts/test_z_image.mjs
@@ -135,8 +156,31 @@ jobs:
           node --check workers/generation-lab/public/admin/models.js
           node --check workers/generation-lab/public/admin/suspensions.js
 
+      - name: Find last successful production push
+        id: baseline
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Event.before misses changes when pending runs are replaced or a prior
+          # deployment fails. Successful push runs cover every selected Worker.
+          # Manual runs may select only one Worker, so cannot advance this base.
+          if ! base=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/worker.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty'); then
+            echo "::warning::Cannot read deployment history; conservatively deploying all Workers."
+            base=''
+          fi
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Select affected Workers
+        id: deployments
+        env:
+          DEPLOYMENT_BASE: ${{ steps.baseline.outputs.sha }}
+          DEPLOYMENT_TARGET: ${{ inputs.worker || 'all' }}
+          LOG_RETENTION_WORKER_READY: ${{ vars.LOG_RETENTION_WORKER_READY }}
+        run: node Scripts/worker_deployments.mjs
+
       - name: Check deployment credentials
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.deployments.outputs.any == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -147,7 +191,8 @@ jobs:
           fi
 
       - name: Deploy monitoring before its producers
-        if: github.event_name != 'pull_request'
+        id: deploy_monitoring
+        if: github.event_name != 'pull_request' && steps.deployments.outputs.monitoring == 'true'
         uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -157,7 +202,8 @@ jobs:
           command: deploy --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
       - name: Deploy Worker
-        if: github.event_name != 'pull_request'
+        id: deploy_api
+        if: github.event_name != 'pull_request' && steps.deployments.outputs.api == 'true'
         uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -167,7 +213,8 @@ jobs:
           command: deploy --keep-vars --var AI_GATEWAY_ID:coloring-sheets --var MODERATION_GATEWAY_ID:coloring-sheets --var MODERATION_MODEL:clef --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
       - name: Deploy moderation lab with the same policy revision
-        if: github.event_name != 'pull_request'
+        id: deploy_moderation
+        if: github.event_name != 'pull_request' && steps.deployments.outputs.moderation == 'true'
         uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -177,7 +224,8 @@ jobs:
           command: deploy --keep-vars --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
       - name: Deploy WonderLines comparison studio
-        if: github.event_name != 'pull_request'
+        id: deploy_comparison
+        if: github.event_name != 'pull_request' && steps.deployments.outputs.comparison == 'true'
         uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -187,8 +235,9 @@ jobs:
           command: deploy --keep-vars --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
       - name: Deploy isolated Gateway log retention
+        id: deploy_log_retention
         # Bootstrap with the dedicated secret before enabling this repository variable.
-        if: github.event_name != 'pull_request' && vars.LOG_RETENTION_WORKER_READY == 'true'
+        if: github.event_name != 'pull_request' && steps.deployments.outputs.log_retention == 'true'
         uses: cloudflare/wrangler-action@25853364521e0d392ece9b0c1e97a4b37b638087 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -197,15 +246,25 @@ jobs:
           wranglerVersion: '4.136.3'
           command: deploy --message "GitHub main ${{ steps.revision.outputs.sha }}"
 
-      - name: Summarize deployment
-        if: github.event_name != 'pull_request'
+      - name: Summarize deployment results
+        if: always() && github.event_name != 'pull_request' && steps.deployments.outcome == 'success'
         env:
           DEPLOYED_SHA: ${{ steps.revision.outputs.sha }}
+          MONITORING: ${{ steps.deploy_monitoring.outcome }}
+          API: ${{ steps.deploy_api.outcome }}
+          MODERATION: ${{ steps.deploy_moderation.outcome }}
+          COMPARISON: ${{ steps.deploy_comparison.outcome }}
+          LOG_RETENTION: ${{ steps.deploy_log_retention.outcome }}
         run: |
           {
-            echo '### API and comparison labs deployed'
-            echo "Workers: wonderlines-monitoring, coloring-sheets-api, coloring-sheets-moderation-lab, wonderlines-compare"
-            echo "Commit: [$DEPLOYED_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$DEPLOYED_SHA)"
-            echo 'API/lab dashboard variables and existing Worker secrets are preserved.'
-            echo 'R2 diagnostic cleanup: hourly, seven-day policy. Gateway cleanup requires its dedicated credential and bootstrap.'
+            echo '### Worker deployment results'
+            echo "Tested commit: [$DEPLOYED_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$DEPLOYED_SHA)"
+            echo ''
+            echo '| Worker | Result |'
+            echo '| --- | --- |'
+            echo "| Monitoring | $MONITORING |"
+            echo "| API | $API |"
+            echo "| Moderation lab | $MODERATION |"
+            echo "| Comparison studio | $COMPARISON |"
+            echo "| Log retention | $LOG_RETENTION |"
           } >> "$GITHUB_STEP_SUMMARY"
