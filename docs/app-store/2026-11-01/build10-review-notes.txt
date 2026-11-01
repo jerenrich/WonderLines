@@ -8,7 +8,7 @@ Descriptions are now checked by two independent services in parallel, Cloudflare
 
 Wonder Lines is a coloring app for families. Children should use it with a parent or guardian, and because younger users may use it, it includes these protections:
 - Before the first sheet, the app asks an adult-level multiplication question. Only then is the AI sharing notice shown, which a grown-up must accept before any description is sent. The notice names Cloudflare, TypeSafe AI and the image provider, and links to the privacy policy.
-- Every description is checked before any image is generated. Unsuitable content is rejected, and so are personal details such as full names, addresses, schools, phone numbers, email addresses and usernames.
+- Every description is screened by automated filters before any image is generated, for unsuitable content and for personal details such as full names, addresses, schools, phone numbers, email addresses and usernames. Descriptions are rejected when either is detected, and Report sheet covers anything the filters miss.
 - Requests to AI providers contain only the description and drawing settings, never an account identifier, device identifier or IP address.
 - There is no sign-in, advertising, analytics, tracking or in-app purchase. Sheets are private; there is no feed, messaging or other users' content.
 - Report sheet (the flag button above the sheet; on narrower screens such as iPhone, in the Sheet actions menu) sends a private report to support and removes that sheet from the gallery.
