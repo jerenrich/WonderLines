@@ -70,7 +70,7 @@ try {
   assert.deepEqual([...env.ACCOUNTS.objects.get(a.accountId).state.storage.values.keys()],['deletion']);
   const budget=env.BUDGET.objects.get('daily-generation-budget');
   assert.equal([...budget.state.storage.values.keys()].some(k=>k.includes(a.accountId)),false);
-  assert.equal((await api('/v1/installations/renew',a,'POST',{})).status,401);
+  assert.equal((await api('/v1/installations/renew',a,'POST',{})).status,410,'A deleted account tells the app to start a new one');
   assert.equal((await api('/v1/access',b)).status,200,'Another account must be unaffected');
 
   // A legacy request outside the DO must not write an orphan image after deletion.
