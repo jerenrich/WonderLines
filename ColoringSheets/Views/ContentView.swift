@@ -551,8 +551,7 @@ struct ContentView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Privacy & safety") {
-                    Link("Privacy policy", destination: PrivacyConsent.policyURL)
-                        .accessibilityIdentifier("privacyPolicy")
+                    PrivacyPolicyLink()
                     Link("Contact support", destination: PrivacyConsent.supportURL)
                     Link("Email support", destination: PrivacyConsent.emailURL)
                     Text(store.hasConsent ? "AI data sharing: agreed. Your choice is saved for future sheets." : "AI data sharing: not agreed. We’ll ask before your next generation.")

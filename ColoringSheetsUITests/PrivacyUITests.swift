@@ -2,6 +2,53 @@ import XCTest
 
 final class PrivacyUITests: XCTestCase {
     @MainActor
+    func testPrivacyPolicyStaysInAppAndReturnsToEachScreen() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock", "--require-consent", "--fixed-parental-gate",
+                               "-aiSharingConsentVersion", "0", "-descriptionDraft", "A friendly flower", "-imageCount", "1"]
+        app.launch()
+        app.buttons["settings"].tap()
+        reveal(app.buttons["privacyPolicy"], in: app)
+        openAndClosePolicy(in: app)
+        XCTAssertTrue(app.navigationBars["Settings"].exists)
+        app.buttons["Done"].tap()
+
+        app.buttons["generate"].tap()
+        answerGate("98", in: app)
+        reveal(app.buttons["privacyPolicy"], in: app)
+        openAndClosePolicy(in: app)
+        XCTAssertFalse(app.images["sheetPreview"].exists, "Reading the policy must not accept consent or generate a sheet.")
+        reveal(app.buttons["agreeToAI"], in: app)
+        app.buttons["agreeToAI"].tap()
+        XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
+
+        if !app.buttons["reportSheet"].isHittable { app.buttons["sheetActions"].tap() }
+        app.buttons["reportSheet"].tap()
+        reveal(app.buttons["privacyPolicy"], in: app)
+        openAndClosePolicy(in: app)
+        XCTAssertTrue(app.navigationBars["Report sheet"].exists)
+        XCTAssertTrue(app.buttons["sendSheetReport"].exists, "Reading the policy must not send the report.")
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.images["sheetPreview"].exists)
+    }
+
+    @MainActor
+    private func openAndClosePolicy(in app: XCUIApplication) {
+        app.buttons["privacyPolicy"].tap()
+        XCTAssertTrue(app.buttons["closePrivacyPolicy"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.webViews["privacyPolicyWebView"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.state, .runningForeground)
+        let loading = app.descendants(matching: .any).matching(identifier: "privacyPolicyLoading").firstMatch
+        let finishedLoading = NSPredicate(format: "exists == false")
+        expectation(for: finishedLoading, evaluatedWith: loading)
+        waitForExpectations(timeout: 35)
+        capture("Privacy policy inside Wonder Lines")
+        app.buttons["closePrivacyPolicy"].tap()
+        XCTAssertFalse(app.buttons["closePrivacyPolicy"].exists)
+    }
+
+    @MainActor
     func testTypeSafeNoticeRequiresRenewedConsent() {
         continueAfterFailure = false
         let app = XCUIApplication()
