@@ -5,10 +5,16 @@ final class PrivacyUITests: XCTestCase {
     func testTypeSafeNoticeRequiresRenewedConsent() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "--require-consent", "-aiSharingConsentVersion", "1",
+        app.launchArguments = ["--mock", "--require-consent", "--fixed-parental-gate", "-aiSharingConsentVersion", "1",
                                "-descriptionDraft", "A friendly dinosaur riding a bicycle on the moon", "-imageCount", "1"]
         app.launch()
         app.buttons["generate"].tap()
+        // A wrong answer replaces the question and never reveals the notice.
+        answerGate("12", in: app)
+        XCTAssertTrue(app.staticTexts["parentalGateWrong"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["agreeToAI"].exists)
+        capture("Parental gate")
+        answerGate("98", in: app)
         XCTAssertTrue(app.buttons["cancelAIConsent"].waitForExistence(timeout: 5))
         let disclosure = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Cloudflare and TypeSafe AI")).firstMatch
         XCTAssertTrue(disclosure.exists, "Updated disclosure must name both safety providers.")
@@ -17,12 +23,20 @@ final class PrivacyUITests: XCTestCase {
         app.buttons["cancelAIConsent"].tap()
         XCTAssertTrue(app.buttons["generate"].isEnabled)
         app.buttons["generate"].tap()
+        answerGate("98", in: app)
         XCTAssertTrue(disclosure.waitForExistence(timeout: 5), "Cancel must not accept the revised notice.")
         reveal(app.buttons["agreeToAI"], in: app)
         app.buttons["agreeToAI"].tap()
         XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["agreeToAI"].exists)
         capture("Build 9 sheet after updated consent")
+    }
+    @MainActor
+    private func answerGate(_ value: String, in app: XCUIApplication) {
+        let field = app.textFields["parentalGateAnswer"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap(); field.typeText(value)
+        app.buttons["parentalGateContinue"].tap()
     }
     @MainActor
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
@@ -41,7 +55,7 @@ final class PrivacyUITests: XCTestCase {
     func testConsentIsOneOffAndSettingsAllowWithdrawalAndDeletion() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["--mock", "--require-consent", "-aiSharingConsentVersion", "0", "-descriptionDraft", "A friendly flower", "-imageCount", "1"]
+        app.launchArguments = ["--mock", "--require-consent", "--fixed-parental-gate", "-aiSharingConsentVersion", "0", "-descriptionDraft", "A friendly flower", "-imageCount", "1"]
         app.launch()
         app.buttons["generate"].tap()
         XCTAssertTrue(app.buttons["cancelAIConsent"].waitForExistence(timeout: 5))
@@ -51,16 +65,18 @@ final class PrivacyUITests: XCTestCase {
         XCTAssertFalse(app.images["sheetPreview"].exists)
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "subject").firstMatch.value as? String, "A friendly flower")
         app.buttons["generate"].tap()
+        answerGate("98", in: app)
         reveal(app.buttons["agreeToAI"], in: app)
         app.buttons["agreeToAI"].tap()
         XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
         app.terminate()
-        app.launchArguments = ["--mock", "--require-consent", "-descriptionDraft", "A friendly flower", "-imageCount", "1"]
+        app.launchArguments = ["--mock", "--require-consent", "--fixed-parental-gate", "-descriptionDraft", "A friendly flower", "-imageCount", "1"]
         app.launch()
         app.buttons["generate"].tap()
         XCTAssertTrue(app.images["sheetPreview"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["agreeToAI"].exists)
         app.buttons["settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         reveal(app.buttons["withdrawConsent"], in: app)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "privacyPolicy").firstMatch.exists)
         capture("Privacy settings")
@@ -68,10 +84,12 @@ final class PrivacyUITests: XCTestCase {
         app.buttons["Withdraw consent"].tap()
         app.buttons["Done"].tap()
         app.buttons["generate"].tap()
+        answerGate("98", in: app)
         XCTAssertTrue(app.buttons["agreeToAI"].waitForExistence(timeout: 5))
         reveal(app.buttons["cancelAIConsent"], in: app)
         app.buttons["cancelAIConsent"].tap()
         app.buttons["settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         reveal(app.buttons["deleteAccount"], in: app)
         app.buttons["deleteAccount"].tap()
         capture("Delete confirmation")

@@ -387,6 +387,28 @@ final class GenerationTests: XCTestCase {
         }
     }
 
+    func testPersonalDetailRejectionAsksToRemoveThem() {
+        func message(_ reasons: [String]) -> GenerationError? {
+            let body = try! JSONSerialization.data(withJSONObject: ["error": ["code": "description_not_suitable", "message": "private", "reasonCodes": reasons]])
+            var thrown: GenerationError?
+            XCTAssertThrowsError(try WorkerClient.parse(body, response: response(400, type: "application/json"), requestedModel: .flare)) { thrown = $0 as? GenerationError }
+            return thrown
+        }
+        XCTAssertEqual(message(["personal"]), .validation("Please leave out real names, addresses and other personal details, then try again."))
+        // Any content reason keeps the general message, so personal details never mask it.
+        XCTAssertEqual(message(["personal", "violence"]), .validation("This description was rejected because it was flagged by content moderation."))
+        XCTAssertEqual(message([]), .validation("This description was rejected because it was flagged by content moderation."))
+    }
+
+    func testParentalGateQuestionsAreAdultLevel() {
+        for _ in 0..<200 {
+            let question = ParentalGateQuestion.random()
+            XCTAssertTrue((12...19).contains(question.left) && (3...9).contains(question.right))
+            XCTAssertEqual(question.answer, question.left * question.right)
+            XCTAssertEqual(question.prompt, "What is \(question.left) × \(question.right)?")
+        }
+    }
+
     func testModerationDiagnosticsOnlyRetainKnownCategories() throws {
         let body = try JSONSerialization.data(withJSONObject: ["error": ["code": "description_not_suitable", "message": "private message", "reasonCodes": ["violence", "private prompt and token", "uncertain", "violence"]]])
         XCTAssertEqual(WorkerClient.moderationDiagnostic(body, response: response(400, type: "application/json")),
@@ -1167,6 +1189,23 @@ final class NetworkingTests: XCTestCase {
             let persisted = await identities.session()
             XCTAssertEqual(persisted, saved, "Failed renewal must leave the existing credential intact for another attempt")
         }
+    }
+
+    func testDeletedAccountIsReplacedOnlyWhenTheServiceSaysItExpired() async throws {
+        let identities = AnonymousIdentityStore(service: "ColoringSheets.expired-account-tests.\(UUID())")
+        addTeardownBlock { await identities.remove() }
+        let saved = AnonymousSession(accountID: UUID(), accessToken: "expired-token", expiresAt: .distantPast)
+        try await identities.save(saved)
+        let replacement = AnonymousSession(accountID: UUID(), accessToken: "new-token", expiresAt: .distantFuture)
+        let created = try await identities.session(register: {
+            replacement
+        }, renew: { identity in
+            XCTAssertEqual(identity, saved)
+            throw AnonymousAccountExpired()
+        })
+        XCTAssertEqual(created, replacement)
+        let persisted = await identities.session()
+        XCTAssertEqual(persisted, replacement)
     }
 
     func testCancellationDuringRenewalNeverStartsGeneration() async throws {

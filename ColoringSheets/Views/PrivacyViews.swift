@@ -1,26 +1,84 @@
 import SwiftUI
 
+/// An adult-level task shown before the AI sharing notice can be accepted.
+/// Apple's Kids Category requires a parental gate before permissions and links out.
+struct ParentalGateQuestion: Equatable {
+    let left: Int, right: Int
+    var answer: Int { left * right }
+    var prompt: String { "What is \(left) × \(right)?" }
+    static func random() -> Self {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--fixed-parental-gate") { return Self(left: 14, right: 7) }
+        #endif
+        return Self(left: Int.random(in: 12...19), right: Int.random(in: 3...9))
+    }
+}
+
 struct AIConsentView: View {
     @ObservedObject var store: ColoringViewModel
+    @State private var gatePassed = false
+    @State private var question = ParentalGateQuestion.random()
+    @State private var answer = ""
+    @State private var wrongAnswer = false
+    @FocusState private var answerFocused: Bool
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Before your first sheet").font(.title2.bold())
-                    Text("To create your sheet, Wonder Lines sends your description to Cloudflare and TypeSafe AI for safety checks. Your description, drawing difficulty and model choice are also sent to Cloudflare for processing and to the selected image provider: OpenAI, Cloudflare Workers AI or fal.ai.")
-                    Text("These services may retain request logs. Wonder Lines stores generated sheets and an anonymous service account so you can recover unfinished work. Please leave names and other personal information out of descriptions.")
-                    Link("Read the privacy policy", destination: PrivacyConsent.policyURL)
-                    Text("Your choice is remembered. You can withdraw consent or delete your account and data in Settings.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                    Button(store.consentActionTitle) { store.acceptConsent() }
-                        .buttonStyle(.borderedProminent)
-                        .accessibilityIdentifier("agreeToAI")
-                    Button("Cancel", role: .cancel) { store.showsConsent = false }
-                        .accessibilityIdentifier("cancelAIConsent")
+                    if gatePassed { notice } else { gate }
                 }.padding(24).frame(maxWidth: 620, alignment: .leading).frame(maxWidth: .infinity)
             }
-            .navigationTitle("AI generation")
+            .navigationTitle(gatePassed ? "AI generation" : "For grown-ups")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    @ViewBuilder private var gate: some View {
+        Text("Ask a grown-up").font(.title2.bold())
+        Text("Before the first sheet, a parent or guardian needs to read and accept how Wonder Lines uses descriptions.")
+        Text(question.prompt).font(.title3.weight(.semibold))
+            .accessibilityIdentifier("parentalGateQuestion")
+        TextField("Answer", text: $answer)
+            .keyboardType(.numberPad)
+            .textFieldStyle(.roundedBorder)
+            .focused($answerFocused)
+            .frame(maxWidth: 200)
+            .accessibilityIdentifier("parentalGateAnswer")
+        if wrongAnswer {
+            Text("That isn’t right. Here’s a new question.").font(.footnote).foregroundStyle(.red)
+                .accessibilityIdentifier("parentalGateWrong")
+        }
+        Button("Continue") { check() }
+            .buttonStyle(.borderedProminent)
+            .disabled(answer.trimmingCharacters(in: .whitespaces).isEmpty)
+            .accessibilityIdentifier("parentalGateContinue")
+        Button("Cancel", role: .cancel) { store.showsConsent = false }
+            .accessibilityIdentifier("cancelAIConsent")
+    }
+
+    @ViewBuilder private var notice: some View {
+        Text("Before the first sheet").font(.title2.bold())
+        Text("To create a sheet, Wonder Lines sends the description to Cloudflare and TypeSafe AI for safety checks. The description, drawing difficulty and model choice are also sent to Cloudflare for processing and to the selected image provider: OpenAI, Cloudflare Workers AI or fal.ai. These requests don’t include a name, account or device identifier.")
+        Text("These services may retain request logs. Wonder Lines keeps an anonymous service account so unfinished sheets can be recovered, and deletes it after 180 days without use. Descriptions that include personal details such as full names or addresses are rejected, but please remind children to leave them out.")
+        Link("Read the privacy policy", destination: PrivacyConsent.policyURL)
+        Text("Your choice is remembered. You can withdraw consent or delete the account and its data in Settings.")
+            .font(.footnote).foregroundStyle(.secondary)
+        Button(store.consentActionTitle) { store.acceptConsent() }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("agreeToAI")
+        Button("Cancel", role: .cancel) { store.showsConsent = false }
+            .accessibilityIdentifier("cancelAIConsent")
+    }
+
+    private func check() {
+        if Int(answer.trimmingCharacters(in: .whitespaces)) == question.answer {
+            answerFocused = false
+            gatePassed = true
+        } else {
+            wrongAnswer = true
+            answer = ""
+            question = ParentalGateQuestion.random()
         }
     }
 }
