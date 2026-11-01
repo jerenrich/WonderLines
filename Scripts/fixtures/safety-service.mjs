@@ -30,7 +30,7 @@ class Namespace {
   }
 }
 export const actor = {id: 'verified-operator', email: ADMIN_EMAIL};
-export const safe = () => ({answers: Object.fromEntries(['sexual', 'violence', 'hate', 'adult', 'frightening', 'bypass', 'all_ages'].map(name => [name, {type: 'noul', noul: name === 'all_ages' ? 1 : 0}]))});
+export const safe = () => ({answers: Object.fromEntries(['sexual', 'violence', 'hate', 'adult', 'frightening', 'bypass', 'personal', 'all_ages'].map(name => [name, {type: 'noul', noul: name === 'all_ages' ? 1 : 0}]))});
 export const invoke = (account, path, input = {}) => account.fetch(new Request('https://account' + path, {method: 'POST', body: JSON.stringify(input)}));
 export function service() {
   const state = {verdict: 'allow', checks: 0};

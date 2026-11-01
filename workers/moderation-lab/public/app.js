@@ -9,7 +9,7 @@ $('forget').onclick=async()=>{
   try {const r=await fetch('/api/session',{method:'DELETE'});if(!r.ok)throw Error('Could not forget access');setRemembered(false);}
   catch(error){$('status').textContent=error.message;}
 };
-const labels = {all_ages:'All-ages suitability',sexual:'Sexual content',violence:'Violence / weapons',hate:'Hate / harassment',adult:'Adult themes',frightening:'Frightening content',bypass:'Safety bypass'};
+const labels = {all_ages:'All-ages suitability',sexual:'Sexual content',violence:'Violence / weapons',hate:'Hate / harassment',adult:'Adult themes',frightening:'Frightening content',bypass:'Safety bypass',personal:'Personal information'};
 const names = {jev:'Jev',clef:'Clef','clef-flash':'Clef-flash'};
 const el = (tag, text, cls) => {const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
 function render(results) {
@@ -17,7 +17,7 @@ function render(results) {
   for (const result of results) {
     const card=el('article',undefined,'card');card.append(el('h3',names[result.name]),el('div',result.id,'model-id'));
     card.append(el('span',result.outcome[0].toUpperCase()+result.outcome.slice(1),'decision '+result.outcome),el('span',Math.round(result.elapsedMs)+' ms','timing'));
-    card.append(el('div',result.outcome==='unavailable'?'The safety service could not complete this check. Try again.':result.reasonCodes.length?'Flagged: '+result.reasonCodes.map(x=>labels[x]??'Uncertain suitability').join(', '):'All seven policy checks passed.','reasons'));
+    card.append(el('div',result.outcome==='unavailable'?'The safety service could not complete this check. Try again.':result.reasonCodes.length?'Flagged: '+result.reasonCodes.map(x=>labels[x]??'Uncertain suitability').join(', '):'All eight policy checks passed.','reasons'));
     if(result.scores)for(const [name,label] of Object.entries(labels)){
       const score=result.scores[name], limit=result.thresholds[name], failed=name==='all_ages'?score<limit:score>limit;
       const row=el('div',undefined,'score'+(failed?' failed':'')),head=el('div',undefined,'score-head');head.append(el('span',label),el('strong',Math.round(score*100)+'%'));

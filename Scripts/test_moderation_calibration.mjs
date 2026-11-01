@@ -25,8 +25,8 @@ console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, 
   const {assessModerationScores} = await import('../workers/coloring-sheets-api/src/moderation.mjs');
   const {parallelClefThresholds, directJevThresholds} = await import('../workers/coloring-sheets-api/src/moderation-profiles.mjs');
   const {runParallelModeration} = await import('../workers/coloring-sheets-api/src/parallel-moderation.mjs');
-  const recorded = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-31/parallel-live-scores.json', import.meta.url), 'utf8'));
-  const evidence = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-31/veto-calibration-report.json', import.meta.url), 'utf8'));
+  const recorded = JSON.parse(readFileSync(new URL('../docs/moderation/2026-11-01/kids-live-scores.json', import.meta.url), 'utf8'));
+  const evidence = JSON.parse(readFileSync(new URL('../docs/moderation/2026-11-01/kids-profile-evaluation.json', import.meta.url), 'utf8'));
   assert.deepEqual(parallelClefThresholds, evidence.providers.clef.thresholds);
   assert.deepEqual(directJevThresholds, evidence.providers.jev.thresholds);
   const counts = {};
@@ -44,5 +44,5 @@ console.log('PASS: deterministic threshold fitting, unsafe-approval constraint, 
     assert.equal(count.harmlessApproved, evidence.paired[split].harmlessApproved);
     assert.equal(count.unsafeApproved, 0);
   }
-  console.log('PASS: 610 recorded live score sets replay through calibrated production profiles and veto coordinator; zero unsafe approvals in recorded calibration/validation/final-test examples.');
+  console.log('PASS: ' + recorded.results.length * 2 + ' recorded live score sets replay through production profiles and veto coordinator; zero unsafe approvals in recorded calibration/validation/final-test examples, including personal details.');
 }

@@ -10,11 +10,12 @@ import {fitThresholds, summarize, evaluatePair} from './lib/moderation-calibrati
 const root = new URL('../', import.meta.url);
 const arg = name => process.argv.find(value => value.startsWith('--' + name + '='))?.slice(name.length + 3);
 const load = async path => JSON.parse(await readFile(new URL(path, root), 'utf8'));
-const sources = ['moderation-cases', 'moderation-validation-cases', 'moderation-clef-calibration-cases', 'moderation-permissive-cases', 'moderation-car-regressions', 'moderation-parallel-holdout'];
+const sources = ['moderation-cases', 'moderation-validation-cases', 'moderation-clef-calibration-cases', 'moderation-permissive-cases', 'moderation-car-regressions', 'moderation-parallel-holdout',
+  'moderation-personal-cases', 'moderation-personal-holdout', 'moderation-redteam-holdout'];
 const deduplicated = new Map();
 for (const name of sources) for (const row of await load('Scripts/fixtures/' + name + '.json')) {
   const previous = deduplicated.get(row.description);
-  const split = name === 'moderation-parallel-holdout' ? 'holdout' : row.split === 'holdout' ? 'validation' : 'calibration';
+  const split = name.endsWith('-holdout') ? 'holdout' : row.split === 'holdout' ? 'validation' : 'calibration';
   const rank = {calibration: 0, validation: 1, holdout: 2};
   if (previous && previous.expected !== row.allowed) throw Error('Conflicting fixture labels');
   // A description appearing in validation must never be used for fitting.
@@ -115,5 +116,5 @@ if(process.argv.includes('--write-profiles')) {
   if(!ready)throw Error('Cannot activate profiles until both services have complete calibration/holdout scores and zero observed unsafe approvals');
   const policyRevision=createHash('sha256').update(JSON.stringify({profiles,rubricHash,model:DIRECT_JEV_MODEL})).digest('hex').slice(0,12);
   const path=new URL('../workers/coloring-sheets-api/src/moderation-profiles.mjs',import.meta.url);
-  await writeFile(path,`// Fitted only on calibration examples; holdout evaluated separately.\n// Evidence: ${arg('report')??output}; fixture SHA-256 ${fixtureHash}.\nexport const DIRECT_JEV_MODEL = '${DIRECT_JEV_MODEL}';\nexport const PARALLEL_MODERATION_POLICY = 'all-ages-v11-veto-${policyRevision}';\nexport const parallelClefThresholds = Object.freeze(${JSON.stringify(profiles.clef)});\nexport const directJevThresholds = Object.freeze(${JSON.stringify(profiles.jev)});\n`);
+  await writeFile(path,`// Fitted only on calibration examples; holdout evaluated separately.\n// Evidence: ${arg('report')??output}; fixture SHA-256 ${fixtureHash}.\nexport const DIRECT_JEV_MODEL = '${DIRECT_JEV_MODEL}';\nexport const PARALLEL_MODERATION_POLICY = 'all-ages-v12-veto-personal-${policyRevision}';\nexport const parallelClefThresholds = Object.freeze(${JSON.stringify(profiles.clef)});\nexport const directJevThresholds = Object.freeze(${JSON.stringify(profiles.jev)});\n`);
 }

@@ -39,10 +39,11 @@ assert.equal(moderationDecision(calibrated, MODERATION_MODELS.jev), false);
 assert.equal(moderationDecision(calibrated, MODERATION_MODELS.clef), true);
 for (const model of Object.values(MODERATION_MODELS)) {
   const relaxed = safeModerationResult();
-  for (const name of names.filter(name => name !== 'all_ages')) relaxed.answers[name].noul = 0.30;
+  // Personal details use a separate, lower limit (see below).
+  for (const name of names.filter(name => !['all_ages', 'personal'].includes(name))) relaxed.answers[name].noul = 0.30;
   assert.equal(moderationDecision(relaxed, model), true, model + ' accepts content scores at 30%.');
   for (const [name, limit] of Object.entries(moderationThresholds(model))) {
-    assert.ok(limit >= 0.30, model + ' has at least a 30% threshold for ' + name);
+    assert.ok(name === 'personal' ? limit === 0.25 : limit >= 0.30, model + ' has the expected threshold for ' + name);
     const atLimit = safeModerationResult(); atLimit.answers[name].noul = limit;
     assert.equal(moderationDecision(atLimit, model), true, model + ' accepts boundary for ' + name);
     atLimit.answers[name].noul += name === 'all_ages' ? -0.0001 : 0.0001;
@@ -137,6 +138,7 @@ console.log('Moderation protocol tests passed (synthetic responses; no model cal
 const recordedCars = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-06-clef-car-regressions.json', import.meta.url), 'utf8')).results;
 const recordedCruelty = JSON.parse(readFileSync(new URL('../docs/moderation/2026-10-04-clef-calibration-holdout.json', import.meta.url), 'utf8')).results.find(row => row.name === 'animal-cruelty');
 for (const row of [...recordedCars, recordedCruelty]) {
-  const result = {answers: Object.fromEntries(Object.entries(row.scores).map(([name, noul]) => [name, {type: 'noul', noul}]))};
+  // These recordings predate the personal-information question and contain no personal details.
+  const result = {answers: Object.fromEntries(Object.entries({personal: 0, ...row.scores}).map(([name, noul]) => [name, {type: 'noul', noul}]))};
   assert.equal(moderationDecision(result, MODERATION_MODELS.clef), row.expected, row.description ?? row.name);
 }
