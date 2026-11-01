@@ -10,7 +10,7 @@ export const activeSuspension = (value, now = Date.now()) => value && (value.unt
 export function suspensionError(suspension) {
   return {error: {code: 'account_suspended', message: suspension.until === null
     ? 'Generation has been suspended for this account. Contact support for review.'
-    : `Generation is suspended until ${new Date(suspension.until).toISOString()}. Contact support for review.`,
+    : `Generation is suspended until ${new Date(suspension.until).toLocaleString('en-GB', {timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'})} UTC. Contact support for review.`,
   suspendedUntil: suspension.until === null ? null : new Date(suspension.until).toISOString()}};
 }
 const prune = (state, now) => {

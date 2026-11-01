@@ -1,8 +1,8 @@
 # App Store submission records
 
-**1.0 (9) is prepared locally for resubmission; it has not been uploaded or submitted to Apple.** The signed App Store export, tests, renewed TypeSafe consent and production deployment are recorded in the [build 9 preparation](2026-10-31/build9-preparation.json), [artifact verification](2026-10-31/build9-artifact-verification.json), and [draft review notes](2026-10-31/build9-review-notes.txt).
+**1.0 (10) is the next submission; it has not been archived, uploaded or submitted.** Source on `main` sets build 10. Draft review notes: [build 10 review notes](2026-11-01/build10-review-notes.txt).
 
-The implementation is committed on `main`; [post-push CI and live deployment verification](2026-10-31/build9-main-verification.json) confirms immediate first approval and completion logging on the CI-deployed backend.
+1.0 (9) was uploaded on 31 October but never selected for the version or submitted; it is superseded by build 10. Its records ([preparation](2026-10-31/build9-preparation.json), [artifact verification](2026-10-31/build9-artifact-verification.json), [upload](2026-10-31/build9-upload-and-selection.json), [draft notes](2026-10-31/build9-review-notes.txt)) remain historical. Since build 9, the backend added the moderation veto rule (policy `all-ages-v11-veto`), automatic and operator account suspension, and plain-language service errors; build 10 adds the matching app wording, suspension handling and the encryption declaration.
 
 The latest recorded submission remains **1.0 (8), submitted 17 October 2026 at 08:50 PDT / 16:50 Europe/London**. Apple rejected it on 31 October for a generation error under guideline 2.1(a). A matching service session hit the eight-second Clef moderation timeout before image generation; see the [investigation](2026-10-31/investigation.json) and [sanitized findings](2026-10-31/log-findings.json). Build 8's original [submission receipt](2026-10-17/build8-resubmission.json), [verification](2026-10-17/build8-verification.txt), and [submitted review notes](2026-10-17/build8-review-notes.txt) remain historical records.
 
