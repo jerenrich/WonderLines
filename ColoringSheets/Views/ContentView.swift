@@ -555,7 +555,6 @@ struct ContentView: View {
                         .accessibilityIdentifier("privacyPolicy")
                     Link("Contact support", destination: PrivacyConsent.supportURL)
                     Link("Email support", destination: PrivacyConsent.emailURL)
-                    Text("jordan.erenrich@gmail.com").font(.footnote).textSelection(.enabled)
                     Text(store.hasConsent ? "AI data sharing: agreed. Your choice is saved for future sheets." : "AI data sharing: not agreed. We’ll ask before your next generation.")
                         .font(.footnote)
                     if store.hasConsent {
