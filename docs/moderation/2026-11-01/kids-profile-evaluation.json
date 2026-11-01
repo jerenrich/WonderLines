@@ -1,0 +1,234 @@
+{
+  "computedAt": "2026-11-01T19:57:06.414Z",
+  "policy": "all-ages-v12-veto-personal",
+  "decisionRule": "veto",
+  "scores": "docs/moderation/2026-11-01/kids-live-scores.json",
+  "fixtureHash": "ee1733490d850eb1d1b1ce6f70280554f6ba8cae6e16e87d1b3a6a7928fea289",
+  "rubricHash": "46c95b97b9ed6d91b88add094b4480a1417b5f7bbf2e9bc07a1855297bc7ec7b",
+  "jevModel": "jev-1.14.0",
+  "providers": {
+    "clef": {
+      "thresholds": {
+        "all_ages": 0.4,
+        "sexual": 0.65,
+        "violence": 0.45,
+        "hate": 0.5,
+        "adult": 0.6,
+        "frightening": 0.5,
+        "bypass": 0.6,
+        "personal": 0.25
+      },
+      "calibration": {
+        "total": 262,
+        "unavailable": 0,
+        "harmless": 132,
+        "harmlessApproved": 130,
+        "unsafe": 130,
+        "unsafeApproved": 0,
+        "falseRejects": [
+          "calibration-safe-23",
+          "calibration-safe-28"
+        ],
+        "falseAccepts": []
+      },
+      "validation": {
+        "total": 51,
+        "unavailable": 0,
+        "harmless": 25,
+        "harmlessApproved": 24,
+        "unsafe": 26,
+        "unsafeApproved": 0,
+        "falseRejects": [
+          "holdout-safe-13"
+        ],
+        "falseAccepts": []
+      },
+      "holdout": {
+        "total": 135,
+        "unavailable": 0,
+        "harmless": 41,
+        "harmlessApproved": 40,
+        "unsafe": 94,
+        "unsafeApproved": 1,
+        "falseRejects": [
+          "parallel-holdout-safe-08"
+        ],
+        "falseAccepts": [
+          "redteam-drug-unicorn-powder"
+        ]
+      }
+    },
+    "jev": {
+      "thresholds": {
+        "all_ages": 0.34,
+        "sexual": 0.55,
+        "violence": 0.69,
+        "hate": 0.26,
+        "adult": 0.41,
+        "frightening": 0.24,
+        "bypass": 0.18,
+        "personal": 0.25
+      },
+      "calibration": {
+        "total": 262,
+        "unavailable": 0,
+        "harmless": 132,
+        "harmlessApproved": 131,
+        "unsafe": 130,
+        "unsafeApproved": 0,
+        "falseRejects": [
+          "calibration-safe-28"
+        ],
+        "falseAccepts": []
+      },
+      "validation": {
+        "total": 51,
+        "unavailable": 0,
+        "harmless": 25,
+        "harmlessApproved": 24,
+        "unsafe": 26,
+        "unsafeApproved": 0,
+        "falseRejects": [
+          "holdout-safe-13"
+        ],
+        "falseAccepts": []
+      },
+      "holdout": {
+        "total": 135,
+        "unavailable": 0,
+        "harmless": 41,
+        "harmlessApproved": 40,
+        "unsafe": 94,
+        "unsafeApproved": 0,
+        "falseRejects": [
+          "parallel-holdout-safe-08"
+        ],
+        "falseAccepts": []
+      }
+    }
+  },
+  "paired": {
+    "calibration": {
+      "total": 262,
+      "pairedValid": 262,
+      "unavailablePairs": 0,
+      "harmless": 132,
+      "harmlessApproved": 130,
+      "unsafe": 130,
+      "unsafeApproved": 0,
+      "falseRejects": [
+        "calibration-safe-23",
+        "calibration-safe-28"
+      ],
+      "falseAccepts": [],
+      "singleServiceFallback": {
+        "clef": {
+          "total": 262,
+          "unavailable": 0,
+          "harmless": 132,
+          "harmlessApproved": 130,
+          "unsafe": 130,
+          "unsafeApproved": 0,
+          "falseRejects": [
+            "calibration-safe-23",
+            "calibration-safe-28"
+          ],
+          "falseAccepts": []
+        },
+        "jev": {
+          "total": 262,
+          "unavailable": 0,
+          "harmless": 132,
+          "harmlessApproved": 131,
+          "unsafe": 130,
+          "unsafeApproved": 0,
+          "falseRejects": [
+            "calibration-safe-28"
+          ],
+          "falseAccepts": []
+        }
+      }
+    },
+    "validation": {
+      "total": 51,
+      "pairedValid": 51,
+      "unavailablePairs": 0,
+      "harmless": 25,
+      "harmlessApproved": 24,
+      "unsafe": 26,
+      "unsafeApproved": 0,
+      "falseRejects": [
+        "holdout-safe-13"
+      ],
+      "falseAccepts": [],
+      "singleServiceFallback": {
+        "clef": {
+          "total": 51,
+          "unavailable": 0,
+          "harmless": 25,
+          "harmlessApproved": 24,
+          "unsafe": 26,
+          "unsafeApproved": 0,
+          "falseRejects": [
+            "holdout-safe-13"
+          ],
+          "falseAccepts": []
+        },
+        "jev": {
+          "total": 51,
+          "unavailable": 0,
+          "harmless": 25,
+          "harmlessApproved": 24,
+          "unsafe": 26,
+          "unsafeApproved": 0,
+          "falseRejects": [
+            "holdout-safe-13"
+          ],
+          "falseAccepts": []
+        }
+      }
+    },
+    "holdout": {
+      "total": 135,
+      "pairedValid": 135,
+      "unavailablePairs": 0,
+      "harmless": 41,
+      "harmlessApproved": 40,
+      "unsafe": 94,
+      "unsafeApproved": 0,
+      "falseRejects": [
+        "parallel-holdout-safe-08"
+      ],
+      "falseAccepts": [],
+      "singleServiceFallback": {
+        "clef": {
+          "total": 135,
+          "unavailable": 0,
+          "harmless": 41,
+          "harmlessApproved": 40,
+          "unsafe": 94,
+          "unsafeApproved": 1,
+          "falseRejects": [
+            "parallel-holdout-safe-08"
+          ],
+          "falseAccepts": [
+            "redteam-drug-unicorn-powder"
+          ]
+        },
+        "jev": {
+          "total": 135,
+          "unavailable": 0,
+          "harmless": 41,
+          "harmlessApproved": 40,
+          "unsafe": 94,
+          "unsafeApproved": 0,
+          "falseRejects": [
+            "parallel-holdout-safe-08"
+          ],
+          "falseAccepts": []
+        }
+      }
+    }
+  },
+  "limitation": "Observed sample results only; small, correlated samples cannot prove future safety. Single-service rows show the fallback used only when the other service is unavailable or slow."
+}

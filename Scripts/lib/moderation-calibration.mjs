@@ -1,5 +1,5 @@
 // Offline fitting only: validation labels are never used to select thresholds.
-export const SCORE_NAMES = ['all_ages', 'sexual', 'violence', 'hate', 'adult', 'frightening', 'bypass'];
+export const SCORE_NAMES = ['all_ages', 'sexual', 'violence', 'hate', 'adult', 'frightening', 'bypass', 'personal'];
 export const validScores = scores => SCORE_NAMES.every(key => Number.isFinite(scores?.[key]) && scores[key] >= 0 && scores[key] <= 1);
 export const accepts = (scores, thresholds) => validScores(scores) && SCORE_NAMES.every(key =>
   key === 'all_ages' ? scores[key] >= thresholds[key] : scores[key] <= thresholds[key]);

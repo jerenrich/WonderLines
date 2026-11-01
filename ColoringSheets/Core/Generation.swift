@@ -887,6 +887,10 @@ final class WorkerClient: GenerationServing {
                                               "response", httpStatus: http.statusCode,
                                               workerCode: Self.workerErrorCode(data, response: http))
         }
+        if saved != nil, let http = response as? HTTPURLResponse, http.statusCode == 410,
+           Self.workerErrorCode(data, response: http) == "account_expired" {
+            throw AnonymousAccountExpired()
+        }
         guard let http = response as? HTTPURLResponse, http.statusCode == (saved == nil ? 201 : 200),
               let created = try? JSONDecoder().decode(InstallationResponse.self, from: data),
               let accountID = UUID(uuidString: created.accountID), !created.accessToken.isEmpty else {
@@ -918,7 +922,7 @@ final class WorkerClient: GenerationServing {
         }
         guard code == "description_not_suitable", response.statusCode == 400 else { return nil }
         // Only fixed server-owned reason codes may enter the shared report.
-        let known: Set<String> = ["sexual", "violence", "hate", "adult", "frightening", "bypass", "uncertain"]
+        let known: Set<String> = ["sexual", "violence", "hate", "adult", "frightening", "bypass", "personal", "uncertain"]
         let reasons = ((try? JSONDecoder().decode(WorkerErrorBody.self, from: data))?.error.reasonCodes ?? [])
             .filter { known.contains($0) }
         let codes = Set(reasons).sorted().joined(separator: ",")
@@ -955,6 +959,10 @@ final class WorkerClient: GenerationServing {
         }
         guard response.statusCode == expectedStatus else { return nil }
         if code == "description_not_suitable" {
+            let reasons = (try? JSONDecoder().decode(WorkerErrorBody.self, from: data))?.error.reasonCodes ?? []
+            if !reasons.isEmpty, reasons.allSatisfy({ $0 == "personal" }) {
+                return "Please leave out real names, addresses and other personal details, then try again."
+            }
             return "This description was rejected because it was flagged by content moderation."
         }
         guard

@@ -31,6 +31,7 @@ on:
       - 'Scripts/lib/moderation-calibration.mjs'
       - 'Scripts/test_batch_moderation.mjs'
       - 'Scripts/test_account_safety.mjs'
+      - 'Scripts/test_account_retention.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   push:
@@ -63,6 +64,7 @@ on:
       - 'Scripts/lib/moderation-calibration.mjs'
       - 'Scripts/test_batch_moderation.mjs'
       - 'Scripts/test_account_safety.mjs'
+      - 'Scripts/test_account_retention.mjs'
       - 'Scripts/fixtures/**'
       - '.github/workflows/worker.yml'
   workflow_dispatch:
@@ -135,6 +137,7 @@ jobs:
           node Scripts/test_reporting_concurrency.mjs
           node Scripts/test_batch_moderation.mjs
           node Scripts/test_account_safety.mjs
+          node Scripts/test_account_retention.mjs
           node workers/generation-lab/tests/suspension-admin.mjs
           node Scripts/test_moderation.mjs
           node Scripts/test_parallel_moderation.mjs

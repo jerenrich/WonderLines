@@ -6,21 +6,22 @@ Build 8 was rejected under guideline 2.1(a) after a generation error. We traced 
 
 Descriptions are now checked by two independent services in parallel, Cloudflare Clef and TypeSafe Jev. A rejection from either service blocks generation. If one service is slow or unavailable, generation proceeds on the other service's approval after a short wait, so a single service outage no longer blocks image generation.
 
-Build 10 names TypeSafe AI in the AI sharing notice and asks for consent again before generation. The public privacy policy has been updated to match.
-
-Safety controls:
-- Every description is checked before any image is generated.
+Wonder Lines is a coloring app for families. Children should use it with a parent or guardian, and because younger users may use it, it includes these protections:
+- Before the first sheet, the app asks an adult-level multiplication question. Only then is the AI sharing notice shown, which a grown-up must accept before any description is sent. The notice names Cloudflare, TypeSafe AI and the image provider, and links to the privacy policy.
+- Every description is checked before any image is generated. Unsuitable content is rejected, and so are personal details such as full names, addresses, schools, phone numbers, email addresses and usernames.
+- Requests to AI providers contain only the description and drawing settings, never an account identifier, device identifier or IP address.
+- There is no sign-in, advertising, analytics, tracking or in-app purchase. Sheets are private; there is no feed, messaging or other users' content.
 - Report sheet (the flag button above the sheet; on narrower screens such as iPhone, in the Sheet actions menu) sends a private report to support and removes that sheet from the gallery.
-- Accounts with 20 content-policy rejections in 24 hours are automatically suspended from generation for 24 hours. We can also suspend or reinstate an account after review. Suspension is enforced on the server; reporting, support and account deletion remain available.
-- Generated sheets are private. There is no public gallery, feed, messaging or other users' content.
+- Accounts with 20 content-policy rejections in 24 hours are automatically suspended from generation for 24 hours, and we can suspend or reinstate accounts after review.
+- Generated images are deleted from our service after 24 hours, and anonymous accounts after 180 days without use. Settings offers consent withdrawal and full account and data deletion.
 
 To test:
 1. Open Wonder Lines with an internet connection.
 2. Enter "A friendly dinosaur riding a bicycle on the moon".
-3. Tap Generate and then Agree and Generate on the AI sharing notice.
+3. Tap Generate. Answer the multiplication question, tap Continue, then tap Agree and Generate.
 4. Wait for the three sheets, then swipe or use the arrows to view them.
 
-No sign-in, purchase or settings change is required. Generation is free for users, subject to service availability and a daily allowance of 100 images per anonymous account. Settings includes consent withdrawal, account and data deletion, the privacy policy, and support.
+No sign-in, purchase or settings change is required. Generation is free, subject to service availability and a daily allowance of 100 images per anonymous account.
 
 Privacy: https://jerenrich.github.io/WonderLines/privacy.html
 Support: https://jerenrich.github.io/WonderLines/#support

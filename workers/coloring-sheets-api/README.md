@@ -7,7 +7,7 @@ Provider failure diagnostics now include `upstreamErrorReasons` (fixed cause cat
 ## Parallel moderation (31 October 2026)
 
 `MODERATION_STRATEGY=parallel` runs Cloudflare Clef and direct TypeSafe Jev
-(`jev-1.14.0`) together, and either service can veto (policy `all-ages-v11-veto`).
+(`jev-1.14.0`) together, and either service can veto (policy `all-ages-v12-veto-personal`).
 A valid rejection immediately rejects the batch. A valid approval waits up to four
 seconds (`SECOND_DECISION_GRACE_MS`), never past the overall deadline, for the
 other service: a second approval permits generation (`both_approved`) and a
@@ -92,6 +92,32 @@ node Scripts/test_parallel_moderation.mjs
 node Scripts/test_moderation_calibration.mjs
 node Scripts/test_batch_moderation.mjs
 ```
+
+## Personal-information check and account retention (1 November 2026)
+
+Wonder Lines is a general-audience family app that children may use with a parent or guardian. The moderation rubric
+adds an eighth question, `personal`: full names, addresses, schools, phone numbers,
+email addresses, usernames or exact locations of a private person are rejected; a
+first name alone, family words, pets and fictional or well-known figures are allowed.
+Both services use a 0.25 limit, midway between the highest harmless score (Clef
+0.16, Jev 0.03) and the lowest personal-details score (Clef 0.46, Jev 0.45) in the
+live calibration. The seven content limits are unchanged from v10/v11. Evidence:
+`docs/moderation/2026-11-01/kids-live-scores.json` and `kids-profile-evaluation.json`
+(`node Scripts/evaluate_moderation_profiles.mjs --scores=…`). With both services, 0 of
+250 unsafe examples were approved and 194 of 198 harmless ones were. Clef alone still
+approves `redteam-drug-unicorn-powder`; that matters only during a TypeSafe outage.
+Rejections for `personal` alone never add an account-safety strike.
+
+Accounts are deleted after 180 days without an authenticated request
+(`src/account-retention.mjs`). `/authorize` records activity at most once a day and
+arms the Account alarm for `lastActiveAt + 180 days`; every alarm re-arms it, since
+queued work can replace the alarm. When due, the alarm starts the existing deletion
+path (account, R2 images and reports, Budget claims), marked `reason: inactivity`.
+The comparison service account is exempt. Renewing a credential for a deleted or
+unknown account returns HTTP 410 `account_expired`, and build 10 then registers a
+new anonymous account. Older accounts without an activity record get one when they
+next authenticate or alarm; the hourly cron also pages once through Budget claims to
+start a window for every account that has generated.
 
 ## Files
 

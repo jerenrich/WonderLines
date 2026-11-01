@@ -8,6 +8,8 @@ class Storage {
   values = new Map();
   async get(key) { return structuredClone(this.values.get(key)); }
   async put(key, value) { this.values.set(key, structuredClone(value)); }
+  async getAlarm() { return this.alarm ?? null; }
+  async setAlarm(time) { this.alarm = time; }
 }
 class Namespace {
   objects = new Map();

@@ -45,6 +45,7 @@ export class AccountSafety {
   }
   async reject(id, error, epoch, fingerprint) {
     if (!isUUID(id) || error?.code !== 'description_not_suitable' || error.status !== 400 ||
+        // Personal details alone never add a strike: children often type their own names.
         !error.reasonCodes?.some(reason => ['sexual', 'violence', 'hate', 'adult', 'frightening', 'bypass'].includes(reason))) return;
     return this.storage.transaction(async storage => {
       const now = Date.now(), state = prune((await storage.get(key)) ?? empty(), now);

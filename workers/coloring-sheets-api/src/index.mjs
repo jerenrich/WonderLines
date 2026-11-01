@@ -10,6 +10,7 @@ import {falCostData} from './fal-cost.mjs';
 import {isUUID} from './composition.mjs';
 import {prepareGeneration, startGeneration} from './generation-start.mjs';
 import {AccountSafety, safetyDirectory, cleanSafetyDirectory, suspensionError} from './account-safety.mjs';
+import {recordActivity, ensureActivityRecord, inactivityDue, retentionBackfillPage} from './account-retention.mjs';
 import {ADMIN_EMAIL} from '../../shared/admin-identity.mjs';
 import {moderateSubject, ModerationError, moderationModel, moderationPolicy, moderationEnvironment} from './moderation.mjs';
 import {DIRECT_JEV_MODEL} from './moderation-profiles.mjs';
@@ -124,6 +125,7 @@ export class Budget {
     const input = await request.json().catch(() => null);
     const path = new URL(request.url).pathname;
     if (['/safety-index', '/suspensions'].includes(path)) return safetyDirectory(this.state.storage, path, input);
+    if (path === '/retention-accounts') return reply(await retentionBackfillPage(this.state.storage));
     if (path === '/register') {
       const day = new Date().toISOString().slice(0, 10), existing = await this.state.storage.get('registrations');
       const used = existing?.day === day ? existing.used : 0;
@@ -196,7 +198,12 @@ export class Account {
       if (result.status === 200) await this.syncSafetyDirectory();
       return reply({accountId: account.id, ...result.value}, result.status);
     }
-    if (path === '/authorize') return account.credentialId === input.credentialId ? reply({access: await this.access(), appAttested: !!account.appAttested}) : fail('invalid_token', 'Invalid token.', 401);
+    if (path === '/authorize') {
+      if (account.credentialId !== input.credentialId) return fail('invalid_token', 'Invalid token.', 401);
+      await recordActivity(this.state.storage);
+      return reply({access: await this.access(), appAttested: !!account.appAttested});
+    }
+    if (path === '/retention-init') return reply({started: await ensureActivityRecord(this.state.storage)});
     if (path === '/attest-status') {
       const enrolled = await this.state.storage.get('app-attest');
       return reply({keyID: enrolled?.keyID ?? null});
@@ -423,6 +430,7 @@ export class Account {
   async initialize({accountId}) {
     if (!/^[0-9a-f-]{36}$/.test(accountId) || await this.state.storage.get('account')) return fail('invalid_account', 'Invalid account.', 409);
     const account = {id: accountId, credentialId: crypto.randomUUID()}; await this.state.storage.put('account', account);
+    await recordActivity(this.state.storage);
     return reply({credentialId: account.credentialId, access: await this.access()}, 201);
   }
   async dailyImagePolicy() {
@@ -487,9 +495,19 @@ export class Account {
   }
   async alarm() {
     await this.track(async () => {
-      if (!await this.state.storage.get('deletion')) { await this.syncSafetyDirectory(); await this.runAlarm(); }
+      if (!await this.state.storage.get('deletion')) { await this.syncSafetyDirectory(); await this.runAlarm(); await this.expireIfInactive(); }
     });
     if (await this.state.storage.get('deletion')) await this.finishDeletion();
+  }
+  async expireIfInactive() {
+    const account = await this.state.storage.get('account');
+    // The comparison studio's service account is operator-owned, not a user's.
+    if (!account || account.id === this.env.COMPARISON_ACCOUNT_ID) return;
+    if (!await inactivityDue(this.state.storage)) return;
+    // Reuse the user-initiated deletion path, which alarm() completes next.
+    await this.state.storage.put('deletion', {accountId: account.id, credentialHash: await digest(account.credentialId),
+      startedAt: Date.now(), complete: false, reason: 'inactivity'});
+    console.info(JSON.stringify({event: 'account_inactivity_deletion'}));
   }
   async runAlarm() {
     const pending = await this.state.storage.list({prefix: 'fal:', limit: 5});
@@ -836,6 +854,13 @@ export default {
       console.error(JSON.stringify({event:'storage_failure',operation:'recovery_image_retention'}));
       throw new Error('recovery_image_retention_failed');
     }
+    try {
+      const budget = env.BUDGET.get(env.BUDGET.idFromName('daily-generation-budget'));
+      const page = await (await budget.fetch('https://budget/retention-accounts', {method: 'POST', body: '{}'})).json();
+      let started = 0;
+      for (const accountId of page.accountIds ?? []) if (isUUID(accountId) && (await call(env, accountId, '/retention-init', {})).value?.started) started++;
+      if (page.accountIds?.length || !page.complete) console.info(JSON.stringify({event: 'account_retention_backfill', accounts: page.accountIds?.length ?? 0, started, complete: !!page.complete}));
+    } catch { console.error(JSON.stringify({event: 'account_retention_backfill_failed'})); }
     try { console.info(JSON.stringify(await cleanLegacyUsageLogs(env.GENERATIONS))); }
     catch {
       console.error(JSON.stringify({event: 'legacy_usage_log_retention_failed'}));
@@ -858,8 +883,16 @@ async function fetchRequest(request, env, ctx) {
     if (request.method !== 'POST' || !await body(request)) return fail('invalid_request', 'Send an empty JSON object.', 400);
     // Only renewal accepts an expired signed credential. The account must still
     // exist and its credentialId must match, so revocation also blocks renewal.
-    const account = await authenticate(request, env, true);
-    if (!account) return fail('unauthorized', 'The saved account credential could not be renewed.', 401);
+    const signed = await claims(request.headers.get('Authorization'), env.ACCOUNT_TOKEN_SECRET, true);
+    if (!signed) return fail('unauthorized', 'The saved account credential could not be renewed.', 401);
+    const checked = await call(env, signed.sub, '/authorize', {credentialId: signed.cid});
+    // A validly signed credential whose account is gone was deleted, usually
+    // after 180 days of inactivity. The app then starts a new anonymous account.
+    if (['account_deleted', 'unknown_account'].includes(checked.value?.error?.code)) {
+      return fail('account_expired', 'This anonymous account has been deleted. A new one will be created.', 410);
+    }
+    if (checked.status !== 200) return fail('unauthorized', 'The saved account credential could not be renewed.', 401);
+    const account = {id: signed.sub, credentialId: signed.cid, access: checked.value.access};
     return reply({accountId: account.id, accessToken: await token(account.id, account.credentialId, env.ACCOUNT_TOKEN_SECRET), expiresAt: Math.floor(Date.now() / 1000) + TOKEN_SECONDS, access: account.access});
   }
   if (url.pathname === '/v1/account' && request.method === 'DELETE') {

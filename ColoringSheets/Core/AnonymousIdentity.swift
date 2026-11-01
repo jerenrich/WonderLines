@@ -11,6 +11,10 @@ struct AnonymousSession: Codable, Equatable {
     var isUsable: Bool { expiresAt > Date().addingTimeInterval(60) }
 }
 
+/// The service deleted the saved account, normally after 180 days of inactivity.
+/// Only this signal may replace a saved account with a new registration.
+struct AnonymousAccountExpired: Error {}
+
 actor AnonymousIdentityStore {
     private let service: String
     private let account = "current"
@@ -30,8 +34,15 @@ actor AnonymousIdentityStore {
         let task = Task {
             let created: AnonymousSession
             if let saved {
-                created = try await renew(saved)
-                guard created.accountID == saved.accountID else { throw GenerationError.configuration }
+                let renewed: AnonymousSession?
+                do { renewed = try await renew(saved) } catch is AnonymousAccountExpired { renewed = nil }
+                if let renewed {
+                    guard renewed.accountID == saved.accountID else { throw GenerationError.configuration }
+                    created = renewed
+                } else {
+                    try deleteSavedSession()
+                    created = try await register()
+                }
             } else {
                 created = try await register()
             }
