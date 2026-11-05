@@ -4,12 +4,12 @@ import {imageCost, refreshImageCostMetrics} from '../workers/coloring-sheets-api
 
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-12, `${actual} != ${expected}`);
 const request = (model, provider = 'openai') => ({model, provider, payload: {prompt: 'A friendly flower'}});
-for (const model of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
+for (const model of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'gpt-image-2.6-flare', 'gpt-image-2.6-sunburst']) {
   const cost = imageCost(request(model), {inputTokens: 100, textInputTokens: 80, imageInputTokens: 20, outputTokens: 200});
   close(cost.estimatedInputUsd, 0.00056);
   close(cost.estimatedOutputUsd, 0.006);
   close(cost.estimatedTotalUsd, 0.00656);
-  assert.equal(cost.ratesChecked, '2026-10-23');
+  assert.equal(cost.ratesChecked, model.includes('2.6') ? '2026-11-05' : '2026-10-23');
   const textOnly = imageCost(request(model), {inputTokens: 100, outputTokens: 200});
   close(textOnly.estimatedTotalUsd, 0.0065);
   const cached = imageCost(request(model), {inputTokens: 100, cachedInputTokens: 80, outputTokens: 200});

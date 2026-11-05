@@ -11,7 +11,7 @@ const expected={
   'flux-1-schnell':'¢0.19', 'lucid-origin':'¢5.86', 'phoenix-1.0':'¢4.29',
   'stable-diffusion-xl-base-1.0':'¢0.00', 'stable-diffusion-xl-lightning':'¢0.00', 'dreamshaper-8-lcm':'<¢0.01'
 };
-assert.equal(models.length,24);
+assert.equal(models.length,26);
 assert.equal(modelReferenceCost({provider:"fal",model:"z-image-turbo"}).usd,0.01);
 for(const model of models) {
   if(!Object.hasOwn(expected,model.id)){

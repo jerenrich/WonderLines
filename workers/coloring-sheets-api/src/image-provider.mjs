@@ -3,6 +3,11 @@
 import {providerErrorDiagnostics} from './provider-diagnostics.mjs';
 import {comparisonRoutes, falComparisonConfig, isFalEndpoint} from './fal-models.mjs';
 export const DEFAULT_MODEL = 'gpt-image-2.5-flare';
+// Experimental OpenAI options belong to Compare until evaluated for the app.
+export const OPENAI_COMPARISON_ROUTES = {
+  'gpt-image-2.6-flare': {provider: 'openai', model: 'gpt-image-2.6-flare'},
+  'gpt-image-2.6-sunburst': {provider: 'openai', model: 'gpt-image-2.6-sunburst'}
+};
 const DEFAULT_ROUTES = {
   'coloringbook-redmond-v2': {provider: 'fal', model: 'coloringbook-redmond-v2'},
   'z-image-turbo': {provider: 'fal', model: 'z-image-turbo'},
@@ -42,7 +47,7 @@ const PROMPT = 'Create a printable coloring page with bold clean black outlines 
 export function modelCatalog(env, {comparison = false} = {}) {
   const overrides = env.IMAGE_MODEL_ROUTES === undefined ? {} : JSON.parse(env.IMAGE_MODEL_ROUTES);
   if (!object(overrides)) throw new Error('Invalid image model routes');
-  const routes = {...DEFAULT_ROUTES, ...(comparison ? comparisonRoutes() : {}), ...overrides};
+  const routes = {...DEFAULT_ROUTES, ...(comparison ? {...OPENAI_COMPARISON_ROUTES, ...comparisonRoutes()} : {}), ...overrides};
   if (Object.keys(routes).length > 32) throw new Error('Too many image model routes');
   for (const [id, route] of Object.entries(routes)) {
     validateModelRoute(id, route, {comparison});

@@ -5,6 +5,9 @@
 const RATES_CHECKED = '2026-10-23';
 const ESTIMATE_VERSION = 3;
 const OPENAI_RATES = new Map([
+  // GPT Image 2.6 rates verified against official pricing on 2026-11-05.
+  ['gpt-image-2.6-flare', {text: 5, image: 8, output: 30, checkedOn: '2026-11-05'}],
+  ['gpt-image-2.6-sunburst', {text: 5, image: 8, output: 30, checkedOn: '2026-11-05'}],
   ['gpt-image-2.5-flare', {text: 5, image: 8, output: 30}],
   ['gpt-image-2.5-sunburst', {text: 5, image: 8, output: 30}],
   // The collapsed pricing page also contains Batch prices. This adapter calls
@@ -95,7 +98,7 @@ export function imageCost(request, result) {
     const cached = image === 0 ? Math.min(count(result.cachedInputTokens) ?? 0, text) : 0;
     const input = ((text - cached) * rates.text + cached * rates.text / 4 + image * rates.image) / 1e6;
     basis += cached ? ' Reported cached text tokens use the cached rate.' : ' No cache discount assumed.';
-    return estimate(input, output * rates.output / 1e6, basis);
+    return {...estimate(input, output * rates.output / 1e6, basis), ratesChecked: rates.checkedOn ?? RATES_CHECKED};
   }
 
   if (request.provider === 'workers-ai') {

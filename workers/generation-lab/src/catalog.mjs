@@ -5,6 +5,14 @@ import {modelReferenceCost} from './model-reference-cost.mjs';
 import {FAL_COMPARISON_MODELS} from '../../coloring-sheets-api/src/fal-models.mjs';
 const names = {'gpt-image-2.5-flare': 'Flare', 'gpt-image-2.5-sunburst': 'Sunburst', 'flux-2-klein-4b': 'FLUX.2 Klein 4B', 'flux-2-klein-9b': 'FLUX.2 Klein 9B', 'flux-2-dev': 'FLUX.2 Dev', 'flux-1-schnell': 'FLUX.1 Schnell', 'lucid-origin': 'Lucid Origin', 'phoenix-1.0': 'Phoenix 1.0', 'stable-diffusion-xl-base-1.0': 'Stable Diffusion XL', 'stable-diffusion-xl-lightning': 'SDXL Lightning', 'dreamshaper-8-lcm': 'DreamShaper 8 LCM'};
 const recommended = ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'z-image-turbo', 'flux-2-klein-4b', 'flux-2-klein-9b', 'phoenix-1.0'];
+const openaiLabels = {
+  'gpt-image-2.5-flare': 'GPT Image 2.5 Flare',
+  'gpt-image-2.5-sunburst': 'GPT Image 2.5 Sunburst',
+  'gpt-image-2.6-flare': 'GPT Image 2.6 Flare',
+  'gpt-image-2.6-sunburst': 'GPT Image 2.6 Sunburst'
+};
+const openaiLabel = (id, route) => route.provider === 'openai' && route.model === id ? openaiLabels[id] : undefined;
+recommended.push('gpt-image-2.6-flare', 'gpt-image-2.6-sunburst');
 // Distilled and undistilled Klein are different checkpoints. Put the variant
 // and actual sampling steps in the picker label so they do not look duplicated.
 const kleinLabels = {
@@ -16,7 +24,7 @@ const kleinLabels = {
 export function catalog(env) {
   const result = modelCatalog(env, {comparison: true});
   return Object.entries(result.routes).map(([id, route]) => ({id,
-    label: kleinLabels[id] ?? FAL_COMPARISON_MODELS[id]?.label ?? (id === 'coloringbook-redmond-v2' ? 'ColoringBook Redmond V2' : names[id] ?? id),
+    label: openaiLabel(id, route) ?? kleinLabels[id] ?? FAL_COMPARISON_MODELS[id]?.label ?? (id === 'coloringbook-redmond-v2' ? 'ColoringBook Redmond V2' : names[id] ?? id),
     recommended: recommended.includes(id), ...route, referenceCost: modelReferenceCost(route)}));
 }
 // Use the same KV-backed routes as generation admission. Comparison-only
@@ -28,7 +36,7 @@ export async function liveCatalog(env) {
   const visible = new Map(result.models.map(model => [model.id, model]));
   return Object.entries(result.routes).map(([id, route]) => {
     const prior = defaults.get(id), entry = visible.get(id);
-    return {id, ...route, label:entry?.label ?? prior?.label ?? id,
+    return {id, ...route, label:openaiLabel(id, route) ?? entry?.label ?? prior?.label ?? id,
       recommended:entry ? true : (prior?.recommended ?? false),
       referenceCost:modelReferenceCost(route)};
   });

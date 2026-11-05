@@ -1,4 +1,4 @@
-import {modelCatalog, validateModelRoute} from './image-provider.mjs';
+import {modelCatalog, validateModelRoute, OPENAI_COMPARISON_ROUTES} from './image-provider.mjs';
 import initialRegistry from '../model-registry.initial.json' with {type: 'json'};
 import {comparisonRoutes} from './fal-models.mjs';
 
@@ -45,6 +45,11 @@ export async function loadModelCatalog(env, {comparison = false} = {}) {
     const raw = await env.MODEL_REGISTRY.get(MODEL_REGISTRY_KEY, {type: 'text', cacheTtl: 60});
     if (typeof raw !== 'string' || new TextEncoder().encode(raw).length > 65536) throw new Error('Model registry unavailable');
     const document = JSON.parse(raw), catalogue = parseModelRegistry(document);
+    if (comparison && document.providers.openai?.enabled) {
+      for (const [id, route] of Object.entries(OPENAI_COMPARISON_ROUTES)) {
+        if (!document.models.some(entry => entry.id === id)) catalogue.routes[id] = route;
+      }
+    }
     // The private comparison studio has additional experimental fal presets.
     // Keep those separate from the app picker, but honour the provider switch.
     if (comparison && document.providers.fal?.enabled) {

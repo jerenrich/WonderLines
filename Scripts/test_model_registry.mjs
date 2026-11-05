@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {parseModelRegistry, loadModelCatalog, MODEL_REGISTRY_KEY} from '../workers/coloring-sheets-api/src/model-registry.mjs';
 import {prepareGeneration, startGeneration, generationFingerprints} from '../workers/coloring-sheets-api/src/generation-start.mjs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
+import {imageRequest, modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';
 
 const seed = JSON.parse(await readFile(new URL('../workers/coloring-sheets-api/model-registry.initial.json', import.meta.url)));
 let document = structuredClone(seed), reads = 0, broken = false;
@@ -17,6 +18,28 @@ assert.equal(Object.keys(parseModelRegistry(seed).routes).length, 13);
 assert.equal((await loadModelCatalog(env)).defaultModel, 'gpt-image-2.5-sunburst');
 assert.ok(!(await loadModelCatalog(env)).models.some(model => model.id === 'coloringbook-redmond-v2'));
 assert.ok((await loadModelCatalog(env)).routes['coloringbook-redmond-v2'], 'Hidden models remain valid for explicit requests.');
+
+// Compare admits both 2.6 variants while the app keeps its current catalogue.
+for (const variant of ['flare', 'sunburst']) {
+  const id = `gpt-image-2.6-${variant}`;
+  const route = {provider:'openai',model:id};
+  assert.deepEqual((await loadModelCatalog(env,{comparison:true})).routes[id],route);
+  assert.equal((await loadModelCatalog(env)).routes[id],undefined);
+  assert.equal(modelCatalog({}).routes[id],undefined);
+  assert.deepEqual(modelCatalog({},{comparison:true}).routes[id],route);
+  const request=imageRequest({OPENAI_API_KEY:'synthetic'},route,'A friendly flower',{width:1456,height:1024});
+  assert.equal(request.url,'https://api.openai.com/v1/images/generations');
+  assert.equal(request.payload.model,id);
+  assert.equal(request.payload.quality,'low');
+  assert.equal(request.payload.size,'1456x1024');
+  assert.equal(request.payload.output_format,'png');
+  document.models.push({id,...route,enabled:false,visible:false,label:id,detail:'Disabled experiment',price:null});
+  assert.equal((await loadModelCatalog(env,{comparison:true})).routes[id],undefined,'Explicit disabled entries override experimental defaults.');
+  document=structuredClone(seed);
+}
+document.providers.openai.enabled=false;
+assert.ok(!Object.values((await loadModelCatalog(env,{comparison:true})).routes).some(route=>route.provider==='openai'));
+document=structuredClone(seed);
 
 const added = {id:'new-image-choice', provider:'openai', model:'compatible-image-model', enabled:true, visible:true,
   label:'New choice', detail:'A server-defined model.', price:null};
