@@ -1,0 +1,150 @@
+Browser tab: 1, Title: "App Store Connect", URL: "https://appstoreconnect.apple.com/apps/6817505650/distribution/ios/version/inflight/media-manager/iphone".
+0 AXWebArea App Store Connect, URL: appstoreconnect.apple.com/apps/6817505650/distribution/ios/version/inflight/media-manager/iphone
+	1 container
+		2 container App Store Connect
+			3 container
+				4 heading App Store Connect, Value: 1
+					5 link Description: App Store Connect, Value: appstoreconnect.apple.com/, ID: logo
+				6 container Global
+					7 content list
+						8 link Description: Apps, Value: appstoreconnect.apple.com/apps
+						9 link Description: Xcode Cloud, Value: appstoreconnect.apple.com/teams/f715604c-bb11-4c86-afc9-6454d1b159df/xcode-cloud
+						10 link Description: Trends, Value: appstoreconnect.apple.com/trends
+						11 link Description: Reports, Value: appstoreconnect.apple.com/itc/payments_and_financial_reports
+						12 link Description: Business, Value: appstoreconnect.apple.com/business
+						13 link Description: Users and Access, Value: appstoreconnect.apple.com/access/users
+				14 button Jordan Erenrich Jordan Erenrich Account name menu
+		15 container sub
+			16 pop up button (collapsed) Description: Apps menu, Wonder Lines, selected, Secondary Actions: Expand
+				17 container
+					18 image Wonder Lines
+					19 text Wonder Lines
+				20 image
+			21 container Apps
+				22 container
+					23 text Distribution
+					24 image
+				25 content list
+					26 link Description: Distribution, Value: appstoreconnect.apple.com/apps/6817505650/distribution
+					27 link Description: Analytics, Value: appstoreconnect.apple.com/apps/6817505650/analytics
+					28 link Description: TestFlight, Value: appstoreconnect.apple.com/teams/f715604c-bb11-4c86-afc9-6454d1b159df/apps/6817505650/testflight
+		29 container
+			30 container
+				31 container
+					32 image
+					33 text iOS App 1.0
+				34 heading Media Manager, Value: 2
+					35 text Media Manager
+				36 text iPhone
+				37 image
+				38 container
+					39 pop up button (disabled, collapsed) English (U.S.), Secondary Actions: Expand
+					40 button ?
+				41 text Use app previews and screenshots to visually communicate your app's user experience. Screenshots will automatically scale down to smaller device sizes unless you add specific app previews and screenshots for other device sizes and localizations. Screenshots must show your app in use or primarily depict your app's user experience.
+				42 link Description: Learn more..., Value: developer.apple.com/app-store/asset-best-practices/#screenshots
+				43 heading Required, Value: 3
+					44 text Required
+				45 text App previews and screenshots are required to accurately represent your app on these devices.
+				46 button DropZone, ID: react-aria6327382910-38
+				47 text iPhone with Dynamic Island
+				48 text (medium display)
+				49 container accordion-section-0.4793429383833049-1231
+					50 content list
+						51 Draggable item. Press space bar to lift Screenshot 01-create-your-coloring-page.png, ID: a9000019-65ae-8172-8f12-e4ac3d2f18fa
+							52 button Screenshot 01-create-your-coloring-page.png
+								53 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						54 Draggable item. Press space bar to lift Screenshot 02-intricate-nature-details.png, ID: 08400019-65ae-8172-8f36-5142a5a93fda
+							55 button Screenshot 02-intricate-nature-details.png
+								56 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						57 Draggable item. Press space bar to lift Screenshot 03-describe-your-idea.png, ID: 69800019-65ae-8172-8f3f-aec2cd6625e4
+							58 button Screenshot 03-describe-your-idea.png
+								59 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						60 Draggable item. Press space bar to lift Screenshot 04-choose-your-drawing-detail.png, ID: 98400019-65ae-8172-8f20-2c4f1d08b9ae
+							61 button Screenshot 04-choose-your-drawing-detail.png
+								62 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						63 Draggable item. Press space bar to lift Screenshot 05-save-share-and-print.png, ID: f7000019-65ae-8172-8f10-0878a2d78f92
+							64 button Screenshot 05-save-share-and-print.png
+								65 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+					66 text 0 of 3 App Previews
+					67 text 5 of 10 App Screenshots
+					68 pop up button (collapsed) Browse Assets, Secondary Actions: Expand
+					69 button Upload
+					70 pop up button (collapsed) Remove All, Secondary Actions: Expand
+					71 text Drag and drop to add assets or choose from your Asset Library for iPhone 6.1" or 6.3" displays. Supported sizes for app previews include 1920 × 886px and 886 × 1920px. For app screenshots, supported sizes include 2556 × 1179px, 1179 × 2556px, 2622 × 1206px and 1206 × 2622px.
+				72 heading Optional, Value: 3
+					73 text Optional
+				74 text You can add app previews and screenshots to better represent your app on these devices.
+				75 button DropZone, ID: react-aria6327382910-40
+				76 button (expanded) iPhone with Dynamic Island (large display), ID: accordion-toggle-0.4793429383833049-1232, Secondary Actions: Collapse
+					77 text iPhone with Dynamic Island
+					78 text (large display)
+				79 container iPhone with Dynamic Island (large display), ID: accordion-section-0.4793429383833049-1232
+					80 content list
+						81 button Screenshot 01-create-your-coloring-page.png, ID: 10000019-65ae-8172-8f19-9805ec93cfa0
+							82 container Screenshot 01-create-your-coloring-page.png
+						83 Draggable item. Press space bar to lift Screenshot 02-intricate-nature-details.png, ID: 73400019-65ae-8172-8f29-1065c1947a02
+							84 button Screenshot 02-intricate-nature-details.png
+								85 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						86 Draggable item. Press space bar to lift Screenshot 03-describe-your-idea.png, ID: 59000019-65ae-8172-8f30-e526dd795430
+							87 button Screenshot 03-describe-your-idea.png
+								88 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						89 Draggable item. Press space bar to lift Screenshot 04-choose-your-drawing-detail.png, ID: cac00019-65ae-8172-8f14-6d2ec32dc589
+							90 button Screenshot 04-choose-your-drawing-detail.png
+								91 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+						92 Draggable item. Press space bar to lift Screenshot 05-save-share-and-print.png, ID: ec800019-65ae-8172-8f27-98a34a5299c5
+							93 button Screenshot 05-save-share-and-print.png
+								94 pop up button (collapsed) Description: Remove, Secondary Actions: Expand
+					95 text 0 of 3 App Previews
+					96 text 5 of 10 App Screenshots
+					97 pop up button (collapsed) Browse Assets, Secondary Actions: Expand
+					98 button Upload
+					99 pop up button (collapsed) Remove All, Secondary Actions: Expand
+					100 text Drag and drop to add assets or choose from your Asset Library for iPhone 6.5", 6.7", or 6.9" displays. Supported sizes for app previews include 1920 × 886px and 886 × 1920px. For app screenshots, supported sizes include 2796 × 1290px, 1290 × 2796px, 2868 × 1320px, 1320 × 2868px, 2736 × 1260px and 1260 × 2736px.
+				101 button DropZone, ID: react-aria6327382910-42
+				102 button (collapsed) iPhone with Face ID (large display), ID: accordion-toggle-0.4793429383833049-1233, Secondary Actions: Expand
+					103 text iPhone with Face ID
+					104 text (large display)
+				105 container iPhone with Face ID (large display), ID: accordion-section-0.4793429383833049-1233
+				106 button DropZone, ID: react-aria6327382910-44
+				107 button (collapsed) iPhone Duo, ID: accordion-toggle-0.4793429383833049-1234, Secondary Actions: Expand
+					108 text iPhone Duo
+				109 container iPhone Duo, ID: accordion-section-0.4793429383833049-1234
+				110 button DropZone, ID: react-aria6327382910-46
+				111 button (collapsed) iPhone with Face ID (medium display), ID: accordion-toggle-0.4793429383833049-1235, Secondary Actions: Expand
+					112 text iPhone with Face ID
+					113 text (medium display)
+				114 container iPhone with Face ID (medium display), ID: accordion-section-0.4793429383833049-1235
+				115 button DropZone, ID: react-aria6327382910-48
+				116 button (collapsed) iPhone with Home Button (large display), ID: accordion-toggle-0.4793429383833049-1236, Secondary Actions: Expand
+					117 text iPhone with Home Button
+					118 text (large display)
+				119 container iPhone with Home Button (large display), ID: accordion-section-0.4793429383833049-1236
+				120 button DropZone, ID: react-aria6327382910-50
+				121 button (collapsed) iPhone with Home Button (medium display), ID: accordion-toggle-0.4793429383833049-1237, Secondary Actions: Expand
+					122 text iPhone with Home Button
+					123 text (medium display)
+				124 container iPhone with Home Button (medium display), ID: accordion-section-0.4793429383833049-1237
+				125 button DropZone, ID: react-aria6327382910-52
+				126 button (collapsed) iPhone with Home Button (4" display), ID: accordion-toggle-0.4793429383833049-1238, Secondary Actions: Expand
+					127 text iPhone with Home Button
+					128 text (4" display)
+				129 container iPhone with Home Button (4" display), ID: accordion-section-0.4793429383833049-1238
+				130 button DropZone, ID: react-aria6327382910-54
+				131 button (collapsed) iPhone with Home Button (3.5" display), ID: accordion-toggle-0.4793429383833049-1239, Secondary Actions: Expand
+					132 text iPhone with Home Button
+					133 text (3.5" display)
+				134 container iPhone with Home Button (3.5" display), ID: accordion-section-0.4793429383833049-1239
+		135 content list
+			136 link Description: App Store Connect, Value: appstoreconnect.apple.com/apps
+		137 content list
+			138 container
+				139 text Copyright © 2026 Apple Inc. All rights reserved. |
+			140 container
+				141 link Description: Terms of Service, Value: appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/wa/termsOfService
+				142 text |
+			143 container
+				144 link Description: Privacy Policy, Value: apple.com/legal/privacy
+				145 text |
+			146 link Description: Contact Us, Value: appstoreconnect.apple.com/contact-us
+
+The focused UI element is 0 AXWebArea App Store Connect, URL: appstoreconnect.apple.com/apps/6817505650/distribution/ios/version/inflight/media-manager/iphone

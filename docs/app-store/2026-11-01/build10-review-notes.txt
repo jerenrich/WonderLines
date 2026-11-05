@@ -4,9 +4,9 @@ Please review Wonder Lines 1.0 (build 10).
 
 Build 8 was rejected under guideline 2.1(a) after a generation error. We traced it to our description safety check: the Cloudflare-hosted moderation service did not respond within our eight-second limit, so image generation never started.
 
-Descriptions are now checked by two independent services in parallel, Cloudflare Clef and TypeSafe Jev. A rejection from either service blocks generation. If one service is slow or unavailable, generation proceeds on the other service's approval after a short wait, so a single service outage no longer blocks image generation.
+Descriptions are now checked by two independent services in parallel, Cloudflare Clef and TypeSafe Jev. A rejection received before the generation decision blocks generation. After one service approves, the app's service waits up to four seconds for the other decision, within an overall eight-second limit. If the other service fails or remains pending at that cutoff, generation can proceed on one approval. A later rejection is recorded but cannot stop generation that has already been approved.
 
-Wonder Lines is a coloring app for families. Children should use it with a parent or guardian, and because younger users may use it, it includes these protections:
+Wonder Lines is a general-purpose tool for creating printable coloring pages, with adjustable drawing detail. Settings offers Simple, Balanced, Detailed and Intricate artwork; the control describes the drawing, not the user's age. It replaces the previous age-based difficulty control while preserving existing drawing preferences. Parental safeguards are included because children may also use the app. Children should use it with a parent or guardian. Protections include:
 - Before the first sheet, the app asks an adult-level multiplication question. Only then is the AI sharing notice shown, which a grown-up must accept before any description is sent. The notice names Cloudflare, TypeSafe AI and the image provider, and links to the privacy policy.
 - Every description is screened by automated filters before any image is generated, for unsuitable content and for personal details such as full names, addresses, schools, phone numbers, email addresses and usernames. Descriptions are rejected when either is detected, and Report sheet covers anything the filters miss.
 - Requests to AI providers contain only the description and drawing settings, never an account identifier, device identifier or IP address.
@@ -17,9 +17,10 @@ Wonder Lines is a coloring app for families. Children should use it with a paren
 
 To test:
 1. Open Wonder Lines with an internet connection.
-2. Enter "A friendly dinosaur riding a bicycle on the moon".
+2. Enter "A peaceful garden with flowers and a stone archway".
 3. Tap Generate. Answer the multiplication question, tap Continue, then tap Agree and Generate.
 4. Wait for the three sheets, then swipe or use the arrows to view them.
+5. Open Settings and change Drawing detail from Simple to Intricate to try a different level on the next generation.
 
 No sign-in, purchase or settings change is required. Generation is free, subject to service availability and a daily allowance of 100 images per anonymous account.
 

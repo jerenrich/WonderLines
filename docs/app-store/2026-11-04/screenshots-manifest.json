@@ -1,0 +1,113 @@
+{
+  "captureMethod": "Native SwiftUI UI in an isolated simulator-only build; saved Wonder Lines-generated pages; no provider requests. Shipping app source is unchanged by capture.",
+  "intendedBuild": "1.0 (10)",
+  "sourceBaseCommit": "72963067a04d9f493b6767fc9c07f2788e68cf75",
+  "appSourceIncludesUncommittedDrawingDetailChange": true,
+  "artwork": [
+    {
+      "sample": "cs009-age15-20261005-sunburst-r01-v01",
+      "description": "Whale swimming through a coral reef",
+      "sourceMetadata": "datasets/colouring-sheets/metadata/samples/cs009-age15-20261005-sunburst-r01-v01.json",
+      "imageSHA256": "9fe2fab9116253031f4f66d0ef7a6f7ab93678bd891214065c872193b6f08957"
+    },
+    {
+      "sample": "cs012-age15-20261005-sunburst-r01-v01",
+      "description": "Butterfly sitting on a daisy",
+      "sourceMetadata": "datasets/colouring-sheets/metadata/samples/cs012-age15-20261005-sunburst-r01-v01.json",
+      "imageSHA256": "2ae490882fe2fee8f4674dca884ca3a42250c893908aaae701ca7098ec553c91"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "iphone-6.9-inch/01-create-your-coloring-page.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "192738a5e6e33b4d9ed12f1db50d7a908ffc9af5e9e3c1b0ec37815f108f2f35"
+    },
+    {
+      "file": "iphone-6.9-inch/02-intricate-nature-details.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "19e120037c01368af34d56308ab60982e7afc37b6df228af3a6bf549a0757c98"
+    },
+    {
+      "file": "iphone-6.9-inch/03-describe-your-idea.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "fd1e107aad7c3d4e32e40c736359ce9b62e056671a5d58738ddcca3424579674"
+    },
+    {
+      "file": "iphone-6.9-inch/04-choose-your-drawing-detail.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "65ebe466f87452fbdbcaca942f402ce0f6c8a2295e669cbeee28a95aff297904"
+    },
+    {
+      "file": "iphone-6.9-inch/05-save-share-and-print.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "8171fb48f9745e7e651faf5469ee3546bf97c93be8ec7982a6f91b8fc6b9301c"
+    },
+    {
+      "file": "iphone-medium/01-create-your-coloring-page.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "fedd667ddd3a03f9326f78ed30f23152d90f368d8563608a23296a3531c5432f"
+    },
+    {
+      "file": "iphone-medium/02-intricate-nature-details.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "48bc2b30696b0b703b7e22c4b46d6464f1211504172ce7f766c5ad4d07ba5c93"
+    },
+    {
+      "file": "iphone-medium/03-describe-your-idea.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "221e6a3578b5400ec3bc7c7b00c809ffbbb3e016ed38ad0ecc392f819a8ef29b"
+    },
+    {
+      "file": "iphone-medium/04-choose-your-drawing-detail.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "f70918acda86114689d886780cd0cebf8912cbc6a306efee76f08d5bc01aebc6"
+    },
+    {
+      "file": "iphone-medium/05-save-share-and-print.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "e7d680f59208a8e19e1adb93d5783ea455831570c283860b43ebf9b88f718b6d"
+    },
+    {
+      "file": "ipad-13-inch/01-create-your-coloring-page.png",
+      "width": 2732,
+      "height": 2048,
+      "sha256": "557a38ab5397e48da28b4df50629e7c86fdb576b608eca930d8ee40b06560fa9"
+    },
+    {
+      "file": "ipad-13-inch/02-intricate-nature-details.png",
+      "width": 2732,
+      "height": 2048,
+      "sha256": "b0a151f245ec52c557aa75ca09c156e98b3e1dbb1f9393b30247726fed1e90e7"
+    },
+    {
+      "file": "ipad-13-inch/04-choose-your-drawing-detail.png",
+      "width": 2732,
+      "height": 2048,
+      "sha256": "6511d10bfe5547dd4262488823951f4a8657cac4323f86eadb51785e38027af6"
+    },
+    {
+      "file": "ipad-13-inch/05-portrait-gallery.png",
+      "width": 2048,
+      "height": 2732,
+      "sha256": "9aee394c1ff1b1b462e47270bb332963cf8ef611304af89a41195f00406a07fd"
+    }
+  ],
+  "uploadStatus": "All 14 screenshots uploaded and selected in App Store Connect English (U.S.) version 1.0; verified on 4 November 2026",
+  "specification": "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/",
+  "sourceFilesSHA256": {
+    "ColoringSheets/Views/ContentView.swift": "3c030d364182d1c402479006ad5807a53bb8ea529e4c1af9db809ff4f9cf2c86",
+    "ColoringSheets/Core/Generation.swift": "6bd64083b41ed33e37cf2d23970f3bd7f0a799b80c04c93fd8cf0ca5b90dafe0",
+    "ColoringSheets/Core/ColoringViewModel.swift": "c2ea10bfab8a6eed4d2092dd87c6a2562bb2be3415da5165f9b3fbdde3827d7b"
+  }
+}

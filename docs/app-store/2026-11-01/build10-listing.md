@@ -1,8 +1,8 @@
 # App Store listing for 1.0 (10)
 
-Draft settings and copy to enter in App Store Connect. Nothing here has been entered yet.
+Listing copy and review notes were applied to App Store Connect English (U.S.) version 1.0 on 4 November 2026; the name and subtitle already matched. The screenshot selections were refreshed with all 14 captures. Category and age-rating recommendations below remain separate from those copy updates. Build 10 was uploaded, processed and selected on 4 November 2026, and its selection was verified after reload. Version 1.0 has not been resubmitted for review.
 
-Wonder Lines is listed as a general-audience family app, not in the Kids Category. Children may use it, so the app keeps its younger-user protections: a grown-up check before AI sharing consent, personal-details screening, moderation by two services, no identifiers sent to AI providers, and 180-day account deletion.
+Wonder Lines is a general-purpose coloring-page creator, not in the Kids Category. Parental safeguards remain because children may also use it: a grown-up check before AI sharing consent, personal-details screening, moderation by two services, no identifiers sent to AI providers, and 180-day account deletion.
 
 ## App Information
 
@@ -12,22 +12,22 @@ Wonder Lines is listed as a general-audience family app, not in the Kids Categor
 
 ## Listing copy
 
-Guideline 5.1.4: outside the Kids Category, the name, subtitle, icon, screenshots and description must not imply that children are the main audience. The supervision line is a safety notice, not an audience claim.
+Guideline 5.1.4: outside the Kids Category, the name, subtitle, icon, screenshots and description must not imply that children are the main audience. Describe the general-purpose creative tool consistently. Keep supervision guidance in the consent flow and privacy policy.
 
 **Name:** Wonder Lines
 
 **Subtitle (30):** Dream it. Print it. Color it.
 
 **Promotional text (170):**
-A dinosaur riding a bike on the moon? Describe an idea and Wonder Lines draws a coloring page to save, share or print. Children should use it with a parent or guardian.
+Turn your ideas into printable coloring pages. Choose simple shapes or intricate details, then save, share or print your favorite.
 
 **Description:**
 Turn an idea into a page to color.
 
-A dinosaur riding a bike on the moon. A dragon baking cupcakes. Whatever you have in mind, Wonder Lines turns your description into a coloring sheet on iPhone and iPad, ready to print.
+Floral patterns, architectural scenes, peaceful landscapes or imaginative characters. Describe your idea and Wonder Lines turns it into a coloring page on iPhone and iPad, ready to print.
 
 DESCRIBE AN IDEA
-Type a scene or character, or tap Surprise me for a starter idea. Choose a drawing difficulty for simpler shapes or finer details.
+Type a scene, pattern or character, or tap Surprise me for a starter idea. Choose Drawing detail in Settings: Simple, Balanced, Detailed or Intricate. Create larger shapes and open spaces, or finer outlines and detailed backgrounds.
 
 PICK A FAVORITE
 Wonder Lines draws up to three sheets at a time. Swipe through them and choose the one to color.
@@ -35,24 +35,22 @@ Wonder Lines draws up to three sheets at a time. Swipe through them and choose t
 PRINT AND COLOR
 Save a sheet to Photos, share it, or print it with an AirPrint printer.
 
-FOR FAMILIES AND CLASSROOMS
-Children should use Wonder Lines with a parent or guardian.
-- A grown-up answers a quick question and agrees to how descriptions are used before the first sheet.
-- No sign-in, no ads, no tracking and no in-app purchases.
-- Every description is screened by automated filters before drawing, which turn away unsuitable ideas and personal details such as full names or addresses when they find them. Filters can miss things, so please keep an eye on what children type, and use Report sheet if a sheet isn't right.
-- Sheets are private. There is no feed, chat or sharing with other users.
-- Delete everything at any time from Settings.
+PRIVACY AND CONTROL
+- No sign-in, ads, tracking or in-app purchases.
+- Descriptions are screened for unsuitable content and personal details before drawing. Automated filters can miss things; use Report sheet to flag an inappropriate result.
+- Sheets stay private unless you export or share them. There is no feed or chat.
+- Delete your account and app history from Settings.
 
 An internet connection is needed to make new sheets. Wonder Lines uses AI image generation, so results vary.
 
-**Keywords (100):** coloring pages,printable,drawing,colouring,family,classroom,dinosaur,unicorn,activity,art
+**Keywords (100):** coloring pages,printable,drawing,colouring,patterns,creative,landscape,flowers,activity,art
 
 **Support URL:** https://jerenrich.github.io/WonderLines/#support
 **Privacy Policy URL:** https://jerenrich.github.io/WonderLines/privacy.html
 
 ## Screenshots
 
-Recapture on build 10 with a sheet the app actually generated. Every screenshot must suit a 4+ audience and should not imply a children's app; include an intricate sheet alongside simpler ones.
+Prepared on 4 November in [the screenshot pack](../2026-11-04/screenshots-manifest.json): five large iPhone captures (1320 × 2868), five medium iPhone captures (1206 × 2622) and four 13-inch iPad captures (2732 × 2048 landscape or 2048 × 2732 portrait). They show coral-reef and botanical pages generated by Wonder Lines, description editing, the Drawing detail control, and export actions. Captures use the current native UI in an isolated simulator build with saved generated artwork; no provider requests were made. Dimensions and RGB format were checked, and the captures were visually inspected. All 14 captures are uploaded and selected in App Store Connect English (U.S.) version 1.0; counts and filenames were verified.
 
 ## App Privacy (nutrition labels)
 

@@ -1,0 +1,43 @@
+{
+  "verifiedAtUTC": "2026-11-04T21:23:50.294866+00:00",
+  "version": "1.0",
+  "build": "10",
+  "bundleID": "com.jordan.family.ColoringSheets",
+  "deviceFamilies": [
+    1,
+    2
+  ],
+  "signatureVerified": true,
+  "distribution": "App Store Connect; Cloud Managed Apple Distribution; signed payload verified before Upload",
+  "appAttestEnvironment": "production",
+  "debuggingEntitlement": false,
+  "privacyManifestTracking": false,
+  "productionBackend": "https://coloring-sheets-api.jordan-erenrich.workers.dev",
+  "mockMode": false,
+  "drawingDetailUIVerified": true,
+  "screenshotFixturesAbsent": true,
+  "localSecretScan": "No saved local secret values found in signed payload",
+  "payloadFilesSHA256": {
+    "AppIcon60x60@2x.png": "9ddf46da0c2b08d9be1cbd7362b1cbe126241123570c2ac517c0631f84621c5b",
+    "AppIcon76x76@2x~ipad.png": "c7b8ae79c913a723ca5dacae40212c8860223b41f8066bcb2ae91500ae2750bb",
+    "Assets.car": "72879e3dc6ecef0bbe3c0710b8fc883f569d2008246803d271867952be7ee8ba",
+    "ColoringSheets": "fe10107d04a9694515197f766ad2bd81d2d46c0cf27fee48399d462f5f81f720",
+    "Info.plist": "e4802cbe79f530efb4f4996d07d749adc16f05923c995969f4486f2a50e3739b",
+    "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "PrivacyInfo.xcprivacy": "d0abc1c76737a6a21f339dbc7abe918558e295417c1950b6b6d48bf94ab4b7a3",
+    "ServiceConfiguration.plist": "fae8f92b90fb9a3dae8cbcb1211668fc74e918915abb3461abdbf18b9608673e",
+    "_CodeSignature/CodeResources": "6da846bf52ef990c775f24abd667e23ae4a9c077f53f05d1905d7c8115d453e4",
+    "embedded.mobileprovision": "ee3ca7d0e3555a48bbaab5f0ffc6e5ce23e22c2e73ba741e165086382518b06b"
+  },
+  "archivePath": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build10/WonderLines-1.0-10.xcarchive",
+  "signedPayloadPath": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build10/Inspected/Payload/ColoringSheets.app",
+  "uploadSucceeded": true,
+  "packagedPayloadMatchesVerifiedSignature": true,
+  "ipaSHA256": "958d1c66b10375d47d4697f21b43251e593fac908e5c0f997638c057a5e84fac",
+  "ipaBytes": 6216298,
+  "ipaPath": "/Users/jordan/Documents/ChatGPT/ColoringSheetsIpad/.build/build10/Export/ColoringSheets.ipa",
+  "uploadedAtUTC": "2026-11-04T21:26:05.727704+00:00",
+  "uploadMethod": "Xcode Organizer, Cloud Managed Apple Distribution",
+  "uploadConfirmation": "ColoringSheets 1.0 (10) uploaded",
+  "uploadEvidence": "build10-uploaded.png"
+}

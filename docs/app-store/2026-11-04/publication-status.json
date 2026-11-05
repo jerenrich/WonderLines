@@ -1,0 +1,55 @@
+{
+  "website": {
+    "status": "published and verified",
+    "commit": "72963067a04d9f493b6767fc9c07f2788e68cf75",
+    "urls": [
+      "https://jerenrich.github.io/WonderLines/",
+      "https://jerenrich.github.io/WonderLines/privacy.html"
+    ],
+    "files": {
+      "index.html": "0ec4bfecbe1073654295c0aae8453b4e97918d14d00217560cf2625eb7d71b26",
+      "privacy.html": "2593133b38f1e36a58af339a639f5e05c1c0385623707d6c6b2abc8d051ed26a",
+      "docs/images/ipad-general-purpose-coloring.jpg": "0412d786b98d1b0de31efdb4e04f0a0996cba50c79194bde1c4b5fec8125f061"
+    }
+  },
+  "appStoreConnect": {
+    "status": "Listing and screenshots saved; build 10 uploaded, processed and selected",
+    "verifiedAtUTC": "2026-11-04T21:30:38.629003+00:00",
+    "appID": "6817505650",
+    "version": "1.0",
+    "locale": "en-US",
+    "listingUpdated": true,
+    "reviewNotesUpdated": true,
+    "screenshotsUploaded": true,
+    "screenshotCounts": {
+      "iphone-medium": 5,
+      "iphone-6.9-inch": 5,
+      "ipad-13-inch": 4
+    },
+    "nameAndSubtitle": "Already matched the prepared copy; verified",
+    "selectedBuild": "10",
+    "intendedBuild": "10",
+    "submittedForReview": false,
+    "verification": "Listing field values read back after navigation; iPhone selections verified after reload; iPad selection verified in Media Manager.",
+    "evidence": [
+      "listing-before-update.json",
+      "listing-after-update.json",
+      "app-store-listing-saved.jpg",
+      "app-store-iphone-medium.jpg",
+      "app-store-iphone-large.jpg",
+      "app-store-ipad.jpg",
+      "app-store-iphone-verification.txt",
+      "build10-ready-to-submit.jpg",
+      "build10-selection-verified.txt",
+      "build10-selected.jpg"
+    ],
+    "build10Release": {
+      "archiveSucceeded": true,
+      "uploadSucceeded": true,
+      "processingStatus": "Ready to Submit",
+      "selectedBuild": "10",
+      "submittedForReview": false,
+      "record": "build10-release-status.json"
+    }
+  }
+}

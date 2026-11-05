@@ -1,0 +1,27 @@
+heading Build, Value: 3
+					160 text Build
+				161 table
+					162 row
+						163 cell
+							164 text BUILD
+						165 cell
+							166 text VERSION
+						167 cell
+							168 text HAS APP CLIP
+					169 row 7472930d-0276-451e-806f-7ed7a6334431
+						170 cell
+							171 link Description: App Icon, Help: 10, Value: appstoreconnect.apple.com/apps/6817505650/testflight/ios/7472930d-0276-451e-806f-7ed7a6334431/metadata
+							172 link Description: 10, Help: (10), Value: appstoreconnect.apple.com/apps/6817505650/testflight/ios/7472930d-0276-451e-806f-7ed7a6334431/metadata
+						173 cell
+							174 text 1.0
+						175 cell
+							176 text NO
+						177 cell
+							178 button Delete
+				179 text Included Assets
+				180 button App Icon
+					181 image App Icon
+				182 text App Icon
+				183 checkbox (settable, integer) Description: Game Center, Value: 0
+				184 text Game Center
+				185
