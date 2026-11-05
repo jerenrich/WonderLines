@@ -4,6 +4,12 @@ Detailed setup, architecture, testing, and verification notes moved from the mai
 
 [Back to the project overview](../README.md)
 
+## Drawing detail
+
+Settings offers four drawing-detail levels: Simple, Balanced, Detailed and Intricate. These match the service's existing complexity bands, from large open shapes to intricate outlines and layered backgrounds. The control describes artwork, not the user's age. Existing saved preferences retain their exact complexity until changed. For compatibility, the local `childAge` preference and request `age` field remain internal protocol names; new selections map to 3, 6, 9 and 13 respectively. No backend deployment or renewed sharing consent is needed for this presentation change.
+
+Verification (4 November 2026): the normally signed iPhone 17e simulator unit suite passed 106 tests with eight skips; both targeted Settings and first-use UI checks passed. The Settings screenshot was inspected. Coverage includes every saved complexity value, persistence of all four detail selections and the values sent for generation. Configuration and backend batch-moderation checks passed, and listing character limits and local website links were checked. The initial unsigned simulator run could not access the Keychain; normal simulator signing resolved those failures. All generation used mocks. The website and privacy policy were published on 4 November; the 14-image store screenshot pack is ready in `docs/app-store/2026-11-04/`. The listing copy, review notes and all 14 screenshot selections were applied in App Store Connect and verified on 4 November. Build 10 was archived, uploaded through Xcode Organizer with cloud-managed signing, processed by Apple and selected for version 1.0 on 4 November. The signed payload and packaged IPA were verified. Version 1.0 has not been resubmitted for review.
+
 ## Repository layout
 
 ```text

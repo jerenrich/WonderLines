@@ -69,7 +69,13 @@ final class ColoringViewModel: ObservableObject {
             if !isInBackground { recordActivity() }
         }
     }
+    // Preserve the legacy preference and API value so existing installations
+    // keep their drawing complexity without a backend or consent migration.
     @Published var age: Int { didSet { defaults.set(age, forKey: "childAge") } }
+    var drawingDetail: DrawingDetail {
+        get { DrawingDetail(legacyAge: age) }
+        set { age = newValue.legacyAge }
+    }
     @Published var model: ImageModel { didSet { defaults.set(model.rawValue, forKey: "generationModel") } }
     @Published private(set) var modelCatalogue: ModelCatalogue
     @Published private(set) var isRefreshingModels = false

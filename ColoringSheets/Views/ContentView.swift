@@ -487,24 +487,24 @@ struct ContentView: View {
     private var settingsSheet: some View {
         NavigationStack {
             Form {
-                Section("Age difficulty") {
+                Section("Drawing detail") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("\(store.age) years")
+                        Text(store.drawingDetail.label)
                             .font(.headline)
-                            .accessibilityIdentifier("ageSettingValue")
+                            .accessibilityIdentifier("drawingDetailValue")
                         Slider(value: Binding(
-                            get: { Double(store.age) },
-                            set: { store.age = Int($0) }), in: 3...18, step: 1) {
-                            Text("Age difficulty")
+                            get: { Double(store.drawingDetail.rawValue) },
+                            set: { if let detail = DrawingDetail(rawValue: Int($0)) { store.drawingDetail = detail } }), in: 0...3, step: 1) {
+                            Text("Drawing detail")
                         } minimumValueLabel: {
-                            Text("3")
+                            Text("Simple")
                         } maximumValueLabel: {
-                            Text("18")
+                            Text("Intricate")
                         }
-                        .accessibilityValue("\(store.age) years")
-                        .accessibilityIdentifier("ageSetting")
+                        .accessibilityValue(store.drawingDetail.label)
+                        .accessibilityIdentifier("drawingDetail")
                     }
-                    Text("Younger ages use simpler shapes and larger coloring areas. Older ages add finer details.")
+                    Text("Choose larger shapes and open spaces, or finer outlines and detailed backgrounds.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Generation") {

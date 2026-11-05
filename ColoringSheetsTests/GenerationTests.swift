@@ -1643,7 +1643,30 @@ final class StateTests: XCTestCase {
         }
         for saved in 3...18 {
             defaults.set(saved, forKey: "childAge")
-            XCTAssertEqual(ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults).age, saved)
+            let store = ColoringViewModel(service: MockGenerator(), isMock: true, defaults: defaults)
+            XCTAssertEqual(store.age, saved, "Opening Settings must preserve the saved complexity")
+            let expected: DrawingDetail = saved <= 5 ? .simple : saved <= 8 ? .balanced : saved <= 12 ? .detailed : .intricate
+            XCTAssertEqual(store.drawingDetail, expected)
+        }
+    }
+
+    func testDrawingDetailChoicesPersistAndReachGeneration() async {
+        for (detail, wireValue) in [(DrawingDetail.simple, 3), (.balanced, 6), (.detailed, 9), (.intricate, 13)] {
+            let suite = "DrawingDetail-\(UUID())"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let service = ControlledService()
+            let store = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+            store.drawingDetail = detail
+            store.description = "A floral pattern"
+            store.setImageCount(1)
+            let restored = ColoringViewModel(service: service, isMock: true, defaults: defaults)
+            XCTAssertEqual(restored.drawingDetail, detail)
+            store.generate()
+            await waitFor { service.pendingCount == 1 }
+            XCTAssertEqual(service.captured.first?.age, wireValue)
+            service.succeed()
+            await waitFor { store.phase == .result }
         }
     }
     func testRecoverUnfinishedSheetsAppendsWithoutGenerating() async {

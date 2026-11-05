@@ -217,6 +217,39 @@ struct GenerationSize: Equatable {
     var cgSize: CGSize { CGSize(width: width, height: height) }
 }
 
+/// The four complexity bands supported by the existing generation protocol.
+/// `age` remains a legacy wire field; it describes artwork, not the user's age.
+enum DrawingDetail: Int, CaseIterable {
+    case simple, balanced, detailed, intricate
+
+    init(legacyAge: Int) {
+        switch legacyAge {
+        case ...5: self = .simple
+        case 6...8: self = .balanced
+        case 9...12: self = .detailed
+        default: self = .intricate
+        }
+    }
+
+    var legacyAge: Int {
+        switch self {
+        case .simple: 3
+        case .balanced: 6
+        case .detailed: 9
+        case .intricate: 13
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .simple: "Simple"
+        case .balanced: "Balanced"
+        case .detailed: "Detailed"
+        case .intricate: "Intricate"
+        }
+    }
+}
+
 enum SheetComposition: String, CaseIterable {
     case side, front, wide, close, elevated
 }
@@ -234,7 +267,7 @@ struct GenerationRequest: Encodable, Equatable {
     init(description: String, age: Int, model: ImageModel, size: GenerationSize = .a4Default,
          composition: SheetComposition? = nil, batchID: UUID? = nil, modelLabel: String? = nil) throws {
         guard size.isValid else { throw GenerationError.validation("The page size is unsupported. Choose a smaller page size.") }
-        guard (3...18).contains(age) else { throw GenerationError.validation("Choose a child’s age from 3 to 18.") }
+        guard (3...18).contains(age) else { throw GenerationError.validation("Choose a supported drawing detail in Settings.") }
         let original = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !original.isEmpty else { throw GenerationError.validation("Describe what you’d like on the sheet.") }
         guard original.utf16.count <= 500 else {
