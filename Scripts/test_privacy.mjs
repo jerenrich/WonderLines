@@ -9,6 +9,7 @@ class Storage {
   async put(k, v) { this.values.set(k, structuredClone(v)); }
   async delete(k) { for (const key of Array.isArray(k) ? k : [k]) this.values.delete(key); }
   async setAlarm(time) { this.alarm = time; }
+  async getAlarm() { return this.alarm ?? null; }
   async deleteAlarm() { this.alarm = null; }
   async transaction(fn) { return fn(this); }
   async list({prefix = '', limit = Infinity} = {}) {

@@ -7,12 +7,24 @@ import {isUUID,MAX_COMPOSED_SUBJECT_LENGTH} from './composition.mjs';
 // Account still owns moderation, idempotency, all budget reservations and results.
 export class ComparisonImageRunner {
   constructor(state,env){this.state=state;this.env=env;this.queue=Promise.resolve();this.active=null;}
+  queueTimings(task) {
+    const metrics={};
+    const stages={dispatchWaitMs:['createdAt','dispatchedAt'],runnerHandoffMs:['dispatchedAt','runnerAcceptedAt'],
+      runnerAlarmWaitMs:['runnerAcceptedAt','runnerStartedAt'],runnerPreparationMs:['runnerStartedAt','safetyCheckStartedAt'],
+      safetyCheckMs:['safetyCheckStartedAt','startedAt']};
+    // Old in-flight tasks may lack some boundaries. Do not invent timings for
+    // those stages, or expose negative durations from cross-host clock skew.
+    for(const [key,[from,to]] of Object.entries(stages)) {
+      if(Number.isSafeInteger(task[from])&&Number.isSafeInteger(task[to])&&task[to]>=task[from])metrics[key]=task[to]-task[from];
+    }
+    return metrics;
+  }
   log(task,outcome,result={}) {
-    const metrics=result.metrics??task.metrics??{};
+    const metrics={...this.queueTimings(task),...task.metrics,...result.metrics};
     const emit=outcome==='failed'||outcome==='persistence_retry'?console.error:console.info;
     emit(JSON.stringify({event:'comparison_image',generationID:task.id,model:task.publicModel??metrics.requestedModel,
       provider:task.route?.provider??metrics.provider,stage:task.stage,outcome,errorCode:result.errorCode??null,
-      ...Object.fromEntries(['elapsedMs','queueMs','inferenceMs','complexity','failureStage','httpStatus','upstreamErrorCodes','upstreamErrorReasons','upstreamErrorParameters','upstreamErrorDetailStatus','providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'].filter(key=>metrics[key]!==undefined).map(key=>[key,metrics[key]]))}));
+      ...Object.fromEntries(['elapsedMs','queueMs','dispatchWaitMs','runnerHandoffMs','runnerAlarmWaitMs','runnerPreparationMs','safetyCheckMs','requestMs','inferenceMs','complexity','failureStage','httpStatus','upstreamErrorCodes','upstreamErrorReasons','upstreamErrorParameters','upstreamErrorDetailStatus','providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'].filter(key=>metrics[key]!==undefined).map(key=>[key,metrics[key]]))}));
   }
   fetch(request){
     const result=this.queue.then(async()=>{
@@ -20,8 +32,9 @@ export class ComparisonImageRunner {
       if(!input||request.method!=='POST'||!isUUID(input.id)||input.accountId!==this.env.COMPARISON_ACCOUNT_ID||!isUUID(input.accountId)||typeof input.fingerprint!=='string'||!Number.isSafeInteger(input.createdAt)||typeof input.subject!=='string'||input.subject.length>MAX_COMPOSED_SUBJECT_LENGTH||!input.route||!input.size)return Response.json({error:'Invalid task'},{status:400});
       const previous=await this.state.storage.get('task');
       if(previous)return Response.json({accepted:previous.id===input.id&&previous.accountId===input.accountId&&previous.fingerprint===input.fingerprint},{status:previous.id===input.id&&previous.accountId===input.accountId&&previous.fingerprint===input.fingerprint?202:409});
-      await this.state.storage.transaction(async storage=>{await storage.put('task',{...input,stage:'queued'});await storage.setAlarm(Date.now()+1);});
-      this.log({...input,stage:'queued'},'accepted');
+      const task={...input,runnerAcceptedAt:Date.now(),stage:'queued'};
+      await this.state.storage.transaction(async storage=>{await storage.put('task',task);await storage.setAlarm(Date.now()+1);});
+      this.log(task,'accepted');
       return Response.json({accepted:true},{status:202});
     });
     this.queue=result.catch(()=>{});return result;
@@ -50,6 +63,7 @@ export class ComparisonImageRunner {
     if(result.state==='failed')result.metrics={requestedModel:task.publicModel,provider:task.route?.provider,
       elapsedMs:Date.now()-task.createdAt,queueMs:(task.startedAt??Date.now())-task.createdAt,
       inferenceMs:task.startedAt?Date.now()-task.startedAt:0,failureStage:task.stage,...task.metrics,...result.metrics};
+    result.metrics={...this.queueTimings(task),...result.metrics};
     this.log(task,result.state,result);
     task.stage='reporting';task.result=result;delete task.subject;delete task.route;delete task.size;await this.state.storage.put('task',task);await this.report(task);
   }
@@ -61,10 +75,11 @@ export class ComparisonImageRunner {
       const model=task.route.model==='coloringbook-redmond-v2'?'fal-ai/lora':task.route.model;
       const result=await pollFalRequest(this.env,task.falRequestID,model);
       if(!result){await this.state.storage.setAlarm(Date.now()+4000);return;}
+      const requestMs=Date.now()-task.startedAt;
       const cost=await falCostData(this.env,task.falRequestID,result.billableUnits,task.startedAt,model);
       task.metrics={requestedModel:task.publicModel,provider:'fal',upstreamModel:model,viaGateway:true,
         providerRequestID:task.falRequestID,seed:result.seed,requestedSize:task.size.width+'x'+task.size.height,size:result.size,
-        elapsedMs:Date.now()-task.createdAt,queueMs:task.startedAt-task.createdAt,inferenceMs:result.inferenceMs,
+        elapsedMs:Date.now()-task.createdAt,queueMs:task.startedAt-task.createdAt,...this.queueTimings(task),requestMs,inferenceMs:result.inferenceMs,
         ...cost,...imageCost({provider:'fal',model},{...result,...cost})};
       task.stage='saving';await this.state.storage.put('task',task);
       await this.env.GENERATIONS.put(objectKey,result.image);
@@ -79,6 +94,7 @@ export class ComparisonImageRunner {
     }
   }
   async run(){
+    const wokeAt=Date.now();
     const task=await this.state.storage.get('task');if(!task||task.stage==='done')return;
     await this.state.storage.setAlarm(Date.now()+30000);
     if(task.stage==='reporting'){await this.report(task);return;}
@@ -88,9 +104,11 @@ export class ComparisonImageRunner {
       if(task.stage==='saving'&&await this.env.GENERATIONS.get(objectKey))return this.finish(task,{state:'completed',objectKey,metrics:task.metrics});
       return this.finish(task,{state:'failed',errorCode:'provider_connection_failed',message:'The image request was interrupted. No automatic second generation was submitted.'});
     }
+    task.runnerStartedAt=wokeAt;
     let request;
     try{request=imageRequest(this.env,task.route,task.subject,task.size);}
     catch{return this.finish(task,{state:'failed',errorCode:'provider_unavailable',message:'The image provider is not configured for this model.'});}
+    task.safetyCheckStartedAt=Date.now();
     const gate=await this.account('/generation-gate',{},task.accountId);
     if(!gate.ok) {
       if([404,410].includes(gate.status)) {
@@ -104,7 +122,7 @@ export class ComparisonImageRunner {
     }
     await gate.body?.cancel();
     const started=Date.now();task.stage='submitting';task.startedAt=started;await this.state.storage.put('task',task);
-    this.log(task,'provider_started');
+    this.log(task,'provider_started',{metrics:{queueMs:started-task.createdAt}});
     try{
       if(request.provider==='fal'){
         task.falRequestID=await submitFalRequest(this.env,request);
@@ -113,10 +131,12 @@ export class ComparisonImageRunner {
         await this.state.storage.setAlarm(Date.now()+1000);return;
       }
       const result=await runImageRequest(request);
+      const requestMs=Date.now()-started;
       task.metrics={requestedModel:task.publicModel,provider:request.provider,upstreamModel:request.model,viaGateway:request.viaGateway,
         requestedSize:task.size.width+'x'+task.size.height,size:result.size,inputTokens:result.inputTokens,textInputTokens:result.textInputTokens??null,
         imageInputTokens:result.imageInputTokens??null,cachedInputTokens:result.cachedInputTokens??null,outputTokens:result.outputTokens,totalTokens:result.totalTokens,
-        elapsedMs:Date.now()-task.createdAt,queueMs:started-task.createdAt,inferenceMs:Date.now()-started,...(supportsImageComplexity(task.route)?{complexity:task.route.complexity??'high'}:{}),...imageCost(request,result),...result.diagnostics};
+        elapsedMs:Date.now()-task.createdAt,queueMs:started-task.createdAt,...this.queueTimings(task),requestMs,inferenceMs:requestMs,
+        ...(supportsImageComplexity(task.route)?{complexity:task.route.complexity??'high'}:{}),...imageCost(request,result),...result.diagnostics};
       task.stage='saving';await this.state.storage.put('task',task);
       await this.env.GENERATIONS.put(objectKey,result.image);
       await this.finish(task,{state:'completed',objectKey,metrics:task.metrics});

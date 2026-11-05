@@ -20,6 +20,7 @@ class MemoryStorage {
   async put(k, v) { this.values.set(k, structuredClone(v)); }
   async delete(k) { this.values.delete(k); }
   async setAlarm(time) { this.alarm = time; }
+  async getAlarm() { return this.alarm ?? null; }
   async transaction(callback) { return callback(this); }
   async list({prefix, limit = Infinity}) {
     return new Map([...this.values].filter(([k]) => k.startsWith(prefix)).slice(0, limit).map(([k,v]) => [k, structuredClone(v)]));

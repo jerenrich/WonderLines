@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {formatCents, formatPriceText, displayMetric, exportComparison, modelCostSummary, matchingReferenceModel} from '../public/cost-display.mjs';
+import {modelTiming, requestTimeMs, formatDuration} from '../public/timing-display.mjs';
 
 for (const [usd, expected] of [[0, '¢0.00'], [0.001, '¢0.10'], [0.0065, '¢0.65'],
   [0.0429, '¢4.29'], [0.000002728, '<¢0.01'], [12.5, '¢1,250.00'], [1e-15, '<¢0.01']]) {
@@ -34,3 +35,35 @@ const newRoute={id:'alias',provider:'openai',model:'gpt-image-2.5-flare',referen
 assert.equal(matchingReferenceModel(oldRoute,[newRoute]).referenceCost,null,'Do not label an old model with a remapped alias price.');
 assert.equal(matchingReferenceModel(newRoute,[newRoute]),newRoute);
 console.log('PASS: cents totals, tiny and zero costs, historical rates, detail labels, and correctly denominated exports.');
+
+assert.equal(requestTimeMs({requestMs:0,elapsedMs:9000,queueMs:1000}),0);
+assert.equal(requestTimeMs({elapsedMs:9000,queueMs:1000}),8000);
+assert.equal(requestTimeMs({provider:'fal',inferenceMs:2000}),null,'Provider compute time is not end-to-end request time.');
+assert.equal(requestTimeMs({provider:'openai',inferenceMs:2000}),2000);
+for(const metrics of [null,{}, {elapsedMs:100,queueMs:200}, {elapsedMs:100,queueMs:-1}, {requestMs:NaN}, {requestMs:'100'}]) assert.equal(requestTimeMs(metrics),null);
+const timings=modelTiming([
+  {model:'test',status:'completed',metrics:{requestMs:2000,elapsedMs:5000}},
+  {model:'test',status:'completed',metrics:{elapsedMs:7000,queueMs:3000}},
+  {model:'test',status:'completed',metrics:{elapsedMs:9000}},
+  {model:'test',status:'failed',metrics:{requestMs:90000,elapsedMs:90000}},
+  {model:'other',status:'completed',metrics:{requestMs:90000,elapsedMs:90000}}
+],'test');
+assert.deepEqual(timings,{requestMs:3000,elapsedMs:7000,requestCount:2,totalCount:3});
+assert.deepEqual(modelTiming([],'test'),{requestMs:null,elapsedMs:null,requestCount:0,totalCount:0});
+assert.equal(formatDuration(null),'—');assert.equal(formatDuration(0),'0.0s');assert.equal(formatDuration(20500),'20.5s');
+assert.deepEqual(displayMetric('requestMs',20500),['Request time','20.5s']);
+assert.deepEqual(displayMetric('elapsedMs',23000),['Total time','23.0s']);
+const presetGrid={models:[{id:'2.6-low',complexity:'low'}],cells:[{metrics:{requestMs:2000,elapsedMs:3000,complexity:'low'}}]};
+assert.deepEqual(exportComparison(presetGrid).cells[0].metrics,presetGrid.cells[0].metrics);
+assert.equal(exportComparison(presetGrid).models[0].complexity,'low');
+console.log('PASS: request/total means, historical timing recovery, missing data, real zero durations, completed-image filtering and exported complexity.');
+
+const queueStages={dispatchWaitMs:200,runnerHandoffMs:300,runnerAlarmWaitMs:100,runnerPreparationMs:20,safetyCheckMs:40};
+for(const [key,label] of Object.entries({dispatchWaitMs:'account dispatch',runnerHandoffMs:'runner handoff',runnerAlarmWaitMs:'runner alarm wait',runnerPreparationMs:'runner preparation',safetyCheckMs:'safety check'})) {
+  assert.deepEqual(displayMetric(key,queueStages[key]),['Queue: '+label,queueStages[key]+'ms']);
+  assert.deepEqual(displayMetric(key,0),['Queue: '+label,'0ms']);
+  for(const invalid of [-1,NaN,Infinity,null,'100'])assert.deepEqual(displayMetric(key,invalid),['Queue: '+label,null]);
+}
+assert.deepEqual(displayMetric('dispatchWaitMs',1234),['Queue: account dispatch','1.234s']);
+assert.deepEqual(exportComparison({cells:[{metrics:queueStages}]}).cells[0].metrics,queueStages,'Stage durations keep their millisecond units in exports.');
+console.log('PASS: queue stage labels, millisecond precision, invalid timing exclusion and exported stage timings.');

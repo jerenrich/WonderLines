@@ -22,6 +22,12 @@ const DAILY_IMAGE_LIMIT = 100;
 const COMPARISON_DAILY_IMAGE_LIMIT = DAILY_IMAGE_LIMIT * 10;
 const reply = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers}});
 const fail = (code, message, status, details = {}) => reply({error: {code, message, ...details}}, status);
+// Call inside a storage transaction: dispatch, recovery and account maintenance
+// share one alarm, and none may postpone a deadline scheduled by another.
+async function scheduleAlarmBy(storage, when) {
+  const previous = await storage.getAlarm();
+  if (previous === null || previous > when) await storage.setAlarm(when);
+}
 // This is a dashboard-managed Worker variable, not source configuration. Invalid
 // or absent values fail closed instead of risking spend.
 function globalDailyGenerationLimit(value) {
@@ -472,7 +478,9 @@ export class Account {
     const used = usage?.day === day ? usage.used : 0; let credits = (await this.state.storage.get('credits')) ?? 0;
     if (used >= limit) return fail('allowance_exhausted', `Today’s limit of ${limit} images has been reached. It resets at midnight UTC.`, 429);
     if (used >= allowance && credits < 1) return fail('allowance_exhausted', 'Today’s free sheet allowance has been used.', 429);
-    const global = await reserveGlobalBudget(this.env, (await this.state.storage.get('account')).id + ':' + generationId, falTask || imageTask?.route?.provider === 'fal' ? 'fal' : undefined);
+    const account = await this.state.storage.get('account');
+    const comparisonImage = imageTask && this.env.COMPARISON_RUNNERS && account.id === this.env.COMPARISON_ACCOUNT_ID;
+    const global = await reserveGlobalBudget(this.env, account.id + ':' + generationId, falTask || imageTask?.route?.provider === 'fal' ? 'fal' : undefined);
     if (global.status === 429) return fail('service_budget_exhausted', global.value.error.message, 429);
     if (global.status >= 400) return fail('service_unavailable', 'Could not reserve service capacity.', 503);
     const job = {id: generationId, publicModel, fingerprint, state: 'processing', createdAt: Date.now(),
@@ -486,7 +494,7 @@ export class Account {
       await storage.put(jobKey, job);
       if (falTask || imageTask) {
         await storage.put((falTask ? 'fal:' : 'image:') + generationId, generationId);
-        await storage.setAlarm(Date.now() + 1000);
+        await scheduleAlarmBy(storage, Date.now() + (comparisonImage ? 1 : 1000));
       }
       return null;
     });
@@ -520,7 +528,7 @@ export class Account {
     if (!pending.size && !images.size) return;
     // Schedule a watchdog before network IO. Alarm retries only poll recorded IDs;
     // they must never repeat an ambiguous submission after a crash.
-    await this.state.storage.setAlarm(Date.now() + 30000);
+    await this.state.storage.transaction(storage => scheduleAlarmBy(storage, Date.now() + 30000));
     const outcomes = await Promise.allSettled([
       ...[...pending.values()].map(id => this.advanceFal(id)),
       ...[...images.values()].map(id => this.advanceImage(id))
@@ -531,7 +539,9 @@ export class Account {
     }
     if ((await this.state.storage.list({prefix: 'fal:', limit: 1})).size ||
         (await this.state.storage.list({prefix: 'image:', limit: 1})).size) {
-      await this.state.storage.setAlarm(Date.now() + 5000);
+      // A reservation or completion may have requested immediate dispatch while
+      // handoff RPCs were in flight. The fallback must keep that earlier wake-up.
+      await this.state.storage.transaction(storage => scheduleAlarmBy(storage, Date.now() + 5000));
     }
   }
   comparisonSlots() {
@@ -576,11 +586,12 @@ export class Account {
       // inference, outside this account's shared outgoing-connection limit.
       if (job.imageTask.stage !== 'delegated') {
         job.imageTask.stage = 'delegated';
+        job.imageTask.dispatchedAt = Date.now();
         await this.state.storage.put('job:' + id, job);
       }
       const runner = this.env.COMPARISON_RUNNERS.get(this.env.COMPARISON_RUNNERS.idFromName(account.id + ':' + id));
       const accepted = await runner.fetch('https://runner/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-        id,accountId:account.id,fingerprint:job.fingerprint,createdAt:job.createdAt,
+        id,accountId:account.id,fingerprint:job.fingerprint,createdAt:job.createdAt,dispatchedAt:job.imageTask.dispatchedAt,
         route:job.imageTask.route,subject:job.imageTask.subject,size:job.imageTask.size,publicModel:job.imageTask.publicModel
       })});
       await accepted.body?.cancel();
@@ -771,8 +782,10 @@ export class Account {
     await observeStorage('job_write', generationId, () => this.state.storage.put(k, ready));
     generationResult(generationId, ready.state, ready.errorCode);
     if (comparisonImage) {
-      await this.state.storage.delete('image:' + generationId);
-      await this.state.storage.setAlarm(Date.now() + 1);
+      await this.state.storage.transaction(async storage => {
+        await storage.delete('image:' + generationId);
+        await scheduleAlarmBy(storage, Date.now() + 1);
+      });
     }
     // Completion and concurrent usage reads share one update, so a slow lookup
     // cannot overwrite newer billing metadata or duplicate external requests.

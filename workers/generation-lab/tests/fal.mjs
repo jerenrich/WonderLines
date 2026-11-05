@@ -56,11 +56,14 @@ try{
   assert.throws(()=>imageRequest(env,{provider:'fal',model:'https://evil.example'},'test',{width:1024,height:1024}));
   assert.throws(()=>imageRequest({...env,FAL_KEY:undefined},{provider:'fal',model:'fal-ai/z-image/turbo'},'test',{width:1024,height:1024}));
   currentEndpoint='fal-ai/z-image/turbo';submissions=0;
-  const task={id:crypto.randomUUID(),accountId,fingerprint:'test-fingerprint',createdAt:Date.now(),route:{provider:'fal',model:currentEndpoint},subject:'A friendly dinosaur',size:{width:1456,height:1024},publicModel:'z-image-turbo'};
+  const createdAt=Date.now();
+  const task={id:crypto.randomUUID(),accountId,fingerprint:'test-fingerprint',createdAt,dispatchedAt:createdAt,route:{provider:'fal',model:currentEndpoint},subject:'A friendly dinosaur',size:{width:1456,height:1024},publicModel:'z-image-turbo'};
   const storage=new MemoryStorage(),start=new Request('https://runner/start',{method:'POST',body:JSON.stringify(task)});
   let runner=new ComparisonImageRunner({storage},env);assert.equal((await runner.fetch(start)).status,202);
   await runner.alarm();assert.equal(submissions,1);assert.equal((await storage.get('task')).stage,'polling');
   assert.equal((await storage.get('task')).falRequestID,'job-1');
+  const originalQueueTimings=runner.queueTimings(await storage.get('task'));
+  assert.equal(Object.keys(originalQueueTimings).length,5);
   assert.ok(!JSON.stringify(await storage.get('task')).includes(env.FAL_KEY));
   // A new object instance recovers the same request after queueing and a failed download.
   runner=new ComparisonImageRunner({storage},env);await runner.alarm();assert.equal(submissions,1);
@@ -70,6 +73,7 @@ try{
   assert.equal(reports.at(-1).result.metrics.estimatedTotalUsd,0.005);
   assert.equal(reports.at(-1).result.metrics.costStatus,'reported');
   assert.equal(reports.at(-1).result.metrics.inferenceMs,2000);
+  for(const [key,value] of Object.entries(originalQueueTimings))assert.equal(reports.at(-1).result.metrics[key],value,'Polling/download recovery preserves '+key);
   await runner.alarm();assert.equal(submissions,1);
   const ambiguous=new MemoryStorage();await ambiguous.put('task',{...task,id:crypto.randomUUID(),stage:'submitting'});
   await new ComparisonImageRunner({storage:ambiguous},env).alarm();assert.equal(submissions,1);assert.equal(reports.at(-1).result.state,'failed');

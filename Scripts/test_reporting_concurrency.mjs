@@ -11,6 +11,7 @@ class Storage {
   async delete(keys) { for (const key of Array.isArray(keys) ? keys : [keys]) this.values.delete(key); }
   async transaction(fn) { return fn(this); }
   async setAlarm(time) { this.alarm = time; }
+  async getAlarm() { return this.alarm ?? null; }
   async deleteAlarm() { this.alarm = null; }
 }
 const accountId = '22222222-2222-4222-8222-222222222222';

@@ -88,5 +88,59 @@ try{
   await rejectedRunner.fetch(request({...task,id:rejectedId}));await rejectedRunner.alarm();
   const diagnostics=jobs.get(rejectedId).metrics;assert.equal(diagnostics.httpStatus,400);assert.deepEqual(diagnostics.upstreamErrorCodes,[]);
   for(const field of ['providerRequestID','gatewayRequestID','cfRay','retryAfterSeconds'])assert.equal(diagnostics[field],undefined);
+  // Every planning preset survives handoff/restart and reaches the upstream
+  // request once. Request time excludes our queue; total includes it.
+  const originalNow=Date.now;
+  try {
+    let now=originalNow();Date.now=()=>now;
+    const id=crypto.randomUUID(),createdAt=now-500,dispatchedAt=now-300;
+    const timingStorage=new Storage();let preparing=false;
+    const setAlarm=timingStorage.setAlarm.bind(timingStorage);
+    timingStorage.setAlarm=async value=>{await setAlarm(value);if(preparing)now+=20;};
+    const timingEnv={...env,ACCOUNTS:{...env.ACCOUNTS,get:()=>({fetch:async(url,options)=>{
+      const input=JSON.parse(options.body);
+      if(new URL(url).pathname==='/generation-gate'){now+=40;return Response.json({allowed:true});}
+      jobs.set(input.generationId,input.result);return Response.json({});
+    }})}};
+    globalThis.fetch=async()=>{now+=1500;return Response.json({data:[{b64_json:png}]});};
+    await new ComparisonImageRunner({storage:timingStorage},timingEnv).fetch(request({...task,id,createdAt,dispatchedAt}));
+    now+=30;
+    // A retry of the same handoff must keep the first acceptance boundary.
+    await new ComparisonImageRunner({storage:timingStorage},timingEnv).fetch(request({...task,id,createdAt,dispatchedAt:now}));
+    assert.equal((await timingStorage.get('task')).runnerAcceptedAt,createdAt+500);
+    now+=70;preparing=true;
+    await new ComparisonImageRunner({storage:timingStorage},timingEnv).alarm();
+    const measured=jobs.get(id).metrics;
+    const expectedStages={dispatchWaitMs:200,runnerHandoffMs:300,runnerAlarmWaitMs:100,runnerPreparationMs:20,safetyCheckMs:40};
+    for(const [key,value] of Object.entries(expectedStages))assert.equal(measured[key],value,key);
+    assert.equal(measured.queueMs,Object.values(expectedStages).reduce((sum,value)=>sum+value,0));
+    assert.equal(measured.requestMs,1500);assert.equal(measured.elapsedMs,measured.queueMs+1500);
+    assert.ok(logs.some(log=>log.generationID===id&&log.outcome==='provider_started'&&log.queueMs===660&&log.safetyCheckMs===40));
+    // Historical tasks and cross-host clock skew never produce invented or
+    // negative stage durations.
+    const reader=new ComparisonImageRunner({storage:timingStorage},timingEnv);
+    assert.deepEqual(reader.queueTimings({createdAt,startedAt:now}),{});
+    assert.deepEqual(reader.queueTimings({createdAt,dispatchedAt:createdAt-1}),{});
+    for(const complexity of ['low','medium','high']){
+      const id=crypto.randomUUID(),model='gpt-image-2.6-sunburst';
+      const route={provider:'openai',model,...(complexity==='high'?{}:{complexity})};
+      let submissions=0;
+      globalThis.fetch=async(url,options)=>{
+        submissions++;const payload=JSON.parse(options.body);
+        assert.equal(payload.model,model);assert.equal(payload.complexity,route.complexity);
+        now+=1500;
+        return Response.json({data:[{b64_json:png}],usage:{input_tokens:100,output_tokens:200}});
+      };
+      const storage=new Storage();
+      await new ComparisonImageRunner({storage},env).fetch(request({...task,id,route,publicModel:complexity==='high'?model:`${model}-${complexity}`,createdAt:now-500}));
+      await new ComparisonImageRunner({storage},env).alarm();
+      const metrics=jobs.get(id).metrics;
+      assert.equal(metrics.complexity,complexity);assert.equal(metrics.upstreamModel,model);
+      assert.equal(metrics.requestMs,1500);assert.equal(metrics.queueMs,500);assert.equal(metrics.elapsedMs,2000);
+      assert.ok(Math.abs(metrics.estimatedTotalUsd-0.0065)<1e-12);
+      assert.ok(logs.some(log=>log.generationID===id&&log.outcome==='completed'&&log.complexity===complexity&&log.requestMs===1500));
+      await new ComparisonImageRunner({storage},env).alarm();assert.equal(submissions,1);
+    }
+  } finally {Date.now=originalNow;}
   console.log('PASS: independent image execution, durable handoff, one inference per ID, watchdog deduplication, ambiguous-submission safety, saved-image recovery, completion retries, and prompt removal; no network.');
 }finally{globalThis.fetch=originalFetch;console.info=originalInfo;console.error=originalError;}

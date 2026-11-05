@@ -1,5 +1,6 @@
 'use strict';
 import {formatCents, formatPriceText, displayMetric, exportComparison, modelCostSummary, matchingReferenceModel} from './cost-display.mjs';
+import {modelTiming, requestTimeMs, formatDuration} from './timing-display.mjs';
 const $ = id => document.getElementById(id);
 const STORAGE = 'wonderlines-comparisons-v1';
 const logoutKey='wonderlines.logout.v1';
@@ -192,9 +193,10 @@ function renderGrid() {
     const label = el('div','grid-model',model.label); label.append(el('small','',providerLabels[model.provider] || model.provider));
     const reference = matchingReferenceModel(model,config.models);
     const price = el('small','model-price',modelCostSummary(reference)); price.title = formatPriceText(reference.referenceCost?.basis ?? 'No verified reference price is available for this historical upstream route.'); label.append(price);
-    const timed=current.cells.filter(c=>c.model===model.id&&c.status==='completed'&&Number.isFinite(c.metrics?.elapsedMs)&&c.metrics.elapsedMs>=0);
-    const mean=timed.length?timed.reduce((sum,c)=>sum+c.metrics.elapsedMs,0)/timed.length/1000:null;
-    const timing=el('small','model-mean',mean===null?'Mean: —':`Mean: ${mean.toFixed(1)}s / image`);timing.title=`Mean elapsed generation time across ${timed.length} completed images; includes queue time.`;label.append(timing);grid.append(label);
+    const mean=modelTiming(current.cells,model.id);
+    const timing=el('small','model-mean',`Request: ${formatDuration(mean.requestMs)} · Total: ${formatDuration(mean.elapsedMs)}`);
+    timing.title=`Mean per image: request across ${mean.requestCount} completed images; total across ${mean.totalCount}. Request excludes our queue and includes network, provider wait and polling. Total includes our queue.`;
+    label.append(timing);grid.append(label);
     for (const age of current.ages) {
       const cell = current.cells.find(c => c.model === model.id && c.age === age); if (!cell) { grid.append(el('div')); continue; }
       const card = el('article','sheet-card');
@@ -238,6 +240,7 @@ function openDetails(cell, model) {
   if(cell.error) row('Message',cell.error);
   if(cell.errorCode) row('Error code',cell.errorCode);
   row('Generation ID',cell.id);
+  if(cell.metrics?.requestMs == null && requestTimeMs(cell.metrics) !== null) row('Request time',formatDuration(requestTimeMs(cell.metrics)));
   for(const [key,value] of Object.entries(cell.metrics || {})) row(...displayMetric(key,value));
   $('details-note').hidden = !cell.metrics;
   const actions = $('details-actions'); actions.replaceChildren();

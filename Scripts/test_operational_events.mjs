@@ -7,7 +7,9 @@ class MemoryStorage {
   async get(key) { return structuredClone(this.values.get(key)); }
   async put(key, value) { this.values.set(key, structuredClone(value)); }
   async delete(key) { this.values.delete(key); }
-  async setAlarm() {}
+  async setAlarm(time) { this.alarm = time; }
+  async getAlarm() { return this.alarm ?? null; }
+  async transaction(callback) { return callback(this); }
   async list({prefix}) { return new Map([...this.values].filter(([key]) => key.startsWith(prefix))); }
 }
 

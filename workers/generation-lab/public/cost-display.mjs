@@ -27,6 +27,13 @@ export function formatPriceText(text) {
 const priceLabels = {estimatedInputUsd: 'Estimated input cost', estimatedOutputUsd: 'Estimated output cost',
   estimatedTotalUsd: 'Estimated total cost', reportedCostUsd: 'Reported cost', unitPriceUsd: 'Unit price'};
 export function displayMetric(key, value) {
+  const queueStageLabels = {dispatchWaitMs: 'Queue: account dispatch', runnerHandoffMs: 'Queue: runner handoff', runnerAlarmWaitMs: 'Queue: runner alarm wait',
+    runnerPreparationMs: 'Queue: runner preparation', safetyCheckMs: 'Queue: safety check'};
+  if (Object.hasOwn(queueStageLabels, key)) return [queueStageLabels[key], typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? (value < 1000 ? `${Math.round(value)}ms` : `${(value / 1000).toFixed(3)}s`) : null];
+  const timeLabels = {elapsedMs: 'Total time', requestMs: 'Request time', queueMs: 'Queue time', inferenceMs: 'Inference time'};
+  if (Object.hasOwn(timeLabels, key)) return [timeLabels[key], typeof value === 'number' && Number.isFinite(value) && value >= 0 ? `${(value / 1000).toFixed(1)}s` : null];
+  if (key === 'complexity') return ['Planning complexity', value];
   if (key.endsWith('Usd')) return [(priceLabels[key] ?? key.slice(0, -3)) + ' (US cents)', value == null ? null : formatCents(value)];
   if (key === 'estimateBasis') return ['Estimate basis', formatPriceText(value)];
   return [key, value];
