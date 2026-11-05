@@ -1,0 +1,202 @@
+{
+  "verifiedAt": "2026-11-05T09:08:03.296Z",
+  "deployment": {
+    "checkedAt": "2026-11-05T09:06:54.128Z",
+    "commit": "369c1f7449084e3a8584dc11b06cd8d3bd6625e2",
+    "workers": {
+      "coloring-sheets-api": {
+        "version": "686c40f8-904b-449b-b319-419778bd3c44",
+        "trafficPercent": 100,
+        "bindingsPreserved": true
+      },
+      "wonderlines-compare": {
+        "version": "fb430582-a71f-432b-b2b9-67c993123b1b",
+        "trafficPercent": 100,
+        "bindingsPreserved": true
+      }
+    },
+    "assets": [
+      "cost-display.mjs",
+      "timing-display.mjs",
+      "app.js",
+      "index.html"
+    ],
+    "registry": {
+      "revision": "image26-low-8ceac0b8-1b11-478a-bf87-ef8bc63a5639",
+      "defaultModel": "gpt-image-2.6-flare-low",
+      "unchanged": true
+    },
+    "unauthenticatedComparisonHTTPStatus": 401
+  },
+  "sample": {
+    "gridID": "0ba63d86-1d47-41e6-ab13-2a5b1b7d3b59",
+    "imageCount": 8,
+    "completed": 8,
+    "failed": 0,
+    "submittedOnce": true,
+    "results": [
+      {
+        "id": "cc1fdab5-87f7-4187-854c-23e4e76fd271",
+        "model": "gpt-image-2.6-flare-low",
+        "age": 4,
+        "queueMs": 345,
+        "dispatchWaitMs": 1,
+        "runnerHandoffMs": 313,
+        "runnerAlarmWaitMs": 16,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 15,
+        "requestMs": 6048,
+        "elapsedMs": 6393,
+        "estimatedTotalUsd": 0.02002
+      },
+      {
+        "id": "883216ff-c0a0-496d-b162-cc0e91d2ab75",
+        "model": "gpt-image-2.6-flare-low",
+        "age": 7,
+        "queueMs": 555,
+        "dispatchWaitMs": 225,
+        "runnerHandoffMs": 296,
+        "runnerAlarmWaitMs": 14,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 20,
+        "requestMs": 7824,
+        "elapsedMs": 8379,
+        "estimatedTotalUsd": 0.02001
+      },
+      {
+        "id": "d7fcea95-9ed4-4ff9-a0d1-98aed914f8c1",
+        "model": "gpt-image-2.6-flare-low",
+        "age": 10,
+        "queueMs": 594,
+        "dispatchWaitMs": 232,
+        "runnerHandoffMs": 331,
+        "runnerAlarmWaitMs": 14,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 17,
+        "requestMs": 8210,
+        "elapsedMs": 8804,
+        "estimatedTotalUsd": 0.02001
+      },
+      {
+        "id": "8c7186d4-ab62-42b8-a4b6-4c529a85931b",
+        "model": "gpt-image-2.6-flare-low",
+        "age": 15,
+        "queueMs": 820,
+        "dispatchWaitMs": 409,
+        "runnerHandoffMs": 326,
+        "runnerAlarmWaitMs": 15,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 70,
+        "requestMs": 8667,
+        "elapsedMs": 9487,
+        "estimatedTotalUsd": 0.02002
+      },
+      {
+        "id": "81068c79-2ae1-482c-8045-67c20707fd0c",
+        "model": "gpt-image-2.6-sunburst-low",
+        "age": 4,
+        "queueMs": 435,
+        "dispatchWaitMs": 11,
+        "runnerHandoffMs": 378,
+        "runnerAlarmWaitMs": 21,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 25,
+        "requestMs": 11498,
+        "elapsedMs": 11933,
+        "estimatedTotalUsd": 0.02002
+      },
+      {
+        "id": "da1be4e9-b486-4e4a-a409-82197524867c",
+        "model": "gpt-image-2.6-sunburst-low",
+        "age": 7,
+        "queueMs": 669,
+        "dispatchWaitMs": 205,
+        "runnerHandoffMs": 415,
+        "runnerAlarmWaitMs": 19,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 30,
+        "requestMs": 12357,
+        "elapsedMs": 13026,
+        "estimatedTotalUsd": 0.02001
+      },
+      {
+        "id": "4e3fb135-5e8e-402a-abef-b833fa1a1a5b",
+        "model": "gpt-image-2.6-sunburst-low",
+        "age": 10,
+        "queueMs": 499,
+        "dispatchWaitMs": 32,
+        "runnerHandoffMs": 403,
+        "runnerAlarmWaitMs": 33,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 31,
+        "requestMs": 14306,
+        "elapsedMs": 14805,
+        "estimatedTotalUsd": 0.02001
+      },
+      {
+        "id": "e870897c-28d7-4bd5-90fc-c9b61e96bc21",
+        "model": "gpt-image-2.6-sunburst-low",
+        "age": 15,
+        "queueMs": 684,
+        "dispatchWaitMs": 220,
+        "runnerHandoffMs": 378,
+        "runnerAlarmWaitMs": 39,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 47,
+        "requestMs": 15389,
+        "elapsedMs": 16073,
+        "estimatedTotalUsd": 0.02002
+      }
+    ],
+    "summaryMilliseconds": {
+      "queueMs": {
+        "mean": 575.125,
+        "median": 574.5,
+        "min": 345,
+        "max": 820
+      },
+      "dispatchWaitMs": {
+        "mean": 166.875,
+        "median": 212.5,
+        "min": 1,
+        "max": 409
+      },
+      "runnerHandoffMs": {
+        "mean": 355,
+        "median": 354.5,
+        "min": 296,
+        "max": 415
+      },
+      "runnerAlarmWaitMs": {
+        "mean": 21.375,
+        "median": 17.5,
+        "min": 14,
+        "max": 39
+      },
+      "runnerPreparationMs": {
+        "mean": 0,
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "safetyCheckMs": {
+        "mean": 31.875,
+        "median": 27.5,
+        "min": 15,
+        "max": 70
+      }
+    },
+    "stageSumsMatchQueueMs": true,
+    "savedMetricsMatchProductionLogs": true,
+    "oneProviderStartPerImageVerified": true,
+    "estimatedImageInferenceTotalUsd": 0.16012
+  },
+  "previousFourImageMeanQueueMs": 544,
+  "limitations": "Eight-image sample through the production comparison Library/Account/Runner path, not a 50-slot load test. queueMs excludes pre-reservation moderation and browser polling. Costs are token-based estimates, not billing receipts.",
+  "temporaryVerificationService": {
+    "name": "wonderlines-queue-check-repeat-20261105",
+    "publicURL": false,
+    "cleanup": "deleted",
+    "deletionVerifiedAt": "2026-11-05T09:08:54.534Z"
+  }
+}

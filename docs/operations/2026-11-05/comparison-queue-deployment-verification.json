@@ -1,0 +1,156 @@
+{
+  "checkedAt": "2026-11-05T08:11:36.844Z",
+  "commit": "369c1f7449084e3a8584dc11b06cd8d3bd6625e2",
+  "workers": {
+    "coloring-sheets-api": {
+      "version": "686c40f8-904b-449b-b319-419778bd3c44",
+      "trafficPercent": 100,
+      "bindingsPreserved": true
+    },
+    "wonderlines-compare": {
+      "version": "fb430582-a71f-432b-b2b9-67c993123b1b",
+      "trafficPercent": 100,
+      "bindingsPreserved": true
+    }
+  },
+  "assets": [
+    "cost-display.mjs",
+    "timing-display.mjs",
+    "app.js",
+    "index.html"
+  ],
+  "registry": {
+    "revision": "image26-low-8ceac0b8-1b11-478a-bf87-ef8bc63a5639",
+    "defaultModel": "gpt-image-2.6-flare-low",
+    "unchanged": true
+  },
+  "unauthenticatedComparisonHTTPStatus": 401,
+  "measuredAt": "2026-11-05T08:11:37.779Z",
+  "sample": {
+    "gridID": "b553ce8a-7737-46bd-a135-43e521e9fd9f",
+    "imageCount": 4,
+    "completed": 4,
+    "failed": 0,
+    "submissionPolicy": "Four fixed generation IDs, submitted once; no generation retries.",
+    "path": "Private temporary service -> production ComparisonLibrary -> production Account -> independent ComparisonImageRunner. Same moderation, budgets and generation path as the comparison website.",
+    "results": [
+      {
+        "id": "d7dc61fd-d539-4ca0-8f28-5161450563f1",
+        "model": "gpt-image-2.6-flare-low",
+        "age": 4,
+        "queueMs": 551,
+        "dispatchWaitMs": 141,
+        "runnerHandoffMs": 352,
+        "runnerAlarmWaitMs": 25,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 33,
+        "requestMs": 5915,
+        "elapsedMs": 6466,
+        "estimatedTotalUsd": 0.02002
+      },
+      {
+        "id": "b48e449c-2601-444b-8c57-9b9336f2d505",
+        "model": "gpt-image-2.6-flare-low",
+        "age": 7,
+        "queueMs": 390,
+        "dispatchWaitMs": 22,
+        "runnerHandoffMs": 324,
+        "runnerAlarmWaitMs": 13,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 31,
+        "requestMs": 14341,
+        "elapsedMs": 14731,
+        "estimatedTotalUsd": 0.02001
+      },
+      {
+        "id": "e7b678a8-bfd9-422b-bcd2-b55d88bec269",
+        "model": "gpt-image-2.6-sunburst-low",
+        "age": 4,
+        "queueMs": 433,
+        "dispatchWaitMs": 101,
+        "runnerHandoffMs": 290,
+        "runnerAlarmWaitMs": 16,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 26,
+        "requestMs": 11708,
+        "elapsedMs": 12141,
+        "estimatedTotalUsd": 0.02002
+      },
+      {
+        "id": "a7b23e6e-e1e2-44a2-b2c2-5fe9ff37cc13",
+        "model": "gpt-image-2.6-sunburst-low",
+        "age": 7,
+        "queueMs": 802,
+        "dispatchWaitMs": 290,
+        "runnerHandoffMs": 449,
+        "runnerAlarmWaitMs": 14,
+        "runnerPreparationMs": 0,
+        "safetyCheckMs": 49,
+        "requestMs": 13505,
+        "elapsedMs": 14307,
+        "estimatedTotalUsd": 0.02001
+      }
+    ],
+    "summaryMilliseconds": {
+      "queueMs": {
+        "mean": 544,
+        "median": 492,
+        "min": 390,
+        "max": 802
+      },
+      "dispatchWaitMs": {
+        "mean": 138.5,
+        "median": 121,
+        "min": 22,
+        "max": 290
+      },
+      "runnerHandoffMs": {
+        "mean": 353.75,
+        "median": 338,
+        "min": 290,
+        "max": 449
+      },
+      "runnerAlarmWaitMs": {
+        "mean": 17,
+        "median": 15,
+        "min": 13,
+        "max": 25
+      },
+      "runnerPreparationMs": {
+        "mean": 0,
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "safetyCheckMs": {
+        "mean": 34.75,
+        "median": 32,
+        "min": 26,
+        "max": 49
+      }
+    },
+    "stageSumsMatchQueueMs": true,
+    "savedMetricsMatchProductionLogs": true,
+    "oneProviderStartPerImageVerified": true,
+    "estimatedImageInferenceTotalUsd": 0.08006
+  },
+  "interpretation": {
+    "observedRemainingQueueSeconds": {
+      "mean": 0.544,
+      "min": 0.39,
+      "max": 0.802
+    },
+    "largestRemainingStage": "runnerHandoffMs",
+    "previousUserObservationSeconds": [
+      3,
+      4.5
+    ],
+    "limitations": "Small four-image comparison sample, not a 50-slot load test or a controlled paired before/after benchmark. Pre-reservation moderation and browser polling are excluded from queueMs. Costs are token-based inference estimates, not billing receipts."
+  },
+  "temporaryVerificationService": {
+    "name": "wonderlines-queue-check-20261105",
+    "publicURL": false,
+    "cleanup": "deleted",
+    "deletionVerifiedAt": "2026-11-05T08:13:23.685Z"
+  }
+}
