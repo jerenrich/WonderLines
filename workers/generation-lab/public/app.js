@@ -233,6 +233,7 @@ function openDetails(cell, model) {
   const list = $('details-list'); list.replaceChildren();
   const row = (label,value) => { if(value !== null && value !== undefined) list.append(el('dt','',label),el('dd','',typeof value === 'object' ? JSON.stringify(value) : String(value))); };
   row('Prompt',current.prompt); row('Model',model.label); row('Provider',providerLabels[model.provider] || model.provider);
+  if(model.complexity && cell.metrics?.complexity == null) row('Planning complexity',model.complexity);
   row('Age',`${cell.age} · ${ageDetail(cell.age)}`); row('Status',({completed:'Ready to colour',failed:'Not generated',uncertain:'Check again',processing:'Drawing',submitting:'Starting',queued:'Waiting'})[cell.status] || cell.status);
   if(cell.error) row('Message',cell.error);
   if(cell.errorCode) row('Error code',cell.errorCode);

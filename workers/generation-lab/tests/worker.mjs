@@ -37,7 +37,7 @@ assert.equal((await (await worker.fetch(request('/api/session','GET',undefined,c
 assert.equal(await comparisonPrincipal(request('/api/config','GET',undefined,cookie),{...env,MODEL_ADMIN_SESSION_SECRET:'rotated-secret-at-least-32-characters'}),null);
 assert.equal(await comparisonPrincipal(request('/api/config','GET',undefined,cookie+'x'),env),null);
 const config=await (await worker.fetch(request('/api/config','GET',undefined,cookie),env)).json();
-assert.equal(config.models.length,26);assert.equal(config.models.filter(x=>x.recommended).length,8);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
+assert.equal(config.models.length,30);assert.equal(config.models.filter(x=>x.recommended).length,12);assert.ok(!JSON.stringify(config).includes('PRIVATE_CREDENTIAL'));
 assert.ok(config.models.some(x=>x.id==='sana-sprint'&&x.provider==='fal'));
 // Klein's distinct distilled/base checkpoints must be visibly distinguishable.
 for(const size of ['4b','9b']){
@@ -115,12 +115,20 @@ assert.ok(!liveConfig.models.some(model=>model.id==='gpt-image-2.5-flare'));
 assert.ok(liveConfig.models.some(model=>model.id==='new-comparison-model'));
 for(const variant of ['flare','sunburst']){
   const id=`gpt-image-2.6-${variant}`;
-  assert.equal(liveConfig.models.find(model=>model.id===id).label,`GPT Image 2.6 ${variant==='flare'?'Flare':'Sunburst'}`);
+  assert.equal(liveConfig.models.find(model=>model.id===id).label,`GPT Image 2.6 ${variant==='flare'?'Flare':'Sunburst'} · high complexity`);
   assert.equal(liveConfig.models.find(model=>model.id===id).referenceCost,null,'No inherited 2.5 sample cost.');
   assert.equal((await worker.fetch(request('/api/generations','POST',{...input,id:crypto.randomUUID(),model:id},cookie),liveEnv)).status,202);
   const reserved=calls.filter(call=>call.path==='/reserve').at(-1).input;
   assert.deepEqual(reserved.modelRoute,{provider:'openai',model:id});
   assert.deepEqual(reserved.imageTask.route,reserved.modelRoute);
+  for(const complexity of ['low','medium']){
+    const presetId=`${id}-${complexity}`,preset=liveConfig.models.find(model=>model.id===presetId);
+    assert.ok(preset.label.endsWith(`${complexity} complexity`));
+    assert.equal((await worker.fetch(request('/api/generations','POST',{...input,id:crypto.randomUUID(),model:presetId},cookie),liveEnv)).status,202);
+    const custom=calls.filter(call=>call.path==='/reserve').at(-1).input;
+    assert.deepEqual(custom.modelRoute,{provider:'openai',model:id,complexity});
+    assert.deepEqual(custom.imageTask.route,custom.modelRoute);
+  }
 }
 const liveGrid={id:crypto.randomUUID(),prompt:'A friendly dinosaur',composition:'front',models:[{id:'new-comparison-model'}],ages:[4],cells:[{id:crypto.randomUUID(),model:'new-comparison-model',age:4}]};
 assert.equal((await worker.fetch(request('/api/library','POST',liveGrid,cookie),liveEnv)).status,201);

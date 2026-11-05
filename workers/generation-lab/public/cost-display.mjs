@@ -15,7 +15,7 @@ export function modelCostSummary(model) {
 
 export function matchingReferenceModel(model, catalog) {
   // Historical aliases may have changed upstream providers or models.
-  return catalog.find(candidate => candidate.id === model.id && candidate.provider === model.provider && candidate.model === model.model) ?? {...model, referenceCost: null};
+  return catalog.find(candidate => candidate.id === model.id && candidate.provider === model.provider && candidate.model === model.model && candidate.complexity === model.complexity) ?? {...model, referenceCost: null};
 }
 
 // Historical estimate explanations may still contain dollar-denominated rates.

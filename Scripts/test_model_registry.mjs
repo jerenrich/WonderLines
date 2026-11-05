@@ -3,7 +3,8 @@ import {readFile} from 'node:fs/promises';
 import {parseModelRegistry, loadModelCatalog, MODEL_REGISTRY_KEY} from '../workers/coloring-sheets-api/src/model-registry.mjs';
 import {prepareGeneration, startGeneration, generationFingerprints} from '../workers/coloring-sheets-api/src/generation-start.mjs';
 import worker, {Account, Budget} from '../workers/coloring-sheets-api/src/index.mjs';
-import {imageRequest, modelCatalog} from '../workers/coloring-sheets-api/src/image-provider.mjs';
+import {imageRequest, modelCatalog, validateModelRoute} from '../workers/coloring-sheets-api/src/image-provider.mjs';
+import {upgradeImageModels} from './upgrade_image_models.mjs';
 
 const seed = JSON.parse(await readFile(new URL('../workers/coloring-sheets-api/model-registry.initial.json', import.meta.url)));
 let document = structuredClone(seed), reads = 0, broken = false;
@@ -33,8 +34,22 @@ for (const variant of ['flare', 'sunburst']) {
   assert.equal(request.payload.quality,'low');
   assert.equal(request.payload.size,'1456x1024');
   assert.equal(request.payload.output_format,'png');
+  assert.equal(request.payload.complexity,undefined,'Existing defaults are unchanged.');
+  for (const complexity of ['low','medium']) {
+    const presetId=`${id}-${complexity}`,preset={...route,complexity};
+    assert.deepEqual((await loadModelCatalog(env,{comparison:true})).routes[presetId],preset);
+    assert.equal((await loadModelCatalog(env)).routes[presetId],undefined);
+    validateModelRoute(presetId,preset,{comparison:true});
+    validateModelRoute(presetId,preset);
+    const custom=imageRequest({OPENAI_API_KEY:'synthetic'},preset,'A friendly flower',{width:1456,height:1024});
+    assert.equal(custom.payload.model,id);assert.equal(custom.payload.complexity,complexity);
+    assert.equal(custom.payload.quality,'low');
+    assert.notEqual((await generationFingerprints('flower',presetId,{width:1456,height:1024})).hex,(await generationFingerprints('flower',id,{width:1456,height:1024})).hex);
+  }
+  assert.throws(()=>imageRequest({OPENAI_API_KEY:'synthetic'},{...route,complexity:'invalid'},'flower',{width:1456,height:1024}));
   document.models.push({id,...route,enabled:false,visible:false,label:id,detail:'Disabled experiment',price:null});
   assert.equal((await loadModelCatalog(env,{comparison:true})).routes[id],undefined,'Explicit disabled entries override experimental defaults.');
+  assert.equal((await loadModelCatalog(env,{comparison:true})).routes[`${id}-low`],undefined,'Disabling the parent also disables its experimental presets.');
   document=structuredClone(seed);
 }
 document.providers.openai.enabled=false;
@@ -114,6 +129,7 @@ class Storage {
   async put(key,value){this.values.set(key,structuredClone(value));}
   async delete(key){this.values.delete(key);}
   async setAlarm(time){this.alarm=time;}
+  async getAlarm(){return this.alarm??null;}
   async transaction(callback){return callback(this);}
   async list({prefix,limit=Infinity}){return new Map([...this.values].filter(([key])=>key.startsWith(prefix)).slice(0,limit));}
 }
@@ -153,5 +169,53 @@ for(const provider of Object.values(document.providers))provider.enabled=false;
 response=await getModels();assert.equal(response.status,200);assert.deepEqual((await response.json()).models,[]);
 document=null;response=await getModels();assert.equal(response.status,503);
 broken=true;response=await getModels();assert.equal(response.status,503);
+broken=false;document=structuredClone(seed);
+const presetId='gpt-image-2.6-sunburst-low',presetRoute={provider:'openai',model:'gpt-image-2.6-sunburst',complexity:'low'};
+const complexityInput={generationId:crypto.randomUUID(),publicModel:presetId,fingerprint:'complexity',modelRoute:presetRoute,
+  imageTask:{route:presetRoute,publicModel:presetId,subject:'flower',size:{width:1456,height:1024}}};
+assert.equal((await invokeReserve(complexityInput)).status,409,'App accounts cannot admit comparison planning presets.');
+httpEnv.COMPARISON_ACCOUNT_ID=identity.accountId;
+const beforeComplexity=await account.access();
+assert.equal((await invokeReserve({...complexityInput,modelRoute:{...presetRoute,complexity:'medium'}})).status,409);
+assert.equal((await invokeReserve({...complexityInput,imageTask:{...complexityInput.imageTask,route:{...presetRoute,complexity:'medium'}}})).status,409);
+assert.deepEqual(await account.access(),beforeComplexity,'Changing complexity during admission must not spend allowance.');
+response=await invokeReserve(complexityInput);assert.equal(response.status,201);
+assert.equal((await response.json()).job.imageTask.route.complexity,'low');
+assert.equal((await getModels()).status,200);
+assert.equal((await loadModelCatalog(httpEnv)).defaultModel,'gpt-image-2.5-sunburst');
+
+// The production upgrade adds explicit low-complexity app choices and retires
+// 2.5 to Compare. A pre-upgrade job still recovers its original pinned route.
+delete httpEnv.COMPARISON_ACCOUNT_ID;
+const oldId=crypto.randomUUID(),oldRoute={provider:'openai',model:'gpt-image-2.5-flare'};
+const oldInput={generationId:oldId,publicModel:oldRoute.model,fingerprint:'pre-upgrade',modelRoute:oldRoute,
+  imageTask:{route:oldRoute,publicModel:oldRoute.model,subject:'flower',size:{width:1456,height:1024}}};
+assert.equal((await invokeReserve(oldInput)).status,201);
+const beforeUpgrade=structuredClone(seed);
+document=upgradeImageModels(seed,'test-upgrade');
+assert.deepEqual(seed,beforeUpgrade,'Preparing the upgrade cannot mutate the source catalogue.');
+assert.equal(document.defaultModel,'gpt-image-2.6-flare-low');
+assert.equal(document.models.find(entry=>entry.id==='gpt-image-2.6-flare-low').price,null,'Do not copy 2.5 historical averages onto 2.6.');
+const upgraded=await loadModelCatalog(httpEnv),compared=await loadModelCatalog(httpEnv,{comparison:true});
+for(const variant of ['flare','sunburst']){
+  const old=`gpt-image-2.5-${variant}`,id=`gpt-image-2.6-${variant}-low`;
+  assert.equal(upgraded.routes[old],undefined);
+  assert.equal(compared.routes[old].model,old,'Keep genuine 2.5 comparison baselines.');
+  assert.equal(upgraded.routes[id].model,`gpt-image-2.6-${variant}`);
+  assert.equal(upgraded.routes[id].complexity,'low');
+  const generated=imageRequest({OPENAI_API_KEY:'synthetic'},upgraded.routes[id],'flower',{width:1456,height:1024});
+  assert.equal(generated.payload.complexity,'low');assert.equal(generated.payload.quality,'low');
+}
+response=await getModels();assert.equal((await response.json()).defaultModel,'gpt-image-2.6-flare-low');
+assert.equal((await invokeReserve({...oldInput,generationId:crypto.randomUUID()})).status,409,'New app requests cannot use retired 2.5 models.');
+response=await invokeReserve(oldInput);assert.equal(response.status,200);
+assert.deepEqual((await response.json()).job.imageTask.route,oldRoute);
+response=await invokeReserve({...complexityInput,generationId:crypto.randomUUID()});assert.equal(response.status,201,'Promoted low-complexity models are available to ordinary app accounts.');
+assert.equal((await response.json()).job.imageTask.route.complexity,'low');
+assert.deepEqual(upgradeImageModels(document,'test-upgrade'),document,'Repeating the same migration is idempotent.');
+assert.throws(()=>parseModelRegistry({...document,models:[{...document.models[0],complexity:'invalid'}]}));
+assert.throws(()=>parseModelRegistry({...document,models:[{...document.models[0],model:'gpt-image-2.5-flare'}]}));
+assert.throws(()=>parseModelRegistry({...document,models:[{...document.models[0],comparisonOnly:'yes'}]}));
+assert.throws(()=>upgradeImageModels({...seed,providers:{...seed.providers,openai:{enabled:false}}}));
 assert.ok(reads>10);
 console.log('PASS: KV catalogue validation, live additions, provider/model switches, visibility, defaults, fail-closed outages, authenticated discovery, no-spend rejection, route pinning and recovery; no network or paid inference.');

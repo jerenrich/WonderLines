@@ -28,7 +28,7 @@ async function api(path,options={}) {
 async function run(action){if(state.busy)return;state.busy=true;updateControls();try{await action();}catch(error){message(error.message,true);}finally{state.busy=false;updateControls();}}
 function changed(){saveDraft();state.validation=null;$('validation-result').hidden=true;updateControls();updateSummary();}
 function updateSummary(){
-  const available=state.draft?.models.filter(model=>model.enabled&&model.visible&&state.draft.providers[model.provider]?.enabled)??[];
+  const available=state.draft?.models.filter(model=>model.enabled&&model.visible&&!model.comparisonOnly&&state.draft.providers[model.provider]?.enabled)??[];
   $('visible-count').textContent=String(available.length);
 }
 function updateControls(){
@@ -62,7 +62,7 @@ function checkbox(labelText,checked,onChange,className=''){
 function renderDefault(){
   const select=$('default-model');select.replaceChildren();
   const automatic=element('option',null,'Automatic: first available model');automatic.value='';select.append(automatic);
-  for(const model of state.draft.models){const active=model.enabled&&model.visible&&state.draft.providers[model.provider]?.enabled;
+  for(const model of state.draft.models){const active=model.enabled&&model.visible&&!model.comparisonOnly&&state.draft.providers[model.provider]?.enabled;
     const option=element('option',null,model.label+(active?'':' (unavailable)'));option.value=model.id;select.append(option);}
   select.value=state.draft.defaultModel??'';
 }
@@ -90,7 +90,7 @@ function renderEditor(){
     top.append(actions);card.append(top);
     const switches=element('div','model-switches');
     const enabled=checkbox('Enabled',model.enabled,value=>{model.enabled=value;renderDefault();});enabled.querySelector('input').className='enabled-control';
-    switches.append(enabled,checkbox('Show in picker',model.visible,value=>{model.visible=value;renderDefault();}),element('span','model-provider',providers[model.provider]??model.provider));
+    switches.append(enabled,checkbox('Show in picker',model.visible,value=>{model.visible=value;renderDefault();}),checkbox('Comparison only',model.comparisonOnly??false,value=>{model.comparisonOnly=value;renderDefault();}),element('span','model-provider',providers[model.provider]??model.provider));
     card.append(switches);
     const details=element('details'),summary=element('summary',null,'Edit description, routing and price');details.append(summary);
     const description=field('Description',model.detail,value=>model.detail=value,{kind:'textarea',max:600,required:true});description.className='model-description';details.append(description);
@@ -100,6 +100,9 @@ function renderEditor(){
     const select=element('select');for(const [id,label] of Object.entries(providers)){const option=element('option',null,label);option.value=id;select.append(option);}select.value=model.provider;
     select.addEventListener('change',()=>{model.provider=select.value;if(!state.draft.providers[model.provider])state.draft.providers[model.provider]={enabled:true};switches.querySelector('.model-provider').textContent=providers[model.provider];renderDefault();changed();});providerField.append(select);fields.append(providerField);
     fields.append(field('Upstream model or supported preset',model.model,value=>model.model=value,{max:128,wide:true,required:true}));
+    const complexityField=element('label');complexityField.append(element('span','field-label','Planning complexity (GPT Image 2.6)'));
+    const complexity=element('select');for(const [value,label] of [['','Model default'],['low','Low'],['medium','Medium'],['high','High']]){const option=element('option',null,label);option.value=value;complexity.append(option);}complexity.value=model.complexity??'';complexity.setAttribute('aria-label','Planning complexity (GPT Image 2.6)');
+    complexity.addEventListener('change',()=>{if(complexity.value)model.complexity=complexity.value;else delete model.complexity;changed();});complexityField.append(complexity);fields.append(complexityField);
     const priceContainer=element('div','wide');
     function renderPrice(){priceContainer.replaceChildren();priceContainer.append(checkbox('Include a reference price',model.price!==null,value=>{
       model.price=value?{usd:0,evidence:'Estimate',explanation:''}:null;renderPrice();

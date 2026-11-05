@@ -461,8 +461,8 @@ export class Account {
       // Admission uses the same resolved route as preflight, even while KV is
       // propagating. Never reserve a queued request against a different preset.
       const submittedRoute = modelRoute ?? imageTask?.route;
-      if (!submittedRoute || submittedRoute.provider !== catalogue.routes[selected].provider || submittedRoute.model !== catalogue.routes[selected].model) return fail('model_unavailable', 'Model settings changed. Refresh the model list and try again.', 409);
-      if (imageTask && (imageTask.route?.provider !== submittedRoute.provider || imageTask.route?.model !== submittedRoute.model)) return fail('model_unavailable', 'Model settings changed. Refresh the model list and try again.', 409);
+      if (!submittedRoute || submittedRoute.provider !== catalogue.routes[selected].provider || submittedRoute.model !== catalogue.routes[selected].model || submittedRoute.complexity !== catalogue.routes[selected].complexity) return fail('model_unavailable', 'Model settings changed. Refresh the model list and try again.', 409);
+      if (imageTask && (imageTask.route?.provider !== submittedRoute.provider || imageTask.route?.model !== submittedRoute.model || imageTask.route?.complexity !== submittedRoute.complexity)) return fail('model_unavailable', 'Model settings changed. Refresh the model list and try again.', 409);
     }
     if (falTask) try {
       validateFalConfiguration(this.env);

@@ -4,10 +4,16 @@ import {providerErrorDiagnostics} from './provider-diagnostics.mjs';
 import {comparisonRoutes, falComparisonConfig, isFalEndpoint} from './fal-models.mjs';
 export const DEFAULT_MODEL = 'gpt-image-2.5-flare';
 // Experimental OpenAI options belong to Compare until evaluated for the app.
-export const OPENAI_COMPARISON_ROUTES = {
-  'gpt-image-2.6-flare': {provider: 'openai', model: 'gpt-image-2.6-flare'},
-  'gpt-image-2.6-sunburst': {provider: 'openai', model: 'gpt-image-2.6-sunburst'}
-};
+export const OPENAI_COMPARISON_ROUTES = {};
+for (const model of ['gpt-image-2.6-flare', 'gpt-image-2.6-sunburst']) {
+  for (const complexity of ['low', 'medium', 'high']) {
+    // Preserve existing IDs and their omitted/high planning default, including
+    // saved grids and app routes that use these upstream models explicitly.
+    const id = complexity === 'high' ? model : `${model}-${complexity}`;
+    OPENAI_COMPARISON_ROUTES[id] = {provider: 'openai', model, ...(complexity === 'high' ? {} : {complexity})};
+  }
+}
+export const supportsImageComplexity = route => route.provider === 'openai' && ['gpt-image-2.6-flare', 'gpt-image-2.6-sunburst'].includes(route.model);
 const DEFAULT_ROUTES = {
   'coloringbook-redmond-v2': {provider: 'fal', model: 'coloringbook-redmond-v2'},
   'z-image-turbo': {provider: 'fal', model: 'z-image-turbo'},
@@ -61,7 +67,8 @@ export function validateModelRoute(id, route, {comparison = false} = {}) {
   if (!identifier(id) || !object(route) || !PROVIDERS.includes(route.provider) ||
       !(route.provider === 'workers-ai' ? WORKERS_AI_MODELS.has(route.model) :
         route.provider === 'fal' ? ['coloringbook-redmond-v2', 'z-image-turbo'].includes(route.model) || comparison && !!falComparisonConfig(route.model) : identifier(route.model)) ||
-      Object.keys(route).some(key => !['provider', 'model'].includes(key))) throw new Error('Invalid image model route');
+      Object.keys(route).some(key => !['provider', 'model', 'complexity'].includes(key)) ||
+      (route.complexity !== undefined && (!supportsImageComplexity(route) || !['low', 'medium', 'high'].includes(route.complexity)))) throw new Error('Invalid image model route');
 }
 
 // An absent gateway preserves existing deployments. Partial configuration fails
@@ -103,6 +110,7 @@ function closestAspectRatio({width, height}) {
 
 // Build and validate everything that can fail locally before spending allowance.
 export function imageRequest(env, route, subject, size) {
+  if (route.complexity !== undefined && (!supportsImageComplexity(route) || !['low', 'medium', 'high'].includes(route.complexity))) throw new Error('Invalid image complexity');
   if (route.provider === 'fal') {
     validateFalConfiguration(env);
     return falImageTask(route.model, subject, size);
@@ -138,7 +146,8 @@ export function imageRequest(env, route, subject, size) {
   const {base, headers, viaGateway} = transport(env, route.provider);
   const path = route.provider === 'openai' ? '/images/generations' : `/v1/models/${route.model}:generateContent`;
   const payload = route.provider === 'openai'
-    ? {model: route.model, n: 1, size: `${size.width}x${size.height}`, quality: 'low', output_format: 'png', prompt}
+    ? {model: route.model, n: 1, size: `${size.width}x${size.height}`, quality: 'low', output_format: 'png', prompt,
+      ...(route.complexity !== undefined ? {complexity: route.complexity} : {})}
     : {contents: [{role: 'user', parts: [{text: prompt}]}], generationConfig: {
       responseModalities: ['TEXT', 'IMAGE'], imageConfig: {aspectRatio: closestAspectRatio(size)}
     }};

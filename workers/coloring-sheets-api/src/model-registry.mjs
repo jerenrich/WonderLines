@@ -10,7 +10,7 @@ const keys = (value, allowed) => Object.keys(value).every(key => allowed.include
 
 // Validate the entire document before using any of it. A bad edit must never
 // resurrect disabled models by falling back to compiled configuration.
-export function parseModelRegistry(value) {
+export function parseModelRegistry(value, {comparison = false} = {}) {
   if (!object(value) || !keys(value, ['schemaVersion', 'revision', 'defaultModel', 'providers', 'models']) ||
       value.schemaVersion !== 1 || !text(value.revision, 128) || !object(value.providers) ||
       !keys(value.providers, providers) || !Array.isArray(value.models) || value.models.length > 32) throw new Error('Invalid model registry');
@@ -19,18 +19,19 @@ export function parseModelRegistry(value) {
   }
   const routes = {}, models = [], ids = new Set();
   for (const entry of value.models) {
-    if (!object(entry) || !keys(entry, ['id', 'provider', 'model', 'enabled', 'visible', 'label', 'detail', 'price']) ||
+    if (!object(entry) || !keys(entry, ['id', 'provider', 'model', 'complexity', 'comparisonOnly', 'enabled', 'visible', 'label', 'detail', 'price']) ||
         typeof entry.enabled !== 'boolean' || typeof entry.visible !== 'boolean' ||
+        (entry.comparisonOnly !== undefined && typeof entry.comparisonOnly !== 'boolean') ||
         !text(entry.label, 120) || !text(entry.detail, 600) || ids.has(entry.id) || !Object.hasOwn(value.providers, entry.provider)) throw new Error('Invalid model entry');
-    const route = {provider: entry.provider, model: entry.model};
+    const route = {provider: entry.provider, model: entry.model, ...(entry.complexity !== undefined ? {complexity: entry.complexity} : {})};
     validateModelRoute(entry.id, route);
     if (entry.price !== null && (!object(entry.price) || !keys(entry.price, ['usd', 'evidence', 'explanation']) ||
         !Number.isFinite(entry.price.usd) || entry.price.usd < 0 || entry.price.usd > 100 ||
         !text(entry.price.evidence, 80) || !text(entry.price.explanation, 600))) throw new Error('Invalid reference price');
     ids.add(entry.id);
-    if (entry.enabled && value.providers[entry.provider].enabled) {
+    if (entry.enabled && value.providers[entry.provider].enabled && (!entry.comparisonOnly || comparison)) {
       routes[entry.id] = route;
-      if (entry.visible) models.push({id: entry.id, ...route, label: entry.label, detail: entry.detail, price: entry.price});
+      if (entry.visible && !entry.comparisonOnly) models.push({id: entry.id, ...route, label: entry.label, detail: entry.detail, price: entry.price});
     }
   }
   if (value.defaultModel !== null && !ids.has(value.defaultModel)) throw new Error('Invalid default model');
@@ -44,10 +45,11 @@ export async function loadModelCatalog(env, {comparison = false} = {}) {
     // revision during propagation; there are no independently updated flags.
     const raw = await env.MODEL_REGISTRY.get(MODEL_REGISTRY_KEY, {type: 'text', cacheTtl: 60});
     if (typeof raw !== 'string' || new TextEncoder().encode(raw).length > 65536) throw new Error('Model registry unavailable');
-    const document = JSON.parse(raw), catalogue = parseModelRegistry(document);
+    const document = JSON.parse(raw), catalogue = parseModelRegistry(document, {comparison});
     if (comparison && document.providers.openai?.enabled) {
       for (const [id, route] of Object.entries(OPENAI_COMPARISON_ROUTES)) {
-        if (!document.models.some(entry => entry.id === id)) catalogue.routes[id] = route;
+        if (!document.models.some(entry => entry.id === id) &&
+            !document.models.some(entry => entry.id === route.model && !entry.enabled)) catalogue.routes[id] = route;
       }
     }
     // The private comparison studio has additional experimental fal presets.

@@ -1,5 +1,5 @@
 import {loadModelCatalog} from '../../coloring-sheets-api/src/model-registry.mjs';
-import {modelCatalog} from '../../coloring-sheets-api/src/image-provider.mjs';
+import {modelCatalog, OPENAI_COMPARISON_ROUTES, supportsImageComplexity} from '../../coloring-sheets-api/src/image-provider.mjs';
 import {refreshImageCostMetrics} from '../../coloring-sheets-api/src/image-cost.mjs';
 import {modelReferenceCost} from './model-reference-cost.mjs';
 import {FAL_COMPARISON_MODELS} from '../../coloring-sheets-api/src/fal-models.mjs';
@@ -11,8 +11,12 @@ const openaiLabels = {
   'gpt-image-2.6-flare': 'GPT Image 2.6 Flare',
   'gpt-image-2.6-sunburst': 'GPT Image 2.6 Sunburst'
 };
-const openaiLabel = (id, route) => route.provider === 'openai' && route.model === id ? openaiLabels[id] : undefined;
-recommended.push('gpt-image-2.6-flare', 'gpt-image-2.6-sunburst');
+const openaiLabel = (id, route) => {
+  if (route.provider !== 'openai' || !(route.model === id || `${route.model}-${route.complexity}` === id)) return undefined;
+  const label = openaiLabels[route.model];
+  return label && supportsImageComplexity(route) ? `${label} · ${route.complexity ?? 'high'} complexity` : label;
+};
+recommended.push(...Object.keys(OPENAI_COMPARISON_ROUTES));
 // Distilled and undistilled Klein are different checkpoints. Put the variant
 // and actual sampling steps in the picker label so they do not look duplicated.
 const kleinLabels = {
